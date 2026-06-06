@@ -1,0 +1,12 @@
+.sale-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 5px;
+    white-space: nowrap;
+
+    &.pending   { background: #fffff0; color: #b7791f; }
+    &.completed { background: #f0fff4; color: #276749; }
+    &.cancelled { background: #fff5f5; color: #c53030; }
+    &.refunded  { background: #ebf8ff; color: #2c5282; }
+}

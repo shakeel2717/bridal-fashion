@@ -6,11 +6,12 @@ use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeesController;
+use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\RentalsController;
 use App\Http\Controllers\SalaryController;
+use App\Http\Controllers\SalesController;
 use App\Http\Controllers\VendorsController;
-use App\Http\Controllers\NotificationsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -22,7 +23,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/rentals/create', [RentalsController::class, 'create'])->name('rentals.create');
     Route::get('/rentals/{rental}', [RentalsController::class, 'show'])->name('rentals.show');
     Route::get('/rentals/{rental}/edit', [RentalsController::class, 'edit'])->name('rentals.edit');
-    Route::get('/sales', fn () => view('coming-soon'))->name('sales.index');
+    Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
+    Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create');
+    Route::get('/sales/{sale}', [SalesController::class, 'show'])->name('sales.show');
     Route::get('/products', [ProductsController::class, 'index'])->name('products.index');
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories.index');
     Route::get('/vendors', [VendorsController::class, 'index'])->name('vendors.index');

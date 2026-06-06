@@ -15,6 +15,13 @@
             </div>
         </div>
         <div class="col-3">
+            <div class="stat-card stat-blue">
+                <div class="stat-label">Total Products</div>
+                <div class="stat-value">{{ $stats['total_products'] }}</div>
+                <div class="stat-sub">In inventory</div>
+            </div>
+        </div>
+        <div class="col-3">
             <div class="stat-card stat-green">
                 <div class="stat-label">Active Rentals</div>
                 <div class="stat-value">{{ $stats['active_rentals'] }}</div>
@@ -22,17 +29,10 @@
             </div>
         </div>
         <div class="col-3">
-            <div class="stat-card stat-red">
-                <div class="stat-label">Overdue Returns</div>
-                <div class="stat-value">{{ $stats['overdue'] }}</div>
-                <div class="stat-sub">Action needed</div>
-            </div>
-        </div>
-        <div class="col-3">
-            <div class="stat-card stat-purple">
-                <div class="stat-label">Pickup Today</div>
-                <div class="stat-value">{{ $stats['pickup_today'] }}</div>
-                <div class="stat-sub">Customers arriving</div>
+            <div class="stat-card stat-gold">
+                <div class="stat-label">Monthly Revenue</div>
+                <div class="stat-value" style="font-size:17px;">Rs. {{ number_format($stats['monthly_revenue'], 0) }}</div>
+                <div class="stat-sub">{{ now()->format('F Y') }}</div>
             </div>
         </div>
     </div>
@@ -40,10 +40,10 @@
     {{-- Stats Row 2 --}}
     <div class="row g-2 mb-3">
         <div class="col-3">
-            <div class="stat-card stat-gold">
-                <div class="stat-label">Monthly Revenue</div>
-                <div class="stat-value" style="font-size:17px;">Rs. {{ number_format($stats['monthly_revenue'], 0) }}</div>
-                <div class="stat-sub">{{ now()->format('F Y') }}</div>
+            <div class="stat-card stat-purple">
+                <div class="stat-label">Pickup Today</div>
+                <div class="stat-value">{{ $stats['pickup_today'] }}</div>
+                <div class="stat-sub">Customers arriving</div>
             </div>
         </div>
         <div class="col-3">
@@ -54,10 +54,10 @@
             </div>
         </div>
         <div class="col-3">
-            <div class="stat-card stat-blue">
-                <div class="stat-label">Total Products</div>
-                <div class="stat-value">{{ $stats['total_products'] }}</div>
-                <div class="stat-sub">In inventory</div>
+            <div class="stat-card stat-red">
+                <div class="stat-label">Overdue Returns</div>
+                <div class="stat-value">{{ $stats['overdue'] }}</div>
+                <div class="stat-sub">Action needed</div>
             </div>
         </div>
         <div class="col-3">
