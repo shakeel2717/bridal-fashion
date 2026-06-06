@@ -3,12 +3,13 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CustomersController;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     // Placeholder routes (we'll build each module next)
-    Route::get('/customers', fn() => view('coming-soon'))->name('customers.index');
+    Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
     Route::get('/rentals', fn() => view('coming-soon'))->name('rentals.index');
     Route::get('/sales', fn() => view('coming-soon'))->name('sales.index');
     Route::get('/products', fn() => view('coming-soon'))->name('products.index');

@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/User.php
 
 namespace App\Models;
@@ -41,10 +42,10 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'joining_date'      => 'date',
-            'salary_amount'     => 'decimal:2',
-            'is_active'         => 'boolean',
+            'password' => 'hashed',
+            'joining_date' => 'date',
+            'salary_amount' => 'decimal:2',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -77,11 +78,15 @@ class User extends Authenticatable
 
     public function canAccess(string $feature): bool
     {
-        if ($this->isAdmin()) return true;
+        if ($this->isAdmin()) {
+            return true;
+        }
 
         $toggle = $this->featureToggles()->where('feature', $feature)->first();
 
-        if ($toggle) return $toggle->is_enabled;
+        if ($toggle) {
+            return $toggle->is_enabled;
+        }
 
         // Fall back to global default
         $global = FeatureToggle::whereNull('user_id')

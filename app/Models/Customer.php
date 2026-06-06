@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Customer.php
 
 namespace App\Models;
@@ -13,7 +14,7 @@ class Customer extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name', 'phone1', 'phone2', 'whatsapp', 'cnic',
+        'name', 'phone1', 'phone2', 'whatsapp', 'cnic', 'is_walkin',
         'photo', 'address', 'notes', 'created_by', 'updated_by',
     ];
 
@@ -35,5 +36,15 @@ class Customer extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function scopeRegular($query)
+    {
+        return $query->where('is_walkin', false);
+    }
+
+    public function scopeWalkin($query)
+    {
+        return $query->where('is_walkin', true);
     }
 }
