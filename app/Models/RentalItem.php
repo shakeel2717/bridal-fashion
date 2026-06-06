@@ -1,10 +1,12 @@
 <?php
+
 // app/Models/RentalItem.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RentalItem extends Model
 {
@@ -18,10 +20,10 @@ class RentalItem extends Model
     protected function casts(): array
     {
         return [
-            'rental_price'        => 'decimal:2',
+            'rental_price' => 'decimal:2',
             'custom_option_price' => 'decimal:2',
-            'picked_up_at'        => 'datetime',
-            'returned_at'         => 'datetime',
+            'picked_up_at' => 'datetime',
+            'returned_at' => 'datetime',
         ];
     }
 
@@ -38,5 +40,10 @@ class RentalItem extends Model
     public function receivedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'returned_received_by');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(RentalTask::class);
     }
 }

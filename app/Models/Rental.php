@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Rental.php
 
 namespace App\Models;
@@ -24,15 +25,15 @@ class Rental extends Model
     protected function casts(): array
     {
         return [
-            'booking_date'   => 'date',
-            'pickup_date'    => 'date',
-            'return_date'    => 'date',
+            'booking_date' => 'date',
+            'pickup_date' => 'date',
+            'return_date' => 'date',
             'stitching_date' => 'date',
-            'refund_date'    => 'date',
-            'total_amount'   => 'decimal:2',
-            'advance_paid'   => 'decimal:2',
+            'refund_date' => 'date',
+            'total_amount' => 'decimal:2',
+            'advance_paid' => 'decimal:2',
             'remaining_balance' => 'decimal:2',
-            'refund_amount'  => 'decimal:2',
+            'refund_amount' => 'decimal:2',
         ];
     }
 
@@ -77,5 +78,15 @@ class Rental extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(RentalTask::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(RentalPayment::class);
     }
 }
