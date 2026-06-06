@@ -1,0 +1,95 @@
+.product-code-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 5px;
+    background: #1a2340;
+    color: #fff;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+}
+
+.product-type-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+
+    &.rental { background: #ebf8ff; color: #2c5282; }
+    &.sale    { background: #f0fff4; color: #276749; }
+    &.both    { background: #faf5ff; color: #553c9a; }
+}
+
+.abandoned-row {
+    opacity: 0.55;
+    background: #fffaf0 !important;
+}
+
+.product-price-col {
+    font-size: 12px;
+    line-height: 1.7;
+
+    .price-label {
+        color: var(--text-muted);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .price-value {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+}
+
+.expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+
+    &:last-child { border-bottom: none; }
+
+    .expense-amount {
+        font-weight: 700;
+        color: #e53e3e;
+        white-space: nowrap;
+    }
+
+    .expense-date {
+        font-size: 10px;
+        color: var(--text-muted);
+    }
+}
+
+.tab-pills {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+
+    .tab-pill {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &.active {
+            background: var(--gold);
+            color: #fff;
+            border-color: var(--gold);
+        }
+
+        &:hover:not(.active) {
+            background: var(--gold-light);
+            color: var(--gold-hover);
+            border-color: var(--gold);
+        }
+    }
+}
