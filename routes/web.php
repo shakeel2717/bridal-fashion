@@ -7,6 +7,8 @@ use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\ProductsController;
+use App\Http\Controllers\EmployeesController;
+use App\Http\Controllers\AttendanceController;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -18,8 +20,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/products', [ProductsController::class, 'index'])->name('products.index');
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories.index');
     Route::get('/vendors', [VendorsController::class, 'index'])->name('vendors.index');
-    Route::get('/employees', fn() => view('coming-soon'))->name('employees.index');
-    Route::get('/attendance', fn() => view('coming-soon'))->name('attendance.index');
+    Route::get('/employees', [EmployeesController::class, 'index'])->name('employees.index');
+    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/salary', fn() => view('coming-soon'))->name('salary.index');
     Route::get('/advances', fn() => view('coming-soon'))->name('advances.index');
     Route::get('/notifications', fn() => view('coming-soon'))->name('notifications.index');

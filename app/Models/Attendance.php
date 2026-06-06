@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Attendance.php
 
 namespace App\Models;
@@ -12,11 +13,13 @@ class Attendance extends Model
         'user_id', 'date', 'status', 'note', 'created_by', 'updated_by',
     ];
 
-    protected function casts(): array
+    protected static function booted(): void
     {
-        return [
-            'date' => 'date',
-        ];
+        static::creating(function ($attendance) {
+            if (empty($attendance->created_by)) {
+                $attendance->created_by = auth()->id();
+            }
+        });
     }
 
     public function user(): BelongsTo
