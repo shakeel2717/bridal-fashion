@@ -1,0 +1,644 @@
+// ── Bootstrap variable overrides (must be before imports) ──
+$primary:       #c9963a;
+$secondary:     #1a2340;
+$success:       #38a169;
+$danger:        #e53e3e;
+$warning:       #d69e2e;
+$info:          #3182ce;
+$light:         #f0f2f5;
+$dark:          #1a2340;
+$body-bg:       #f0f2f5;
+$body-color:    #2d3748;
+$border-radius: 8px;
+$font-family-sans-serif: 'Segoe UI', system-ui, -apple-system, sans-serif;
+$font-size-base: 0.875rem;
+$input-border-color: #cbd5e0;
+$input-focus-border-color: $primary;
+$input-focus-box-shadow: 0 0 0 3px rgba(201, 150, 58, 0.15);
+$card-border-color: #e2e8f0;
+$card-box-shadow: none;
+$table-border-color: #edf2f7;
+$modal-content-border-radius: 10px;
+
+// ── Bootstrap core ──
+@import "bootstrap/scss/bootstrap";
+
+// ── Bootstrap Icons ──
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+// ── App Variables ──
+:root {
+  --navy:         #1a2340;
+  --navy-light:   #1e2b47;
+  --navy-muted:   #8a9bb5;
+  --gold:         #c9963a;
+  --gold-light:   #fef3c7;
+  --gold-hover:   #b8832a;
+  --sidebar-w:    56px;
+  --topbar-h:     54px;
+  --body-bg:      #f0f2f5;
+  --card-bg:      #ffffff;
+  --text-primary: #1a2340;
+  --text-muted:   #718096;
+  --border:       #e2e8f0;
+  --radius:       8px;
+  --radius-lg:    12px;
+}
+
+// ── Layout Shell ──
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+// ── Top Bar ──
+.app-topbar {
+  height: var(--topbar-h);
+  min-height: var(--topbar-h);
+  background: var(--navy);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  z-index: 1000;
+  flex-shrink: 0;
+
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 210px;
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      background: var(--gold);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      img {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        filter: brightness(0) invert(1);
+      }
+    }
+
+    .brand-text {
+      .brand-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+      }
+      .brand-sub {
+        font-size: 10px;
+        color: var(--navy-muted);
+        line-height: 1;
+      }
+    }
+  }
+
+  .topbar-center {
+    flex: 1;
+    text-align: center;
+
+    .user-greeting {
+      font-size: 11px;
+      color: var(--navy-muted);
+      line-height: 1;
+    }
+    .user-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.4;
+    }
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 210px;
+    justify-content: flex-end;
+  }
+
+  .top-icon-btn {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--navy-muted);
+    border-radius: 7px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s, color 0.15s;
+    text-decoration: none;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+    }
+
+    .notif-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 8px;
+      height: 8px;
+      background: #e53e3e;
+      border-radius: 50%;
+      border: 1.5px solid var(--navy);
+    }
+  }
+
+  .top-logout-btn {
+    background: #c53030;
+    border: none;
+    color: #fff;
+    border-radius: 7px;
+    padding: 0 14px;
+    height: 34px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s;
+
+    &:hover {
+      background: #9b2c2c;
+    }
+  }
+}
+
+// ── Body Row ──
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+// ── Sidebar ──
+.app-sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--navy-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  gap: 3px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar { width: 0; }
+
+  .sb-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--navy-muted);
+    font-size: 18px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+
+    &:hover {
+      background: rgba(201, 150, 58, 0.15);
+      color: var(--gold);
+    }
+
+    &.active {
+      background: var(--gold);
+      color: #fff;
+    }
+
+    // Tooltip
+    &::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 52px;
+      background: var(--navy);
+      color: #fff;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+      z-index: 9999;
+    }
+
+    &:hover::after {
+      opacity: 1;
+    }
+  }
+
+  .sb-divider {
+    width: 28px;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 4px 0;
+  }
+}
+
+// ── Main Content ──
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--body-bg);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+  }
+}
+
+// ── Section Label ──
+.section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  margin-top: 20px;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+// ── Stat Cards ──
+.stat-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  border-left: 3px solid var(--gold);
+
+  &.stat-blue   { border-left-color: #3182ce; }
+  &.stat-green  { border-left-color: #38a169; }
+  &.stat-red    { border-left-color: #e53e3e; }
+  &.stat-purple { border-left-color: #805ad5; }
+  &.stat-teal   { border-left-color: #319795; }
+  &.stat-gold   { border-left-color: var(--gold); }
+
+  .stat-icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+    opacity: 0.7;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+
+  .stat-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+}
+
+// ── Module Cards ──
+.module-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 16px 10px 14px;
+  text-align: center;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  display: block;
+
+  &:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(201, 150, 58, 0.12);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  .mod-icon-wrap {
+    width: 46px;
+    height: 46px;
+    border-radius: 11px;
+    margin: 0 auto 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+    }
+
+    &.gold   { background: #fef3c7; }
+    &.blue   { background: #ebf8ff; }
+    &.green  { background: #f0fff4; }
+    &.purple { background: #faf5ff; }
+    &.red    { background: #fff5f5; }
+    &.teal   { background: #e6fffa; }
+    &.pink   { background: #fff5f7; }
+  }
+
+  .mod-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #2d3748;
+    line-height: 1.3;
+  }
+}
+
+// ── Alert / Info Cards ──
+.info-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+
+  .info-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i { font-size: 15px; }
+  }
+
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #f7fafc;
+    font-size: 12px;
+
+    &:last-child { border-bottom: none; }
+
+    .item-name { color: var(--text-primary); }
+    .item-code { color: var(--text-muted); font-size: 10px; }
+  }
+}
+
+// ── Badges ──
+.badge-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+
+  &.overdue   { background: #fff5f5; color: #c53030; }
+  &.due-today { background: #fffff0; color: #b7791f; }
+  &.ready     { background: #f0fff4; color: #276749; }
+  &.pending   { background: #ebf8ff; color: #2c5282; }
+  &.booked    { background: #faf5ff; color: #553c9a; }
+}
+
+// ── Auth Layout ──
+.auth-wrapper {
+  min-height: 100vh;
+  background: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 36px 40px;
+  width: 100%;
+  max-width: 400px;
+
+  .auth-logo {
+    text-align: center;
+    margin-bottom: 24px;
+
+    .auth-logo-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--gold);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+
+      img {
+        width: 32px;
+        height: 32px;
+        filter: brightness(0) invert(1);
+      }
+    }
+
+    .auth-logo-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .auth-logo-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+  }
+
+  .auth-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+}
+
+// ── Form Overrides ──
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+
+.form-control, .form-select {
+  font-size: 13px;
+  height: 38px;
+  border-color: var(--border);
+
+  &:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201, 150, 58, 0.15);
+  }
+}
+
+textarea.form-control {
+  height: auto;
+}
+
+.btn-primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  font-weight: 600;
+
+  &:hover {
+    background: var(--gold-hover);
+    border-color: var(--gold-hover);
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(201, 150, 58, 0.25);
+  }
+}
+
+.btn-secondary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+
+  &:hover {
+    background: #111827;
+    border-color: #111827;
+  }
+}
+
+// ── Page Title ──
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+// ── Tables ──
+.table {
+  font-size: 13px;
+
+  thead th {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    background: #f7fafc;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+  }
+
+  tbody td {
+    padding: 10px 14px;
+    vertical-align: middle;
+    color: var(--text-primary);
+    border-color: #f0f4f8;
+  }
+
+  tbody tr:hover {
+    background: #fafbfc;
+  }
+}
+
+.table-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+
+  .table-card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .table-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+  }
+}
+
+// ── Modal Overrides ──
+.modal-header {
+  background: var(--navy);
+  color: #fff;
+  border-radius: 10px 10px 0 0;
+  padding: 14px 20px;
+
+  .modal-title {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .btn-close {
+    filter: invert(1);
+  }
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+}
+
+// ── Utilities ──
+.text-gold { color: var(--gold) !important; }
+.bg-navy   { background: var(--navy) !important; }
+.bg-gold   { background: var(--gold) !important; }
+
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+
+.gap-10 { gap: 10px; }
+.gap-12 { gap: 12px; }
+
+.cursor-pointer { cursor: pointer; }
