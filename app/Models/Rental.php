@@ -25,11 +25,6 @@ class Rental extends Model
     protected function casts(): array
     {
         return [
-            'booking_date' => 'date',
-            'pickup_date' => 'date',
-            'return_date' => 'date',
-            'stitching_date' => 'date',
-            'refund_date' => 'date',
             'total_amount' => 'decimal:2',
             'advance_paid' => 'decimal:2',
             'remaining_balance' => 'decimal:2',
@@ -39,20 +34,20 @@ class Rental extends Model
 
     public function scopeOverdue($query)
     {
-        return $query->where('return_date', '<', now()->toDateString())
+        return $query->whereRaw('DATE(return_date) < ?', [now()->toDateString()])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
     }
 
     public function scopeDueToday($query)
     {
-        return $query->where('return_date', now()->toDateString())
+        return $query->whereRaw('DATE(return_date) = ?', [now()->toDateString()])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
     }
 
     public function scopePickupToday($query)
     {
-        return $query->where('pickup_date', now()->toDateString())
-            ->whereNotIn('status', ['picked_up', 'returned', 'cancelled', 'abandoned']);
+        return $query->whereRaw('DATE(pickup_date) = ?', [now()->toDateString()])
+            ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
     }
 
     public function customer(): BelongsTo

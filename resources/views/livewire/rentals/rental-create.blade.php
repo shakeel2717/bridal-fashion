@@ -34,7 +34,7 @@
     @if ($step === 1)
         <div class="row g-3">
             <div class="col-8">
-                <div class="table-card" style="padding:20px;">
+                <div class="table-card" style="padding:20px; height:450px;">
                     <div class="mb-4">
                         <label class="form-label">Customer Type</label>
                         <div class="walkin-toggle" style="max-width:300px;">

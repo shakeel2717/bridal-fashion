@@ -10,6 +10,7 @@ use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\RentalsController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\VendorsController;
+use App\Http\Controllers\NotificationsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -29,7 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/salary', [SalaryController::class, 'index'])->name('salary.index');
     Route::get('/advances', [AdvancesController::class, 'index'])->name('advances.index');
-    Route::get('/notifications', fn () => view('coming-soon'))->name('notifications.index');
+    Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
     Route::get('/reports', fn () => view('coming-soon'))->name('reports.index');
     Route::get('/settings', fn () => view('coming-soon'))->name('settings.index');
     Route::get('/feature-toggles', fn () => view('coming-soon'))->name('feature-toggles.index');
