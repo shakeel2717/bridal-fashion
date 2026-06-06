@@ -1,0 +1,50 @@
+.advance-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+
+    &.deducted     { background: #f0fff4; color: #276749; }
+    &.not-deducted { background: #fff5f5; color: #c53030; }
+}
+
+.salary-status-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+
+    &.draft { background: #fffff0; color: #b7791f; }
+    &.paid  { background: #f0fff4; color: #276749; }
+}
+
+.salary-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    font-size: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+
+    &:last-child { border-bottom: none; }
+
+    .salary-row-label { color: var(--text-muted); }
+    .salary-row-value { font-weight: 600; text-align: right; color: var(--text-primary); }
+}
+
+.salary-total-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 0 4px;
+    border-top: 2px solid var(--navy);
+    margin-top: 6px;
+
+    .salary-row-label { color: var(--navy); }
+    .salary-row-value { text-align: right; color: var(--navy); }
+}
+
+.negative-amount { color: #e53e3e !important; }
+.positive-amount { color: #38a169 !important; }
