@@ -315,6 +315,16 @@
                     <span class="s-label">Total Paid</span>
                     <span class="s-value">Rs. {{ number_format($totalPaid, 0) }}</span>
                 </div>
+                <div class="summary-row">
+                    <span class="s-label">Advance Paid</span>
+                    <span class="s-value">Rs. {{ number_format($rental->advance_paid, 0) }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="s-label">Payment Via</span>
+                    <span class="s-value" style="font-size:11px;">
+                        {{ ucfirst(str_replace('_', ' ', $rental->advance_payment_method ?? 'cash')) }}
+                    </span>
+                </div>
                 <div class="summary-row total-row">
                     <span class="s-label">Remaining</span>
                     <span class="s-value {{ $remaining > 0 ? 'gold' : '' }}"
@@ -572,6 +582,48 @@
                         @else
                             Yes, Mark Abandoned
                         @endif
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Return Item Modal --}}
+    @if ($showReturnModal)
+        <div class="confirm-modal-overlay">
+            <div class="confirm-modal-box" style="max-width:420px;">
+                <div class="confirm-title">
+                    <i class="bi bi-box-arrow-in-down me-2" style="color:#3182ce;"></i>
+                    Mark Item as Returned
+                </div>
+                <div class="confirm-subtitle">
+                    Select the employee who received this item back in the shop.
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Received By <span class="text-danger">*</span></label>
+                    <select wire:model="returnReceivedBy"
+                        class="form-select @error('returnReceivedBy') is-invalid @enderror">
+                        <option value="">Select employee...</option>
+                        @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('returnReceivedBy')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="confirm-actions">
+                    <button class="btn btn-sm btn-outline-secondary" wire:click="$set('showReturnModal', false)">
+                        Cancel
+                    </button>
+                    <button class="btn btn-sm btn-primary" wire:click="confirmItemReturned"
+                        wire:loading.attr="disabled">
+                        <span wire:loading wire:target="confirmItemReturned">
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        </span>
+                        Confirm Return
                     </button>
                 </div>
             </div>

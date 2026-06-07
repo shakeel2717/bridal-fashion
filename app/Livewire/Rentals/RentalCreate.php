@@ -17,6 +17,14 @@ class RentalCreate extends Component
     // Step
     public int $step = 1;
 
+    public string $phone1Gender = 'male';
+
+    public string $phone2Gender = 'male';
+
+    public string $whatsappGender = 'male';
+
+    public string $advancePaymentMethod = 'cash';
+
     // Customer
     public string $customerType = 'existing'; // existing | walkin
 
@@ -105,6 +113,9 @@ class RentalCreate extends Component
     {
         $this->customerType = $type;
         $this->customerId = null;
+        $this->phone1Gender = 'male';
+        $this->phone2Gender = 'male';
+        $this->whatsappGender = 'male';
         $this->customerName = '';
         $this->customerPhone1 = '';
         $this->customerPhone2 = '';
@@ -113,6 +124,11 @@ class RentalCreate extends Component
         $this->deliveryAddress = '';
         $this->customerSearch = '';
         $this->foundCustomers = null;
+    }
+
+    public function setGender(string $field, string $gender): void
+    {
+        $this->$field = $gender;
     }
 
     public function searchCustomers(): void
@@ -297,6 +313,10 @@ class RentalCreate extends Component
             'delivery_address' => $this->deliveryAddress ?: null,
             'booking_date' => $this->bookingDate,
             'pickup_date' => $this->pickupDate ?: null,
+            'phone1_gender' => $this->phone1Gender,
+            'phone2_gender' => $this->phone2Gender,
+            'whatsapp_gender' => $this->whatsappGender,
+            'advance_payment_method' => $this->advancePaymentMethod,
             'return_date' => $this->returnDate ?: null,
             'stitching_date' => $this->stitchingDate ?: null,
             'stitching_instructions' => $this->stitchingInstructions ?: null,

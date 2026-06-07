@@ -156,6 +156,13 @@
                     <span class="s-label">Received</span>
                     <span class="s-value">Rs. {{ number_format($sale->advance_paid, 0) }}</span>
                 </div>
+                <div class="summary-row">
+                    <span class="s-label">Payment Via</span>
+                    <span class="s-value" style="font-size:11px;">
+                        {{ ucfirst(str_replace('_', ' ', $sale->advance_payment_method ?? 'cash')) }}
+                    </span>
+                </div>
+
                 <div class="summary-row total-row">
                     <span class="s-label">Remaining</span>
                     <span class="s-value {{ $remaining > 0 ? 'gold' : '' }}"

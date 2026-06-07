@@ -90,23 +90,67 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-label">Phone 1 <span class="text-danger">*</span></label>
-                                <input type="text" wire:model="customerPhone1"
-                                    class="form-control @error('customerPhone1') is-invalid @enderror"
-                                    placeholder="03XX-XXXXXXX"
-                                    {{ $customerType === 'existing' && $customerId ? 'readonly' : '' }}>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input type="text" wire:model="customerPhone1"
+                                        class="form-control @error('customerPhone1') is-invalid @enderror"
+                                        placeholder="03XX-XXXXXXX"
+                                        {{ $customerType === 'existing' && $customerId ? 'readonly' : '' }}>
+                                    <div class="gender-toggle">
+                                        <button type="button"
+                                            class="gt-btn male {{ $phone1Gender === 'male' ? 'active' : '' }}"
+                                            wire:click="setGender('phone1Gender', 'male')">
+                                            ♂ M
+                                        </button>
+                                        <button type="button"
+                                            class="gt-btn female {{ $phone1Gender === 'female' ? 'active' : '' }}"
+                                            wire:click="setGender('phone1Gender', 'female')">
+                                            ♀ F
+                                        </button>
+                                    </div>
+                                </div>
                                 @error('customerPhone1')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
+
                             <div class="col-6">
                                 <label class="form-label">Phone 2</label>
-                                <input type="text" wire:model="customerPhone2" class="form-control"
-                                    placeholder="03XX-XXXXXXX">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input type="text" wire:model="customerPhone2" class="form-control"
+                                        placeholder="03XX-XXXXXXX">
+                                    <div class="gender-toggle">
+                                        <button type="button"
+                                            class="gt-btn male {{ $phone2Gender === 'male' ? 'active' : '' }}"
+                                            wire:click="setGender('phone2Gender', 'male')">
+                                            ♂ M
+                                        </button>
+                                        <button type="button"
+                                            class="gt-btn female {{ $phone2Gender === 'female' ? 'active' : '' }}"
+                                            wire:click="setGender('phone2Gender', 'female')">
+                                            ♀ F
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
+
                             <div class="col-6">
                                 <label class="form-label">WhatsApp</label>
-                                <input type="text" wire:model="customerWhatsapp" class="form-control"
-                                    placeholder="03XX-XXXXXXX">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input type="text" wire:model="customerWhatsapp" class="form-control"
+                                        placeholder="03XX-XXXXXXX">
+                                    <div class="gender-toggle">
+                                        <button type="button"
+                                            class="gt-btn male {{ $whatsappGender === 'male' ? 'active' : '' }}"
+                                            wire:click="setGender('whatsappGender', 'male')">
+                                            ♂ M
+                                        </button>
+                                        <button type="button"
+                                            class="gt-btn female {{ $whatsappGender === 'female' ? 'active' : '' }}"
+                                            wire:click="setGender('whatsappGender', 'female')">
+                                            ♀ F
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             @if ($customerType === 'existing')
                                 <div class="col-6">
@@ -421,6 +465,18 @@
                                         @error('advancePaid')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
+                                    </div>
+
+                                    <div class="col-4">
+                                        <label class="form-label">Payment Method</label>
+                                        <select wire:model="advancePaymentMethod" class="form-select">
+                                            <option value="cash">Cash</option>
+                                            <option value="bank_transfer">Bank Transfer</option>
+                                            <option value="easypaisa">Easypaisa</option>
+                                            <option value="jazzcash">JazzCash</option>
+                                            <option value="mobicash">Mobicash</option>
+                                            <option value="cheque">Cheque</option>
+                                        </select>
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label">Remaining Balance</label>

@@ -14,8 +14,8 @@ class Sale extends Model
 
     protected $fillable = [
         'bill_ref', 'customer_id', 'customer_name', 'customer_phone1',
-        'customer_phone2', 'customer_cnic', 'delivery_address',
-        'sale_date', 'status', 'total_amount', 'advance_paid',
+        'customer_phone2', 'customer_cnic', 'delivery_address', 'phone1_gender', 'phone2_gender',
+        'sale_date', 'status', 'total_amount', 'advance_paid', 'advance_payment_method',
         'remaining_balance', 'refund_amount', 'refund_date', 'refund_note',
         'employee_id', 'notes', 'created_by', 'updated_by',
     ];

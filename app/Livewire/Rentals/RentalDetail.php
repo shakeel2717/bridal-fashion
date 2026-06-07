@@ -13,6 +13,14 @@ class RentalDetail extends Component
 {
     public Rental $rental;
 
+    public bool $showReturnModal = false;
+
+    public ?int $returnItemId = null;
+
+    public string $returnReceivedBy = '';
+
+    public string $returnPasswordError = '';
+
     // Password confirm
     public bool $showCancelConfirm = false;
 
@@ -53,6 +61,8 @@ class RentalDetail extends Component
     {
         $this->rental = $rental;
         $this->paymentDate = now()->format('Y-m-d');
+
+        $this->returnReceivedBy = (string) auth()->id();
 
         // Auto-show refund form if cancelled and no refund recorded yet
         if ($rental->status === 'cancelled' && ! $rental->refund_type) {
@@ -111,13 +121,7 @@ class RentalDetail extends Component
 
     public function markItemReturned(int $itemId): void
     {
-        RentalItem::findOrFail($itemId)->update([
-            'pickup_status' => 'returned',
-            'returned_at' => now(),
-            'returned_received_by' => auth()->id(),
-        ]);
-        $this->updateRentalStatus();
-        $this->rental->refresh();
+        $this->openReturnModal($itemId);
     }
 
     public function updateRentalStatus(): void
@@ -264,6 +268,34 @@ class RentalDetail extends Component
     public function executeMarkAbandoned(): void
     {
         $this->rental->update(['status' => 'abandoned', 'updated_by' => auth()->id()]);
+        $this->rental->refresh();
+    }
+
+    public function openReturnModal(int $itemId): void
+    {
+        $this->returnItemId = $itemId;
+        $this->returnReceivedBy = (string) auth()->id();
+        $this->returnPasswordError = '';
+        $this->showReturnModal = true;
+    }
+
+    public function confirmItemReturned(): void
+    {
+        $this->validate([
+            'returnReceivedBy' => 'required|exists:users,id',
+        ], [
+            'returnReceivedBy.required' => 'Please select who received this item.',
+        ]);
+
+        RentalItem::findOrFail($this->returnItemId)->update([
+            'pickup_status' => 'returned',
+            'returned_at' => now(),
+            'returned_received_by' => $this->returnReceivedBy,
+        ]);
+
+        $this->showReturnModal = false;
+        $this->returnItemId = null;
+        $this->updateRentalStatus();
         $this->rental->refresh();
     }
 

@@ -218,3 +218,34 @@
         }
     }
 }
+.gender-toggle {
+    display: inline-flex;
+    border: 1.5px solid #94a3b8;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 38px;
+
+    .gt-btn {
+        padding: 0 12px;
+        font-size: 11px;
+        font-weight: 700;
+        border: none;
+        background: #fff;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        &.male.active {
+            background: #ebf8ff;
+            color: #2c5282;
+        }
+
+        &.female.active {
+            background: #fff5f7;
+            color: #97266d;
+        }
+    }
+}
