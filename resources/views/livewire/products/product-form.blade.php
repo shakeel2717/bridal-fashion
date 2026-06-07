@@ -67,12 +67,60 @@
                         {{-- Vendor --}}
                         <div class="col-6">
                             <label class="form-label">Vendor</label>
-                            <select wire:model="vendorId" class="form-select">
-                                <option value="">No vendor</option>
-                                @foreach ($vendors as $vendor)
-                                    <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                                @endforeach
-                            </select>
+
+                            @if (!$showVendorForm)
+                                <div class="d-flex gap-2">
+                                    <select wire:model="vendorId" class="form-select">
+                                        <option value="">No vendor</option>
+                                        @foreach ($vendors as $vendor)
+                                            <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="openVendorForm" class="btn btn-outline-secondary"
+                                        style="white-space:nowrap; padding:0 12px;" title="Add new vendor">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            @else
+                                <div
+                                    style="background:#f0fff4; border:1.5px solid #9ae6b4; border-radius:8px; padding:12px;">
+                                    <div
+                                        style="font-size:11px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:10px;">
+                                        <i class="bi bi-shop me-1"></i> New Vendor
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <input type="text" wire:model="newVendorName"
+                                                class="form-control form-control-sm @error('newVendorName') is-invalid @enderror"
+                                                placeholder="Vendor name *">
+                                            @error('newVendorName')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-12">
+                                            <input type="text" wire:model="newVendorPhone"
+                                                class="form-control form-control-sm" placeholder="Phone (optional)">
+                                        </div>
+                                        <div class="col-12">
+                                            <input type="text" wire:model="newVendorAddress"
+                                                class="form-control form-control-sm" placeholder="Address (optional)">
+                                        </div>
+                                        <div class="col-12 d-flex gap-2 mt-1">
+                                            <button type="button" wire:click="saveVendor" wire:loading.attr="disabled"
+                                                class="btn btn-sm btn-success flex-fill">
+                                                <span wire:loading wire:target="saveVendor">
+                                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                                </span>
+                                                <i class="bi bi-check me-1"></i> Save Vendor
+                                            </button>
+                                            <button type="button" wire:click="cancelVendorForm"
+                                                class="btn btn-sm btn-outline-secondary">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Type --}}
@@ -147,7 +195,8 @@
                                             <div>
                                                 <input type="text"
                                                     wire:model="itemVariants.{{ $i }}.color"
-                                                    class="form-control form-control-sm" placeholder="e.g. Red, Golden">
+                                                    class="form-control form-control-sm"
+                                                    placeholder="e.g. Red, Golden">
                                             </div>
                                             <div>
                                                 <input type="text"
@@ -209,6 +258,37 @@
                         <div class="col-12">
                             <label class="form-label">Notes</label>
                             <textarea wire:model="notes" class="form-control" rows="2" placeholder="Any notes about this product..."></textarea>
+                        </div>
+
+                        {{-- Photo --}}
+                        <div class="col-12">
+                            <label class="form-label">
+                                Product Photo
+                                <span style="color:var(--text-muted); font-weight:400; font-size:11px;">(optional, max
+                                    3MB)</span>
+                            </label>
+
+                            @if ($existingPhoto)
+                                <div class="mb-2 d-flex align-items-center gap-3">
+                                    <img src="{{ Storage::url($existingPhoto) }}"
+                                        style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:1px solid var(--border);">
+                                    <div style="font-size:12px; color:var(--text-muted);">Current photo</div>
+                                </div>
+                            @endif
+
+                            <input type="file" wire:model="photo"
+                                class="form-control @error('photo') is-invalid @enderror" accept="image/*">
+                            @error('photo')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+
+                            @if ($photo)
+                                <div class="mt-2">
+                                    <img src="{{ $photo->temporaryUrl() }}"
+                                        style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid var(--gold);">
+                                    <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Preview</div>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Status + Abandoned --}}

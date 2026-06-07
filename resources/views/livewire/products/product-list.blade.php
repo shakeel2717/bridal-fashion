@@ -107,17 +107,29 @@
                             <span class="product-code-badge">{{ $product->code }}</span>
                         </td>
                         <td>
-                            <div style="font-weight:600; font-size:13px;">{{ $product->name }}</div>
-                            @if ($product->vendor)
-                                <div style="font-size:11px; color:var(--text-muted);">
-                                    {{ $product->vendor->name }}
+                            <div class="d-flex align-items-center gap-2">
+                                @if ($product->photo)
+                                    <img src="{{ Storage::url($product->photo) }}"
+                                        style="width:36px; height:36px; object-fit:cover; border-radius:6px; border:1px solid var(--border); flex-shrink:0;">
+                                @else
+                                    <div
+                                        style="width:36px; height:36px; background:var(--gold-light); border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <i class="bi bi-image" style="font-size:16px; color:var(--gold);"></i>
+                                    </div>
+                                @endif
+                                <div>
+                                    <div style="font-weight:600; font-size:13px;">{{ $product->name }}</div>
+                                    @if ($product->vendor)
+                                        <div style="font-size:11px; color:var(--text-muted);">
+                                            {{ $product->vendor->name }}</div>
+                                    @endif
+                                    @if ($product->is_abandoned)
+                                        <div style="font-size:10px; color:#e53e3e; font-weight:600;">
+                                            ABANDONED — Rs. {{ number_format($product->abandoned_price, 0) }}
+                                        </div>
+                                    @endif
                                 </div>
-                            @endif
-                            @if ($product->is_abandoned)
-                                <div style="font-size:10px; color:#e53e3e; font-weight:600;">
-                                    ABANDONED — Rs. {{ number_format($product->abandoned_price, 0) }}
-                                </div>
-                            @endif
+                            </div>
                         </td>
                         <td>
                             <span class="tbl-code-badge">{{ $product->category->code }}</span>

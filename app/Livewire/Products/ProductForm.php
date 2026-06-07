@@ -8,12 +8,19 @@ use App\Models\Vendor;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class ProductForm extends Component
 {
+    use WithFileUploads;
+
     public ?int $productId = null;
 
     public string $code = '';
+
+    public $photo = null;
+
+    public ?string $existingPhoto = null;
 
     public array $itemVariants = [];
 
@@ -24,6 +31,14 @@ class ProductForm extends Component
     public string $categoryId = '';
 
     public string $vendorId = '';
+
+    public bool $showVendorForm = false;
+
+    public string $newVendorName = '';
+
+    public string $newVendorPhone = '';
+
+    public string $newVendorAddress = '';
 
     public string $color = '';
 
@@ -112,6 +127,7 @@ class ProductForm extends Component
         $this->code = $product->code;
         $this->color = $product->color ?? '';
         $this->name = $product->name;
+        $this->existingPhoto = $product->photo;
         $this->categoryId = (string) $product->category_id;
         $this->vendorId = (string) ($product->vendor_id ?? '');
         $this->size = $product->size ?? '';
@@ -150,6 +166,7 @@ class ProductForm extends Component
             'size' => 'nullable|string|max:50',
             'type' => 'required|in:rental,sale,both',
             'purchasePrice' => 'nullable|numeric|min:0',
+            'photo' => 'nullable|image|max:3072',
             'rentalPrice' => 'nullable|numeric|min:0',
             'salePrice' => 'nullable|numeric|min:0',
             'stockQty' => 'required|integer|min:1',
@@ -176,11 +193,17 @@ class ProductForm extends Component
 
         $this->validate($rules);
 
+        $photoPath = $this->existingPhoto;
+        if ($this->photo) {
+            $photoPath = $this->photo->store('products', 'public');
+        }
+
         $baseData = [
             'name' => $this->name,
             'category_id' => $this->categoryId,
             'vendor_id' => $this->vendorId ?: null,
             'size' => $this->size ?: null,
+            'photo' => $photoPath,
             'type' => $this->type,
             'purchase_price' => $this->purchasePrice ?: 0,
             'rental_price' => in_array($this->type, ['rental', 'both']) ? ($this->rentalPrice ?: 0) : 0,
@@ -251,6 +274,51 @@ class ProductForm extends Component
         $this->resetForm();
     }
 
+    public function openVendorForm(): void
+    {
+        $this->showVendorForm = true;
+        $this->newVendorName = '';
+        $this->newVendorPhone = '';
+        $this->newVendorAddress = '';
+        $this->resetValidation();
+    }
+
+    public function saveVendor(): void
+    {
+        $this->validate([
+            'newVendorName' => 'required|string|max:150',
+            'newVendorPhone' => 'nullable|string|max:20',
+        ], [
+            'newVendorName.required' => 'Vendor name is required.',
+        ]);
+
+        $vendor = Vendor::create([
+            'name' => $this->newVendorName,
+            'phone' => $this->newVendorPhone ?: null,
+            'address' => $this->newVendorAddress ?: null,
+            'is_active' => true,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        // Auto-select the newly created vendor
+        $this->vendorId = (string) $vendor->id;
+        $this->showVendorForm = false;
+        $this->newVendorName = '';
+        $this->newVendorPhone = '';
+        $this->newVendorAddress = '';
+        $this->resetValidation();
+    }
+
+    public function cancelVendorForm(): void
+    {
+        $this->showVendorForm = false;
+        $this->newVendorName = '';
+        $this->newVendorPhone = '';
+        $this->newVendorAddress = '';
+        $this->resetValidation();
+    }
+
     public function updatedStockQty(): void
     {
         if (! $this->isEdit && in_array($this->type, ['rental', 'both'])) {
@@ -296,6 +364,12 @@ class ProductForm extends Component
         $this->productId = null;
         $this->isEdit = false;
         $this->autoCode = true;
+        $this->photo = null;
+        $this->existingPhoto = null;
+        $this->showVendorForm = false;
+        $this->newVendorName = '';
+        $this->newVendorPhone = '';
+        $this->newVendorAddress = '';
         $this->itemVariants = [];
         $this->code = '';
         $this->color = '';

@@ -14,7 +14,7 @@ class Product extends Model
 
     protected $fillable = [
         'code', 'name', 'category_id', 'vendor_id', 'size', 'type',
-        'purchase_price', 'rental_price', 'sale_price', 'stock_qty','color',
+        'purchase_price', 'rental_price', 'sale_price', 'stock_qty','color', 'photo',
         'is_abandoned', 'abandoned_price', 'abandoned_date', 'abandoned_note',
         'notes', 'is_active', 'created_by', 'updated_by',
     ];
