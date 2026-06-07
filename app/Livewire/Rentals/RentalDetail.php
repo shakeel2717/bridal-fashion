@@ -6,11 +6,21 @@ use App\Models\Rental;
 use App\Models\RentalItem;
 use App\Models\RentalPayment;
 use App\Models\RentalTask;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
 class RentalDetail extends Component
 {
     public Rental $rental;
+
+    // Password confirm
+    public bool $showCancelConfirm = false;
+
+    public string $cancelPassword = '';
+
+    public string $cancelPasswordError = '';
+
+    public string $pendingAction = ''; // cancel | abandon
 
     // Task actions
     public ?int $taskActionId = null;
@@ -43,6 +53,11 @@ class RentalDetail extends Component
     {
         $this->rental = $rental;
         $this->paymentDate = now()->format('Y-m-d');
+
+        // Auto-show refund form if cancelled and no refund recorded yet
+        if ($rental->status === 'cancelled' && ! $rental->refund_type) {
+            $this->showRefundForm = true;
+        }
     }
 
     // ── Tasks ─────────────────────────────────────────────
@@ -176,9 +191,12 @@ class RentalDetail extends Component
     // ── Cancel / Abandon ──────────────────────────────────
     public function cancelRental(): void
     {
-        $this->rental->update(['status' => 'cancelled', 'updated_by' => auth()->id()]);
-        $this->showRefundForm = true;
-        $this->rental->refresh();
+        $this->openCancelConfirm('cancel');
+    }
+
+    public function markAbandoned(): void
+    {
+        $this->openCancelConfirm('abandon');
     }
 
     public function saveRefund(): void
@@ -206,7 +224,44 @@ class RentalDetail extends Component
         session()->flash('success', 'Refund recorded.');
     }
 
-    public function markAbandoned(): void
+    public function openCancelConfirm(string $action): void
+    {
+        $this->pendingAction = $action;
+        $this->cancelPassword = '';
+        $this->cancelPasswordError = '';
+        $this->showCancelConfirm = true;
+    }
+
+    public function confirmWithPassword(): void
+    {
+        $this->cancelPasswordError = '';
+
+        if (! Hash::check($this->cancelPassword, auth()->user()->password)) {
+            $this->cancelPasswordError = 'Incorrect password. Please try again.';
+
+            return;
+        }
+
+        $this->showCancelConfirm = false;
+        $this->cancelPassword = '';
+
+        if ($this->pendingAction === 'cancel') {
+            $this->executeCancelRental();
+        } elseif ($this->pendingAction === 'abandon') {
+            $this->executeMarkAbandoned();
+        }
+
+        $this->pendingAction = '';
+    }
+
+    public function executeCancelRental(): void
+    {
+        $this->rental->update(['status' => 'cancelled', 'updated_by' => auth()->id()]);
+        $this->showRefundForm = true;
+        $this->rental->refresh();
+    }
+
+    public function executeMarkAbandoned(): void
     {
         $this->rental->update(['status' => 'abandoned', 'updated_by' => auth()->id()]);
         $this->rental->refresh();

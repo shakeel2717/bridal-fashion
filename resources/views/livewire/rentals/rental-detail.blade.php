@@ -530,4 +530,51 @@
 
         </div>
     </div>
+    {{-- Password Confirm Modal --}}
+    @if ($showCancelConfirm)
+        <div class="confirm-modal-overlay">
+            <div class="confirm-modal-box">
+                <div class="confirm-title">
+                    <i class="bi bi-shield-lock me-2" style="color:#e53e3e;"></i>
+                    @if ($pendingAction === 'cancel')
+                        Cancel Rental
+                    @else
+                        Mark as Abandoned
+                    @endif
+                </div>
+                <div class="confirm-subtitle">
+                    This action cannot be undone. Please enter your password to confirm.
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Your Password <span class="text-danger">*</span></label>
+                    <input type="password" wire:model="cancelPassword" wire:keydown.enter="confirmWithPassword"
+                        class="form-control" placeholder="Enter your password">
+                    @if ($cancelPasswordError)
+                        <div style="color:#e53e3e; font-size:12px; margin-top:5px;">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            {{ $cancelPasswordError }}
+                        </div>
+                    @endif
+                </div>
+
+                <div class="confirm-actions">
+                    <button class="btn btn-sm btn-outline-secondary" wire:click="$set('showCancelConfirm', false)">
+                        Cancel
+                    </button>
+                    <button class="btn btn-sm btn-danger" wire:click="confirmWithPassword"
+                        wire:loading.attr="disabled">
+                        <span wire:loading wire:target="confirmWithPassword">
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        </span>
+                        @if ($pendingAction === 'cancel')
+                            Yes, Cancel Rental
+                        @else
+                            Yes, Mark Abandoned
+                        @endif
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
