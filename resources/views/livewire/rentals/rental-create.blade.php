@@ -724,14 +724,12 @@
                             @enderror
                         </div>
                         <div class="col-4">
-                            <label class="form-label">Payment Method</label>
-                            <select wire:model="advancePaymentMethod" class="form-select">
-                                <option value="cash">Cash</option>
-                                <option value="bank_transfer">Bank Transfer</option>
-                                <option value="easypaisa">Easypaisa</option>
-                                <option value="jazzcash">JazzCash</option>
-                                <option value="mobicash">Mobicash</option>
-                                <option value="cheque">Cheque</option>
+                            <label class="form-label">Receive Into Account</label>
+                            <select wire:model="advanceAccountId" class="form-select">
+                                <option value="">Select account...</option>
+                                @foreach ($accounts as $acc)
+                                    <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-12">

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Rentals;
 
+use App\Models\Account;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Rental;
@@ -10,6 +11,7 @@ use App\Models\RentalPayment;
 use App\Models\RentalSecurityDeposit;
 use App\Models\RentalTask;
 use App\Models\User;
+use App\Services\AccountService;
 use Carbon\Carbon;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -24,6 +26,8 @@ class RentalCreate extends Component
     public string $customerType = 'existing';
 
     public $walkinPhoto = null;
+
+    public string $advanceAccountId = '';
 
     public $walkinCnicFront = null;
 
@@ -89,6 +93,9 @@ class RentalCreate extends Component
     public function mount(): void
     {
         $this->bookingDate = now()->format('Y-m-d');
+        $defaultAccount = Account::where('is_default', true)->first()
+            ?? Account::where('is_active', true)->first();
+        $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
     }
 
     // ── Navigation ────────────────────────────────────────
@@ -383,12 +390,12 @@ class RentalCreate extends Component
             'stitching_date' => $this->stitchingDate ? Carbon::parse($this->stitchingDate)->toDateString() : null,
             'stitching_instructions' => $this->stitchingInstructions ?: null,
             'status' => 'booked',
+            'advance_payment_method' => Account::find($this->advanceAccountId)?->name ?? 'cash',
             'total_amount' => $total,
             'walkin_photo' => $walkinPhotoPath,
             'walkin_cnic_front' => $walkinCnicFrontPath,
             'walkin_cnic_back' => $walkinCnicBackPath,
             'advance_paid' => $advance,
-            'advance_payment_method' => $this->advancePaymentMethod,
             'remaining_balance' => $remaining,
             'employee_id' => $this->employeeId ?: null,
             'notes' => $this->notes ?: null,
@@ -456,14 +463,27 @@ class RentalCreate extends Component
         }
 
         if ($advance > 0) {
+            $accountName = Account::find($this->advanceAccountId)?->name ?? 'Cash';
+
             RentalPayment::create([
                 'rental_id' => $rental->id,
                 'amount' => $advance,
                 'payment_date' => now()->toDateString(),
-                'payment_method' => $this->advancePaymentMethod,
+                'payment_method' => $accountName,
                 'note' => 'Initial advance payment',
                 'created_by' => auth()->id(),
             ]);
+
+            if ($this->advanceAccountId) {
+                AccountService::credit(
+                    (int) $this->advanceAccountId,
+                    $advance,
+                    'rental_payment',
+                    "Rental advance — {$this->customerName} (#{$rental->id})",
+                    now()->toDateString(),
+                    $rental,
+                );
+            }
         }
 
         session()->flash('success', "Rental #{$rental->id} created successfully.");
@@ -489,6 +509,11 @@ class RentalCreate extends Component
         $employees = User::where('is_active', true)
             ->orderBy('name')->get(['id', 'name', 'designation']);
 
-        return view('livewire.rentals.rental-create', compact('employees'));
+        $accounts = Account::where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get(['id', 'name', 'type']);
+
+        return view('livewire.rentals.rental-create', compact('employees', 'accounts'));
     }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Sales;
 
+use App\Models\Account;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Services\AccountService;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
@@ -21,7 +23,7 @@ class SaleDetail extends Component
 
     public string $paymentAmount = '';
 
-    public string $paymentMethod = 'cash';
+    public string $paymentMethod = '';
 
     public string $paymentDate = '';
 
@@ -40,6 +42,10 @@ class SaleDetail extends Component
         $this->sale = $sale;
         $this->paymentDate = now()->format('Y-m-d');
 
+        $defaultAccount = Account::where('is_default', true)->first()
+    ?? Account::where('is_active', true)->first();
+        $this->paymentMethod = $defaultAccount ? (string) $defaultAccount->id : '';
+
         // Auto-show refund form if cancelled and no refund recorded yet
         if ($sale->status === 'cancelled' && ($sale->refund_amount == 0 && ! $sale->refund_date)) {
             $this->showRefundForm = true;
@@ -51,12 +57,10 @@ class SaleDetail extends Component
         $this->validate([
             'paymentAmount' => 'required|numeric|min:1',
             'paymentDate' => 'required|date',
-            'paymentMethod' => 'required|string',
+            'paymentMethod' => 'required|exists:accounts,id',
             'paymentNote' => 'nullable|string|max:500',
         ]);
 
-        // We'll use rental_payments concept but for sales
-        // Store directly on sale record for simplicity
         $newPaid = $this->sale->advance_paid + (float) $this->paymentAmount;
         $remaining = max(0, $this->sale->total_amount - $newPaid);
 
@@ -66,15 +70,23 @@ class SaleDetail extends Component
             'updated_by' => auth()->id(),
         ]);
 
-        // Log payment in notes
+        $accountName = Account::find($this->paymentMethod)?->name ?? 'Cash';
         $note = now()->format('d/m/Y').': Rs. '.number_format((float) $this->paymentAmount, 0)
-            .' received via '.$this->paymentMethod
+            .' via '.$accountName
             .($this->paymentNote ? ' — '.$this->paymentNote : '');
 
-        $existingNotes = $this->sale->notes ?? '';
         $this->sale->update([
-            'notes' => $existingNotes ? $existingNotes."\n".$note : $note,
+            'notes' => $this->sale->notes ? $this->sale->notes."\n".$note : $note,
         ]);
+
+        AccountService::credit(
+            (int) $this->paymentMethod,
+            (float) $this->paymentAmount,
+            'sale_payment',
+            "Sale payment — {$this->sale->customer_name} (#{$this->sale->id})",
+            $this->paymentDate,
+            $this->sale,
+        );
 
         $this->paymentAmount = '';
         $this->paymentNote = '';
@@ -158,6 +170,11 @@ class SaleDetail extends Component
 
         $remaining = max(0, $this->sale->total_amount - $this->sale->advance_paid);
 
-        return view('livewire.sales.sale-detail', compact('remaining'));
+        $accounts = Account::where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get(['id', 'name', 'type']);
+
+        return view('livewire.sales.sale-detail', compact('remaining', 'accounts'));
     }
 }

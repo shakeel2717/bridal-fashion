@@ -338,14 +338,12 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Payment Method</label>
-                    <select wire:model="advancePaymentMethod" class="form-select">
-                        <option value="cash">Cash</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="easypaisa">Easypaisa</option>
-                        <option value="jazzcash">JazzCash</option>
-                        <option value="mobicash">Mobicash</option>
-                        <option value="cheque">Cheque</option>
+                    <label class="form-label">Receive Into Account</label>
+                    <select wire:model="advanceAccountId" class="form-select">
+                        <option value="">Select account...</option>
+                        @foreach ($accounts as $acc)
+                            <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div style="background:#f7fafc; border-radius:8px; padding:10px 12px; border:1px solid var(--border);">

@@ -2,17 +2,19 @@
 
 namespace App\Livewire\Sales;
 
+use App\Models\Account;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\User;
+use App\Services\AccountService;
 use Carbon\Carbon;
 use Livewire\Component;
 
 class SaleCreate extends Component
 {
-    public string $advancePaymentMethod = 'cash';
+    public string $advanceAccountId = '';
 
     public string $phone1Gender = 'male';
 
@@ -61,6 +63,9 @@ class SaleCreate extends Component
     public function mount(): void
     {
         $this->saleDate = now()->format('Y-m-d');
+        $defaultAccount = Account::where('is_default', true)->first()
+            ?? Account::where('is_active', true)->first();
+        $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
     }
 
     // ── Customer ──────────────────────────────────────────
@@ -238,7 +243,7 @@ class SaleCreate extends Component
             'customer_cnic' => $this->customerCnic ?: null,
             'delivery_address' => $this->deliveryAddress ?: null,
             'sale_date' => Carbon::parse($this->saleDate)->toDateString(),
-            'advance_payment_method' => $this->advancePaymentMethod,
+            'advance_payment_method' => Account::find($this->advanceAccountId)?->name ?? 'cash',
             'status' => 'completed',
             'total_amount' => $total,
             'phone1_gender' => $this->phone1Gender,
@@ -278,6 +283,17 @@ class SaleCreate extends Component
                 ->decrement('stock_qty', $qty);
         }
 
+        if ($advance > 0 && $this->advanceAccountId) {
+            AccountService::credit(
+                (int) $this->advanceAccountId,
+                $advance,
+                'sale_payment',
+                "Sale advance — {$this->customerName} (#{$sale->id})",
+                now()->toDateString(),
+                $sale,
+            );
+        }
+
         session()->flash('success', "Sale #{$sale->id} recorded successfully.");
         $this->redirect(route('sales.show', $sale->id));
     }
@@ -287,6 +303,11 @@ class SaleCreate extends Component
         $employees = User::where('is_active', true)
             ->orderBy('name')->get(['id', 'name']);
 
-        return view('livewire.sales.sale-create', compact('employees'));
+        $accounts = Account::where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get(['id', 'name', 'type']);
+
+        return view('livewire.sales.sale-create', compact('employees', 'accounts'));
     }
 }

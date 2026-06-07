@@ -167,6 +167,19 @@
                     </a>
                 @endif
 
+                <div class="sb-divider"></div>
+
+                @if (auth()->user()->isAdmin())
+                    <a href="{{ route('accounts.index') }}"
+                        class="sb-item {{ request()->routeIs('accounts.*') ? 'active' : '' }}" data-label="Accounts">
+                        <i class="bi bi-bank2"></i>
+                    </a>
+                    <a href="{{ route('expenses.index') }}"
+                        class="sb-item {{ request()->routeIs('expenses.*') ? 'active' : '' }}" data-label="Expenses">
+                        <i class="bi bi-receipt-cutoff"></i>
+                    </a>
+                @endif
+
                 @if (auth()->user()->canAccess('reports'))
                     <a href="{{ route('reports.index') }}"
                         class="sb-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" data-label="Reports">

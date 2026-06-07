@@ -214,12 +214,12 @@
                                 <input type="date" wire:model="paymentDate" class="form-control form-control-sm">
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Method</label>
+                                <label class="form-label">Receive Into Account</label>
                                 <select wire:model="paymentMethod" class="form-select form-select-sm">
-                                    <option value="cash">Cash</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="easypaisa">Easypaisa</option>
-                                    <option value="jazzcash">JazzCash</option>
+                                    <option value="">Select account...</option>
+                                    @foreach ($accounts as $acc)
+                                        <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-12">

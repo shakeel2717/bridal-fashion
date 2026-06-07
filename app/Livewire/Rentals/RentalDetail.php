@@ -2,11 +2,13 @@
 
 namespace App\Livewire\Rentals;
 
+use App\Models\Account;
 use App\Models\Rental;
 use App\Models\RentalItem;
 use App\Models\RentalPayment;
 use App\Models\RentalSecurityDeposit;
 use App\Models\RentalTask;
+use App\Services\AccountService;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
@@ -52,7 +54,7 @@ class RentalDetail extends Component
 
     public string $paymentAmount = '';
 
-    public string $paymentMethod = 'cash';
+    public string $paymentMethod = '';
 
     public string $depositNote = '';
 
@@ -75,6 +77,10 @@ class RentalDetail extends Component
         $this->paymentDate = now()->format('Y-m-d');
 
         $this->returnReceivedBy = (string) auth()->id();
+
+        $defaultAccount = Account::where('is_default', true)->first()
+    ?? Account::where('is_active', true)->first();
+        $this->paymentMethod = $defaultAccount ? (string) $defaultAccount->id : '';
 
         // Auto-show refund form if cancelled and no refund recorded yet
         if ($rental->status === 'cancelled' && ! $rental->refund_type) {
@@ -168,7 +174,7 @@ class RentalDetail extends Component
         $this->validate([
             'paymentAmount' => 'required|numeric|min:1',
             'paymentDate' => 'required|date',
-            'paymentMethod' => 'required|string',
+            'paymentMethod' => 'required|exists:accounts,id',
             'paymentNote' => 'nullable|string|max:500',
         ]);
 
@@ -176,17 +182,22 @@ class RentalDetail extends Component
             'rental_id' => $this->rental->id,
             'amount' => $this->paymentAmount,
             'payment_date' => $this->paymentDate,
-            'payment_method' => $this->paymentMethod,
+            'payment_method' => Account::find($this->paymentMethod)?->name ?? 'Cash',
             'note' => $this->paymentNote ?: null,
             'created_by' => auth()->id(),
         ]);
 
-        // Recalculate advance_paid and remaining_balance
-        $payments = RentalPayment::where('rental_id', $this->rental->id)
-            ->with('createdBy')
-            ->latest('payment_date')
-            ->get();
+        // Credit the selected account directly
+        AccountService::credit(
+            (int) $this->paymentMethod,
+            (float) $this->paymentAmount,
+            'rental_payment',
+            "Rental payment — {$this->rental->customer_name} (#{$this->rental->id})",
+            $this->paymentDate,
+            $this->rental,
+        );
 
+        $payments = RentalPayment::where('rental_id', $this->rental->id)->get();
         $totalPaid = $payments->sum('amount');
         $remaining = max(0, $this->rental->total_amount - $totalPaid);
 
@@ -417,8 +428,13 @@ class RentalDetail extends Component
         $totalPaid = $payments->sum('amount');
         $remaining = max(0, $this->rental->total_amount - $totalPaid);
 
+        $accounts = Account::where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get(['id', 'name', 'type']);
+
         return view('livewire.rentals.rental-detail',
             compact('stitchingTask', 'pendingTasksCount', 'payments',
-                'totalPaid', 'remaining', 'cancellationHolds', 'totalHeld'));
+                'totalPaid', 'remaining', 'cancellationHolds', 'totalHeld', 'accounts'));
     }
 }
