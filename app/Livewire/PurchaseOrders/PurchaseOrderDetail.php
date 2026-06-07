@@ -2,26 +2,32 @@
 
 namespace App\Livewire\PurchaseOrders;
 
+use App\Models\Account;
+use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderPayment;
-use App\Models\Product;
+use App\Services\AccountService;
 use Livewire\Component;
 
 class PurchaseOrderDetail extends Component
 {
     public PurchaseOrder $po;
 
-    public bool   $showPaymentForm  = false;
-    public string $paymentAmount    = '';
-    public string $paymentMethod    = 'cash';
-    public string $paymentDate      = '';
-    public string $paymentNote      = '';
+    public bool $showPaymentForm = false;
 
-    public bool   $showReceiveForm  = false;
+    public string $paymentAmount = '';
+
+    public string $paymentAccountId = '';
+
+    public string $paymentDate = '';
+
+    public string $paymentNote = '';
+
+    public bool $showReceiveForm = false;
 
     public function mount(PurchaseOrder $po): void
     {
-        $this->po          = $po;
+        $this->po = $po;
         $this->paymentDate = now()->format('Y-m-d');
     }
 
@@ -29,34 +35,44 @@ class PurchaseOrderDetail extends Component
     {
         $this->validate([
             'paymentAmount' => 'required|numeric|min:1',
-            'paymentDate'   => 'required|date',
-            'paymentMethod' => 'required|string',
+            'paymentDate' => 'required|date',
+            'paymentAccountId' => 'required|exists:accounts,id',
         ]);
 
         PurchaseOrderPayment::create([
             'purchase_order_id' => $this->po->id,
-            'amount'            => $this->paymentAmount,
-            'payment_date'      => $this->paymentDate,
-            'payment_method'    => $this->paymentMethod,
-            'type'              => 'payment',
-            'note'              => $this->paymentNote ?: null,
-            'created_by'        => auth()->id(),
+            'amount' => $this->paymentAmount,
+            'payment_date' => $this->paymentDate,
+            'payment_method' => Account::find($this->paymentAccountId)?->name ?? 'Cash',
+            'type' => 'payment',
+            'note' => $this->paymentNote ?: null,
+            'created_by' => auth()->id(),
         ]);
 
+        // Debit account — we are paying vendor
+        AccountService::debit(
+            (int) $this->paymentAccountId,
+            (float) $this->paymentAmount,
+            'vendor_payment',
+            "PO Payment — {$this->po->vendor->name} ({$this->po->po_number})",
+            $this->paymentDate,
+            $this->po,
+        );
+
         $totalPaid = PurchaseOrderPayment::where('purchase_order_id', $this->po->id)
-            ->where('type', 'payment')
-            ->sum('amount');
+            ->where('type', 'payment')->sum('amount');
 
         $this->po->update([
             'amount_paid' => $totalPaid,
             'balance_due' => max(0, $this->po->total_amount - $totalPaid),
-            'updated_by'  => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
-        $this->paymentAmount   = '';
-        $this->paymentNote     = '';
-        $this->paymentDate     = now()->format('Y-m-d');
+        $this->paymentAmount = '';
+        $this->paymentNote = '';
+        $this->paymentDate = now()->format('Y-m-d');
         $this->showPaymentForm = false;
+        $this->paymentAccountId = '';
         $this->po->refresh();
         session()->flash('success', 'Payment recorded.');
     }
@@ -75,9 +91,9 @@ class PurchaseOrderDetail extends Component
         }
 
         $this->po->update([
-            'status'        => 'received',
+            'status' => 'received',
             'received_date' => now()->toDateString(),
-            'updated_by'    => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
         $this->po->refresh();
@@ -99,13 +115,13 @@ class PurchaseOrderDetail extends Component
 
         // Check if all items received
         $this->po->refresh();
-        $allReceived = $this->po->items->every(fn($i) => $i->received_qty >= $i->qty);
-        $anyReceived = $this->po->items->some(fn($i) => $i->received_qty > 0);
+        $allReceived = $this->po->items->every(fn ($i) => $i->received_qty >= $i->qty);
+        $anyReceived = $this->po->items->some(fn ($i) => $i->received_qty > 0);
 
         $this->po->update([
-            'status'        => $allReceived ? 'received' : ($anyReceived ? 'partial' : 'ordered'),
+            'status' => $allReceived ? 'received' : ($anyReceived ? 'partial' : 'ordered'),
             'received_date' => $allReceived ? now()->toDateString() : null,
-            'updated_by'    => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
         $this->po->refresh();
@@ -114,7 +130,7 @@ class PurchaseOrderDetail extends Component
     public function cancelOrder(): void
     {
         $this->po->update([
-            'status'     => 'cancelled',
+            'status' => 'cancelled',
             'updated_by' => auth()->id(),
         ]);
         $this->po->refresh();
@@ -125,10 +141,15 @@ class PurchaseOrderDetail extends Component
     {
         $this->po->load(['vendor', 'items.product', 'payments.createdBy', 'createdBy']);
 
-        $totalPaid   = $this->po->payments->where('type', 'payment')->sum('amount');
-        $balanceDue  = max(0, $this->po->total_amount - $totalPaid);
+        $totalPaid = $this->po->payments->where('type', 'payment')->sum('amount');
+        $balanceDue = max(0, $this->po->total_amount - $totalPaid);
+
+        $accounts = Account::where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return view('livewire.purchase-orders.purchase-order-detail',
-            compact('totalPaid', 'balanceDue'));
+            compact('totalPaid', 'balanceDue', 'accounts'));
     }
 }

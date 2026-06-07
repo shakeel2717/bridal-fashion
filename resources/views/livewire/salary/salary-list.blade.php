@@ -1,5 +1,5 @@
 <div>
-    @if(session('success'))
+    @if (session('success'))
         <div class="alert alert-success py-2 mb-3" style="font-size:13px;">
             <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
         </div>
@@ -10,8 +10,7 @@
             <div class="page-title">Salary</div>
             <div class="page-subtitle">Monthly salary calculation & payment</div>
         </div>
-        <select wire:model.live="filterRole"
-                class="form-select form-select-sm" style="width:130px;">
+        <select wire:model.live="filterRole" class="form-select form-select-sm" style="width:130px;">
             <option value="employee">Employees</option>
             <option value="admin">Admins</option>
             <option value="">All Staff</option>
@@ -28,7 +27,7 @@
                 {{ $currentMonth->format('F Y') }}
             </div>
             <button class="month-nav-btn" wire:click="nextMonth"
-                    @if(!$canGoNext) disabled style="opacity:0.4; cursor:not-allowed;" @endif>
+                @if (!$canGoNext) disabled style="opacity:0.4; cursor:not-allowed;" @endif>
                 Next <i class="bi bi-chevron-right"></i>
             </button>
         </div>
@@ -51,83 +50,107 @@
             </thead>
             <tbody>
                 @forelse($employees as $emp)
-                @php $record = $salaryRecords[$emp->id] ?? null; @endphp
-                <tr>
-                    <td>
-                        <div style="font-weight:600; font-size:13px;">{{ $emp->name }}</div>
-                        <div style="font-size:11px; color:var(--text-muted);">{{ $emp->designation ?? $emp->role }}</div>
-                    </td>
-                    <td>
-                        <span class="salary-type-badge {{ $emp->salary_type }}">
-                            {{ $emp->salary_type === 'monthly' ? 'Monthly' : 'Daily' }}
-                        </span>
-                    </td>
-                    <td style="font-size:13px; font-weight:600;">
-                        Rs. {{ number_format($emp->salary_amount, 0) }}
-                    </td>
-                    <td style="font-size:13px; text-align:center;">
-                        {{ $record ? $record->days_present : '—' }}
-                    </td>
-                    <td style="font-size:13px; font-weight:600;">
-                        @if($record)
-                            Rs. {{ number_format($record->earned_salary, 0) }}
-                        @else
-                            <span style="color:var(--text-muted);">—</span>
-                        @endif
-                    </td>
-                    <td style="font-size:13px; font-weight:600; color:#e53e3e;">
-                        @if($record && $record->total_advances > 0)
-                            - Rs. {{ number_format($record->total_advances, 0) }}
-                        @else
-                            <span style="color:var(--text-muted);">—</span>
-                        @endif
-                    </td>
-                    <td style="font-size:14px; font-weight:700; color:var(--navy);">
-                        @if($record)
-                            Rs. {{ number_format($record->net_salary, 0) }}
-                        @else
-                            <span style="color:var(--text-muted); font-size:12px;">Not generated</span>
-                        @endif
-                    </td>
-                    <td>
-                        @if($record)
-                            <span class="salary-status-badge {{ $record->status }}">
-                                {{ ucfirst($record->status) }}
+                    @php $record = $salaryRecords[$emp->id] ?? null; @endphp
+                    <tr>
+                        <td>
+                            <div style="font-weight:600; font-size:13px;">{{ $emp->name }}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">{{ $emp->designation ?? $emp->role }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="salary-type-badge {{ $emp->salary_type }}">
+                                {{ $emp->salary_type === 'monthly' ? 'Monthly' : 'Daily' }}
                             </span>
-                        @endif
-                    </td>
-                    <td>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-sm btn-outline-secondary action-btn"
-                                    wire:click="generateSalary({{ $emp->id }})"
-                                    wire:loading.attr="disabled"
-                                    title="{{ $record ? 'Recalculate' : 'Generate Salary' }}">
-                                <span wire:loading wire:target="generateSalary({{ $emp->id }})">
-                                    <span class="spinner-border spinner-border-sm"></span>
-                                </span>
-                                <span wire:loading.remove wire:target="generateSalary({{ $emp->id }})">
-                                    <i class="bi bi-calculator" style="font-size:12px;"></i>
-                                    {{ $record ? 'Recalc' : 'Generate' }}
-                                </span>
-                            </button>
-
-                            @if($record && $record->status === 'draft')
-                            <button class="btn btn-sm btn-outline-success action-btn"
-                                    wire:click="markPaid({{ $record->id }})"
-                                    title="Mark as Paid">
-                                <i class="bi bi-check-lg" style="font-size:12px;"></i>
-                                Paid
-                            </button>
+                        </td>
+                        <td style="font-size:13px; font-weight:600;">
+                            Rs. {{ number_format($emp->salary_amount, 0) }}
+                        </td>
+                        <td style="font-size:13px; text-align:center;">
+                            {{ $record ? $record->days_present : '—' }}
+                        </td>
+                        <td style="font-size:13px; font-weight:600;">
+                            @if ($record)
+                                Rs. {{ number_format($record->earned_salary, 0) }}
+                            @else
+                                <span style="color:var(--text-muted);">—</span>
                             @endif
-                        </div>
-                    </td>
-                </tr>
+                        </td>
+                        <td style="font-size:13px; font-weight:600; color:#e53e3e;">
+                            @if ($record && $record->total_advances > 0)
+                                - Rs. {{ number_format($record->total_advances, 0) }}
+                            @else
+                                <span style="color:var(--text-muted);">—</span>
+                            @endif
+                        </td>
+                        <td style="font-size:14px; font-weight:700; color:var(--navy);">
+                            @if ($record)
+                                Rs. {{ number_format($record->net_salary, 0) }}
+                            @else
+                                <span style="color:var(--text-muted); font-size:12px;">Not generated</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if ($record)
+                                <span class="salary-status-badge {{ $record->status }}">
+                                    {{ ucfirst($record->status) }}
+                                </span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-secondary action-btn"
+                                    wire:click="generateSalary({{ $emp->id }})" wire:loading.attr="disabled"
+                                    title="{{ $record ? 'Recalculate' : 'Generate Salary' }}">
+                                    <span wire:loading wire:target="generateSalary({{ $emp->id }})">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </span>
+                                    <span wire:loading.remove wire:target="generateSalary({{ $emp->id }})">
+                                        <i class="bi bi-calculator" style="font-size:12px;"></i>
+                                        {{ $record ? 'Recalc' : 'Generate' }}
+                                    </span>
+                                </button>
+
+                                @if ($record && $record->status === 'draft')
+                                    <div x-data="{ open: false }" class="position-relative">
+                                        <button class="btn btn-sm btn-outline-success action-btn" @click="open = !open">
+                                            <i class="bi bi-check-lg" style="font-size:12px;"></i>
+                                            Pay
+                                        </button>
+                                        <div x-show="open" x-cloak
+                                            style="position:absolute; right:0; top:36px; background:#fff; border:1.5px solid var(--border); border-radius:8px; padding:12px; width:220px; z-index:999; box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+                                            <div
+                                                style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">
+                                                Pay from Account
+                                            </div>
+                                            <select wire:model="salaryAccountId"
+                                                class="form-select form-select-sm mb-2">
+                                                <option value="">Select account...</option>
+                                                @foreach ($accounts as $acc)
+                                                    <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-success flex-fill"
+                                                    wire:click="markPaid({{ $record->id }})"
+                                                    wire:loading.attr="disabled">
+                                                    Confirm
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary"
+                                                    @click="open = false">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
                 @empty
-                <tr>
-                    <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
-                        No employees found
-                    </td>
-                </tr>
+                    <tr>
+                        <td colspan="9"
+                            style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
+                            No employees found
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
