@@ -12,13 +12,22 @@ use App\Models\RentalTask;
 use App\Models\User;
 use Carbon\Carbon;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class RentalCreate extends Component
 {
+    use WithFileUploads;
+
     public int $step = 1;
 
     // ── Step 1: Customer ──────────────────────────────────
     public string $customerType = 'existing';
+
+    public $walkinPhoto = null;
+
+    public $walkinCnicFront = null;
+
+    public $walkinCnicBack = null;
 
     public string $customerSearch = '';
 
@@ -121,6 +130,9 @@ class RentalCreate extends Component
         $this->customerName = '';
         $this->customerPhone1 = '';
         $this->customerPhone2 = '';
+        $this->walkinPhoto = null;
+        $this->walkinCnicFront = null;
+        $this->walkinCnicBack = null;
         $this->customerWhatsapp = '';
         $this->customerCnic = '';
         $this->deliveryAddress = '';
@@ -321,6 +333,9 @@ class RentalCreate extends Component
             'advancePaid' => 'required|numeric|min:0',
             'advancePaymentMethod' => 'required|string',
             'employeeId' => 'nullable|exists:users,id',
+            'walkinPhoto' => 'nullable|image|max:3072',
+            'walkinCnicFront' => 'nullable|image|max:3072',
+            'walkinCnicBack' => 'nullable|image|max:3072',
         ]);
 
         $this->recalcTotal();
@@ -332,6 +347,22 @@ class RentalCreate extends Component
         if ($this->customerType === 'walkin' || ! $customerId) {
             $walkIn = Customer::where('is_walkin', true)->first();
             $customerId = $walkIn?->id;
+        }
+
+        $walkinPhotoPath = null;
+        $walkinCnicFrontPath = null;
+        $walkinCnicBackPath = null;
+
+        if ($this->customerType === 'walkin') {
+            if ($this->walkinPhoto) {
+                $walkinPhotoPath = $this->walkinPhoto->store('walkin/photos', 'public');
+            }
+            if ($this->walkinCnicFront) {
+                $walkinCnicFrontPath = $this->walkinCnicFront->store('walkin/cnic', 'public');
+            }
+            if ($this->walkinCnicBack) {
+                $walkinCnicBackPath = $this->walkinCnicBack->store('walkin/cnic', 'public');
+            }
         }
 
         $rental = Rental::create([
@@ -353,6 +384,9 @@ class RentalCreate extends Component
             'stitching_instructions' => $this->stitchingInstructions ?: null,
             'status' => 'booked',
             'total_amount' => $total,
+            'walkin_photo' => $walkinPhotoPath,
+            'walkin_cnic_front' => $walkinCnicFrontPath,
+            'walkin_cnic_back' => $walkinCnicBackPath,
             'advance_paid' => $advance,
             'advance_payment_method' => $this->advancePaymentMethod,
             'remaining_balance' => $remaining,

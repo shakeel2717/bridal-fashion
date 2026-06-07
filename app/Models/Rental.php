@@ -14,7 +14,7 @@ class Rental extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'bill_ref', 'customer_id', 'customer_name', 'customer_phone1',
+        'bill_ref', 'customer_id', 'customer_name', 'customer_phone1', 'walkin_photo', 'walkin_cnic_front', 'walkin_cnic_back',
         'customer_phone2', 'customer_whatsapp', 'customer_cnic', 'delivery_address',
         'booking_date', 'pickup_date', 'return_date', 'stitching_date', 'advance_payment_method',
         'stitching_instructions', 'status', 'total_amount', 'advance_paid', 'phone1_gender', 'phone2_gender', 'whatsapp_gender',

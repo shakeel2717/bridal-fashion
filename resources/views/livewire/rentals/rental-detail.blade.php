@@ -71,6 +71,49 @@
                             <div style="font-weight:600;">{{ $rental->delivery_address }}</div>
                         </div>
                     @endif
+
+                    {{-- Walk-in Documents --}}
+                    @if ($rental->walkin_photo || $rental->walkin_cnic_front || $rental->walkin_cnic_back)
+                        <div class="col-12"
+                            style="border-top:1px solid var(--border); padding-top:12px; margin-top:4px;">
+                            <div
+                                style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">
+                                Walk-in Documents
+                            </div>
+                            <div class="d-flex gap-3 flex-wrap">
+                                @if ($rental->walkin_photo)
+                                    <div style="text-align:center;">
+                                        <img src="{{ Storage::url($rental->walkin_photo) }}"
+                                            style="width:60px; height:60px; object-fit:cover; border-radius:50%; border:2px solid var(--gold);">
+                                        <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Photo
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if ($rental->walkin_cnic_front)
+                                    <div style="text-align:center;">
+                                        <a href="{{ Storage::url($rental->walkin_cnic_front) }}" target="_blank">
+                                            <img src="{{ Storage::url($rental->walkin_cnic_front) }}"
+                                                style="width:120px; height:70px; object-fit:cover; border-radius:6px; border:2px solid var(--border);">
+                                        </a>
+                                        <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">CNIC Front
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if ($rental->walkin_cnic_back)
+                                    <div style="text-align:center;">
+                                        <a href="{{ Storage::url($rental->walkin_cnic_back) }}" target="_blank">
+                                            <img src="{{ Storage::url($rental->walkin_cnic_back) }}"
+                                                style="width:120px; height:70px; object-fit:cover; border-radius:6px; border:2px solid var(--border);">
+                                        </a>
+                                        <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">CNIC Back
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -425,6 +468,32 @@
                 @endif
             </div>
 
+            {{-- Cancellation Hold --}}
+            @if ($cancellationHolds->count() > 0)
+                <div class="table-card mb-3" style="padding:14px 16px; border-left:3px solid #d69e2e;">
+                    <div
+                        style="font-size:11px; font-weight:700; text-transform:uppercase; color:#b7791f; margin-bottom:8px;">
+                        <i class="bi bi-cash-coin me-1"></i> Hold on Cancellation
+                    </div>
+                    @foreach ($cancellationHolds as $hold)
+                        <div style="font-size:12px; padding:4px 0; border-bottom:1px solid var(--border);">
+                            <div style="font-weight:600;">{{ $hold->title }}</div>
+                            @if ($hold->note)
+                                <div style="color:var(--text-muted); font-size:11px;">{{ $hold->note }}</div>
+                            @endif
+                            <div style="font-weight:700; color:#b7791f;">
+                                Rs. {{ number_format($hold->cost, 0) }}
+                            </div>
+                        </div>
+                    @endforeach
+                    @if ($totalHeld > 0)
+                        <div style="font-size:13px; font-weight:700; color:#b7791f; padding-top:8px;">
+                            Total Held: Rs. {{ number_format($totalHeld, 0) }}
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             {{-- Payment History --}}
             <div class="table-card mb-3" style="padding:16px;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -620,6 +689,85 @@
 
         </div>
     </div>
+
+    {{-- Cancel with Hold Form --}}
+    @if ($showCancelHoldForm)
+        <div class="confirm-modal-overlay">
+            <div class="confirm-modal-box" style="max-width:480px;">
+                <div class="confirm-title">
+                    <i class="bi bi-cash-coin me-2" style="color:#b7791f;"></i>
+                    Cancellation — Hold Amount
+                </div>
+                <div class="confirm-subtitle">
+                    Before cancelling, record any amount you are holding from this customer
+                    (e.g. dry clean cost, stitching already done, preparation expenses).
+                    This is optional — leave blank if nothing to hold.
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-5">
+                        <label class="form-label">
+                            Hold Amount (Rs.)
+                            <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
+                        </label>
+                        <input type="number" wire:model="holdAmount"
+                            class="form-control @error('holdAmount') is-invalid @enderror" placeholder="e.g. 500"
+                            min="0">
+                        @error('holdAmount')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-7">
+                        <label class="form-label">
+                            Description
+                            <span style="font-weight:400; color:var(--text-muted);">(what is this for)</span>
+                        </label>
+                        <input type="text" wire:model="holdNote" class="form-control"
+                            placeholder="e.g. Dry clean done, Stitching completed">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">
+                            Customer Reason for Cancel
+                            <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
+                        </label>
+                        <input type="text" wire:model="holdReason" class="form-control"
+                            placeholder="e.g. Changed mind, Found cheaper elsewhere">
+                    </div>
+                </div>
+
+                {{-- Preview --}}
+                @if (!empty($holdAmount) && (float) $holdAmount > 0)
+                    <div
+                        style="background:#fffff0; border:1px solid #f6e05e; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:12px; color:#b7791f;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Rs. <strong>{{ number_format((float) $holdAmount, 0) }}</strong> will be recorded as company
+                        hold
+                        @if (!empty($holdNote))
+                            for "{{ $holdNote }}"
+                        @endif.
+                        This will appear in the rental history.
+                    </div>
+                @endif
+
+                <div class="confirm-actions">
+                    <button class="btn btn-sm btn-outline-secondary" wire:click="skipHoldAndCancel">
+                        Skip & Cancel
+                    </button>
+                    <button class="btn btn-sm btn-warning" wire:click="processCancelWithHold"
+                        wire:loading.attr="disabled" style="color:#fff;">
+                        <span wire:loading wire:target="processCancelWithHold">
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        </span>
+                        @if (!empty($holdAmount) && (float) $holdAmount > 0)
+                            Hold Rs. {{ number_format((float) $holdAmount, 0) }} & Cancel
+                        @else
+                            Confirm Cancel
+                        @endif
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
     {{-- Password Confirm Modal --}}
     @if ($showCancelConfirm)
         <div class="confirm-modal-overlay">

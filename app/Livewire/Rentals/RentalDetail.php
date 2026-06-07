@@ -5,6 +5,7 @@ namespace App\Livewire\Rentals;
 use App\Models\Rental;
 use App\Models\RentalItem;
 use App\Models\RentalPayment;
+use App\Models\RentalSecurityDeposit;
 use App\Models\RentalTask;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
@@ -14,6 +15,15 @@ class RentalDetail extends Component
     public Rental $rental;
 
     public bool $showReturnModal = false;
+
+    // Cancel with hold
+    public bool $showCancelHoldForm = false;
+
+    public string $holdAmount = '';
+
+    public string $holdNote = '';
+
+    public string $holdReason = '';
 
     public ?int $returnItemId = null;
 
@@ -43,6 +53,7 @@ class RentalDetail extends Component
     public string $paymentAmount = '';
 
     public string $paymentMethod = 'cash';
+
     public string $depositNote = '';
 
     public string $paymentDate = '';
@@ -194,28 +205,28 @@ class RentalDetail extends Component
     }
 
     public function refundDeposit(int $depositId): void
-{
-    \App\Models\RentalSecurityDeposit::findOrFail($depositId)->update([
-        'is_refunded' => true,
-        'refunded_at' => now(),
-        'refunded_by' => auth()->id(),
-    ]);
+    {
+        RentalSecurityDeposit::findOrFail($depositId)->update([
+            'is_refunded' => true,
+            'refunded_at' => now(),
+            'refunded_by' => auth()->id(),
+        ]);
 
-    $this->rental->refresh();
-    session()->flash('success', 'Deposit marked as refunded.');
-}
+        $this->rental->refresh();
+        session()->flash('success', 'Deposit marked as refunded.');
+    }
 
-public function markDepositNotRefunded(int $depositId): void
-{
-    \App\Models\RentalSecurityDeposit::findOrFail($depositId)->update([
-        'is_refunded' => false,
-        'refunded_at' => null,
-        'refunded_by' => null,
-    ]);
+    public function markDepositNotRefunded(int $depositId): void
+    {
+        RentalSecurityDeposit::findOrFail($depositId)->update([
+            'is_refunded' => false,
+            'refunded_at' => null,
+            'refunded_by' => null,
+        ]);
 
-    $this->rental->refresh();
-    session()->flash('success', 'Deposit updated.');
-}
+        $this->rental->refresh();
+        session()->flash('success', 'Deposit updated.');
+    }
 
     // ── Cancel / Abandon ──────────────────────────────────
     public function cancelRental(): void
@@ -259,6 +270,63 @@ public function markDepositNotRefunded(int $depositId): void
         $this->cancelPassword = '';
         $this->cancelPasswordError = '';
         $this->showCancelConfirm = true;
+        $this->showCancelHoldForm = false;
+    }
+
+    public function executeCancelRental(): void
+    {
+        $this->showCancelHoldForm = true;
+    }
+
+    public function processCancelWithHold(): void
+    {
+        $this->validate([
+            'holdAmount' => 'nullable|numeric|min:0',
+            'holdNote' => 'nullable|string|max:500',
+        ]);
+
+        // Create hold task if amount entered
+        if (! empty($this->holdAmount) && (float) $this->holdAmount > 0) {
+            RentalTask::create([
+                'rental_id' => $this->rental->id,
+                'type' => 'cancellation_hold',
+                'title' => $this->holdNote ?: 'Cancellation hold amount',
+                'cost' => (float) $this->holdAmount,
+                'status' => 'done',
+                'note' => 'Held on cancellation: '.($this->holdReason ?: 'No reason given'),
+                'actioned_by' => auth()->id(),
+                'actioned_at' => now(),
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        // Now cancel the rental
+        $this->rental->update([
+            'status' => 'cancelled',
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->showCancelHoldForm = false;
+        $this->holdAmount = '';
+        $this->holdNote = '';
+        $this->holdReason = '';
+        $this->showRefundForm = true;
+        $this->rental->refresh();
+    }
+
+    public function skipHoldAndCancel(): void
+    {
+        $this->rental->update([
+            'status' => 'cancelled',
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->showCancelHoldForm = false;
+        $this->holdAmount = '';
+        $this->holdNote = '';
+        $this->holdReason = '';
+        $this->showRefundForm = true;
+        $this->rental->refresh();
     }
 
     public function confirmWithPassword(): void
@@ -281,13 +349,6 @@ public function markDepositNotRefunded(int $depositId): void
         }
 
         $this->pendingAction = '';
-    }
-
-    public function executeCancelRental(): void
-    {
-        $this->rental->update(['status' => 'cancelled', 'updated_by' => auth()->id()]);
-        $this->showRefundForm = true;
-        $this->rental->refresh();
     }
 
     public function executeMarkAbandoned(): void
@@ -340,6 +401,12 @@ public function markDepositNotRefunded(int $depositId): void
             ->where('type', 'stitching')
             ->first();
 
+        $cancellationHolds = $this->rental->tasks()
+            ->where('type', 'cancellation_hold')
+            ->get();
+
+        $totalHeld = $cancellationHolds->sum('cost');
+
         // All pending tasks count (blocks pickup)
         $pendingTasksCount = $this->rental->tasks()
             ->where('status', 'pending')
@@ -351,6 +418,7 @@ public function markDepositNotRefunded(int $depositId): void
         $remaining = max(0, $this->rental->total_amount - $totalPaid);
 
         return view('livewire.rentals.rental-detail',
-            compact('stitchingTask', 'pendingTasksCount', 'payments', 'totalPaid', 'remaining'));
+            compact('stitchingTask', 'pendingTasksCount', 'payments',
+                'totalPaid', 'remaining', 'cancellationHolds', 'totalHeld'));
     }
 }
