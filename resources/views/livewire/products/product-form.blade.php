@@ -123,6 +123,75 @@
                             @endif
                         </div>
 
+                        {{-- Product Group --}}
+                        <div class="col-6">
+                            <label class="form-label">
+                                Product Group
+                                <span style="font-size:10px; color:var(--text-muted); font-weight:400;">(link similar
+                                    items)</span>
+                            </label>
+
+                            @if (!$showGroupForm)
+                                <div class="d-flex gap-2">
+                                    <select wire:model="groupId" class="form-select">
+                                        <option value="">No group</option>
+                                        @foreach ($groups as $group)
+                                            <option value="{{ $group->id }}">
+                                                {{ $group->name }}
+                                                @if ($group->code)
+                                                    ({{ $group->code }})
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="openGroupForm"
+                                        class="btn btn-outline-secondary" style="white-space:nowrap; padding:0 12px;"
+                                        title="Create new group">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            @else
+                                <div
+                                    style="background:#ebf8ff; border:1.5px solid #bee3f8; border-radius:8px; padding:12px;">
+                                    <div
+                                        style="font-size:11px; font-weight:700; text-transform:uppercase; color:#2c5282; margin-bottom:10px;">
+                                        <i class="bi bi-collection me-1"></i> New Group
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-8">
+                                            <input type="text" wire:model="newGroupName"
+                                                class="form-control form-control-sm @error('newGroupName') is-invalid @enderror"
+                                                placeholder="Group name *">
+                                            @error('newGroupName')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-4">
+                                            <input type="text" wire:model="newGroupCode"
+                                                class="form-control form-control-sm @error('newGroupCode') is-invalid @enderror"
+                                                placeholder="Code (opt.)" style="text-transform:uppercase;">
+                                            @error('newGroupCode')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-12 d-flex gap-2">
+                                            <button type="button" wire:click="saveGroup"
+                                                wire:loading.attr="disabled" class="btn btn-sm btn-primary flex-fill">
+                                                <span wire:loading wire:target="saveGroup">
+                                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                                </span>
+                                                <i class="bi bi-check me-1"></i> Save Group
+                                            </button>
+                                            <button type="button" wire:click="cancelGroupForm"
+                                                class="btn btn-sm btn-outline-secondary">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+
                         {{-- Type --}}
                         <div class="col-4">
                             <label class="form-label">Type <span class="text-danger">*</span></label>

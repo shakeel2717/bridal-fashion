@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Product.php
 
 namespace App\Models;
@@ -14,7 +15,7 @@ class Product extends Model
 
     protected $fillable = [
         'code', 'name', 'category_id', 'vendor_id', 'size', 'type',
-        'purchase_price', 'rental_price', 'sale_price', 'stock_qty','color', 'photo',
+        'purchase_price', 'rental_price', 'sale_price', 'stock_qty', 'color', 'photo', 'group_id',
         'is_abandoned', 'abandoned_price', 'abandoned_date', 'abandoned_note',
         'notes', 'is_active', 'created_by', 'updated_by',
     ];
@@ -22,13 +23,13 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'purchase_price'  => 'decimal:2',
-            'rental_price'    => 'decimal:2',
-            'sale_price'      => 'decimal:2',
+            'purchase_price' => 'decimal:2',
+            'rental_price' => 'decimal:2',
+            'sale_price' => 'decimal:2',
             'abandoned_price' => 'decimal:2',
-            'abandoned_date'  => 'date',
-            'is_abandoned'    => 'boolean',
-            'is_active'       => 'boolean',
+            'abandoned_date' => 'date',
+            'is_abandoned' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -80,5 +81,10 @@ class Product extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(ProductGroup::class, 'group_id');
     }
 }

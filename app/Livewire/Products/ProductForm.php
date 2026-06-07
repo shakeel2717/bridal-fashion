@@ -4,6 +4,7 @@ namespace App\Livewire\Products;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductGroup;
 use App\Models\Vendor;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
@@ -35,6 +36,14 @@ class ProductForm extends Component
     public bool $showVendorForm = false;
 
     public string $newVendorName = '';
+
+    public string $groupId = '';
+
+    public bool $showGroupForm = false;
+
+    public string $newGroupName = '';
+
+    public string $newGroupCode = '';
 
     public string $newVendorPhone = '';
 
@@ -125,6 +134,7 @@ class ProductForm extends Component
         $this->isEdit = true;
         $this->autoCode = false;
         $this->code = $product->code;
+        $this->groupId = (string) ($product->group_id ?? '');
         $this->color = $product->color ?? '';
         $this->name = $product->name;
         $this->existingPhoto = $product->photo;
@@ -202,6 +212,7 @@ class ProductForm extends Component
             'name' => $this->name,
             'category_id' => $this->categoryId,
             'vendor_id' => $this->vendorId ?: null,
+            'group_id' => $this->groupId ?: null,
             'size' => $this->size ?: null,
             'photo' => $photoPath,
             'type' => $this->type,
@@ -272,6 +283,47 @@ class ProductForm extends Component
         $this->dispatch('product-saved');
         $this->dispatch('close-product-modal');
         $this->resetForm();
+    }
+
+    public function openGroupForm(): void
+    {
+        $this->showGroupForm = true;
+        $this->newGroupName = '';
+        $this->newGroupCode = '';
+        $this->resetValidation();
+    }
+
+    public function saveGroup(): void
+    {
+        $this->validate([
+            'newGroupName' => 'required|string|max:200',
+            'newGroupCode' => 'nullable|string|max:50|unique:product_groups,code',
+        ], [
+            'newGroupName.required' => 'Group name is required.',
+            'newGroupCode.unique' => 'This code already exists.',
+        ]);
+
+        $group = ProductGroup::create([
+            'name' => $this->newGroupName,
+            'code' => $this->newGroupCode ?: null,
+            'category_id' => $this->categoryId ?: null,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->groupId = (string) $group->id;
+        $this->showGroupForm = false;
+        $this->newGroupName = '';
+        $this->newGroupCode = '';
+        $this->resetValidation();
+    }
+
+    public function cancelGroupForm(): void
+    {
+        $this->showGroupForm = false;
+        $this->newGroupName = '';
+        $this->newGroupCode = '';
+        $this->resetValidation();
     }
 
     public function openVendorForm(): void
@@ -366,6 +418,10 @@ class ProductForm extends Component
         $this->autoCode = true;
         $this->photo = null;
         $this->existingPhoto = null;
+        $this->groupId = '';
+        $this->showGroupForm = false;
+        $this->newGroupName = '';
+        $this->newGroupCode = '';
         $this->showVendorForm = false;
         $this->newVendorName = '';
         $this->newVendorPhone = '';
@@ -395,7 +451,9 @@ class ProductForm extends Component
     {
         $categories = Category::active()->orderBy('name')->get();
         $vendors = Vendor::active()->orderBy('name')->get();
+        $groups = ProductGroup::orderBy('name')->get();
 
-        return view('livewire.products.product-form', compact('categories', 'vendors'));
+        return view('livewire.products.product-form',
+            compact('categories', 'vendors', 'groups'));
     }
 }

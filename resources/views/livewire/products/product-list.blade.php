@@ -128,6 +128,15 @@
                                             ABANDONED — Rs. {{ number_format($product->abandoned_price, 0) }}
                                         </div>
                                     @endif
+                                    @if ($product->group)
+                                        <div style="font-size:10px; margin-top:2px;">
+                                            <span
+                                                style="background:#ebf8ff; color:#2c5282; padding:1px 7px; border-radius:4px; font-weight:600;">
+                                                <i class="bi bi-collection" style="font-size:9px;"></i>
+                                                {{ $product->group->name }}
+                                            </span>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </td>
