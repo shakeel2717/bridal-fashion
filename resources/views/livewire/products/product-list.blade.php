@@ -125,7 +125,20 @@
                                 {{ $product->category->name }}
                             </div>
                         </td>
-                        <td style="font-size:13px;">{{ $product->size ?? '—' }}</td>
+                        <td style="font-size:13px;">
+                            @if ($product->size)
+                                {{ $product->size }}
+                            @endif
+                            @if ($product->color)
+                                <span
+                                    style="display:inline-block; font-size:10px; background:#f0f2f5; padding:1px 7px; border-radius:4px; margin-top:2px;">
+                                    {{ $product->color }}
+                                </span>
+                            @endif
+                            @if (!$product->size && !$product->color)
+                                —
+                            @endif
+                        </td>
                         <td>
                             <span class="product-type-badge {{ $product->type }}">
                                 {{ ucfirst($product->type) }}
