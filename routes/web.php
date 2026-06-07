@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeesController;
 use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\ProductsController;
+use App\Http\Controllers\PurchaseOrdersController;
 use App\Http\Controllers\RentalsController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SalesController;
@@ -26,6 +27,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
     Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create');
     Route::get('/sales/{sale}', [SalesController::class, 'show'])->name('sales.show');
+    Route::get('/purchase-orders', [PurchaseOrdersController::class, 'index'])->name('purchase-orders.index');
+    Route::get('/purchase-orders/create', [PurchaseOrdersController::class, 'create'])->name('purchase-orders.create');
+    Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrdersController::class, 'show'])->name('purchase-orders.show');
     Route::get('/products', [ProductsController::class, 'index'])->name('products.index');
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories.index');
     Route::get('/vendors', [VendorsController::class, 'index'])->name('vendors.index');
