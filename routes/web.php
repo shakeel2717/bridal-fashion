@@ -16,6 +16,7 @@ use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\FeatureTogglesController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -45,7 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
     Route::get('/settings', fn () => view('coming-soon'))->name('settings.index');
-    Route::get('/feature-toggles', fn () => view('coming-soon'))->name('feature-toggles.index');
+    Route::get('/feature-toggles', [FeatureTogglesController::class, 'index'])->name('feature-toggles.index');
 });
 
 require __DIR__.'/auth.php';
