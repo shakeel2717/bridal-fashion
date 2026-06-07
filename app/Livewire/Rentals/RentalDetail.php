@@ -43,6 +43,7 @@ class RentalDetail extends Component
     public string $paymentAmount = '';
 
     public string $paymentMethod = 'cash';
+    public string $depositNote = '';
 
     public string $paymentDate = '';
 
@@ -192,6 +193,30 @@ class RentalDetail extends Component
         session()->flash('success', 'Payment recorded.');
     }
 
+    public function refundDeposit(int $depositId): void
+{
+    \App\Models\RentalSecurityDeposit::findOrFail($depositId)->update([
+        'is_refunded' => true,
+        'refunded_at' => now(),
+        'refunded_by' => auth()->id(),
+    ]);
+
+    $this->rental->refresh();
+    session()->flash('success', 'Deposit marked as refunded.');
+}
+
+public function markDepositNotRefunded(int $depositId): void
+{
+    \App\Models\RentalSecurityDeposit::findOrFail($depositId)->update([
+        'is_refunded' => false,
+        'refunded_at' => null,
+        'refunded_by' => null,
+    ]);
+
+    $this->rental->refresh();
+    session()->flash('success', 'Deposit updated.');
+}
+
     // ── Cancel / Abandon ──────────────────────────────────
     public function cancelRental(): void
     {
@@ -307,6 +332,7 @@ class RentalDetail extends Component
             'customer',
             'employee',
             'payments.createdBy',
+            'securityDeposits.refundedBy',
         ]);
 
         // Stitching task

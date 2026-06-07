@@ -287,6 +287,86 @@
                 @endforeach
             </div>
 
+            {{-- Security Deposits --}}
+            @if ($rental->securityDeposits->count() > 0)
+                <div class="table-card mb-3" style="padding:16px 20px;">
+                    <div
+                        style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px;">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Security / Refundable Deposits
+                    </div>
+
+                    @foreach ($rental->securityDeposits as $deposit)
+                        <div
+                            style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:8px; margin-bottom:6px;
+         background:{{ $deposit->is_refunded ? '#f0fff4' : ($deposit->is_paid ? '#fffff0' : '#fff5f5') }};
+         border:1px solid {{ $deposit->is_refunded ? '#9ae6b4' : ($deposit->is_paid ? '#f6e05e' : '#fed7d7') }};">
+
+                            <div>
+                                <div style="font-size:13px; font-weight:600; color:var(--text-primary);">
+                                    {{ $deposit->item_name }}
+                                </div>
+                                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                    @if ($deposit->is_refunded)
+                                        <span style="color:#276749;">
+                                            <i class="bi bi-check-circle me-1"></i>
+                                            Refunded by {{ $deposit->refundedBy?->name }}
+                                            on {{ $deposit->refunded_at?->format('d/m/Y') }}
+                                        </span>
+                                    @elseif($deposit->is_paid)
+                                        <span style="color:#b7791f;">
+                                            <i class="bi bi-cash me-1"></i> Paid — pending return
+                                        </span>
+                                    @else
+                                        <span style="color:#c53030;">
+                                            <i class="bi bi-x-circle me-1"></i> Not paid by customer
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-size:14px; font-weight:700; color:var(--navy);">
+                                    Rs. {{ number_format($deposit->amount, 0) }}
+                                </span>
+
+                                @if (!in_array($rental->status, ['cancelled', 'abandoned']))
+                                    @if ($deposit->is_paid && !$deposit->is_refunded)
+                                        <button class="btn btn-sm btn-outline-success action-btn"
+                                            wire:click="refundDeposit({{ $deposit->id }})"
+                                            title="Mark as refunded to customer">
+                                            <i class="bi bi-arrow-return-left me-1"></i> Refund
+                                        </button>
+                                    @elseif($deposit->is_refunded)
+                                        <button class="btn btn-sm btn-outline-secondary action-btn"
+                                            wire:click="markDepositNotRefunded({{ $deposit->id }})"
+                                            title="Undo refund">
+                                            <i class="bi bi-arrow-counterclockwise" style="font-size:11px;"></i>
+                                        </button>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+
+                    {{-- Total deposit summary --}}
+                    @php
+                        $totalDeposits = $rental->securityDeposits->sum('amount');
+                        $paidDeposits = $rental->securityDeposits->where('is_paid', true)->sum('amount');
+                        $refundedDeposits = $rental->securityDeposits->where('is_refunded', true)->sum('amount');
+                    @endphp
+                    <div
+                        style="display:flex; justify-content:space-between; font-size:12px; padding-top:10px; border-top:1px solid var(--border); margin-top:8px;">
+                        <div>
+                            Total: <strong>Rs. {{ number_format($totalDeposits, 0) }}</strong>
+                            · Paid: <strong style="color:#b7791f;">Rs. {{ number_format($paidDeposits, 0) }}</strong>
+                            · Refunded: <strong style="color:#276749;">Rs.
+                                {{ number_format($refundedDeposits, 0) }}</strong>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             {{-- Notes --}}
             @if ($rental->notes)
                 <div class="table-card" style="padding:14px 20px;">
