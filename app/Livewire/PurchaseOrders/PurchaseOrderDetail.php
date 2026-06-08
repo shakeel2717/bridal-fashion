@@ -79,14 +79,17 @@ class PurchaseOrderDetail extends Component
 
     public function markReceived(): void
     {
-        // Update all items received qty to full qty
         foreach ($this->po->items as $item) {
-            $item->update(['received_qty' => $item->qty]);
+            $oldQty = (int) $item->received_qty;
+            $newQty = (int) $item->qty;
+            $diff = $newQty - $oldQty;
 
-            // Update product stock if linked
-            if ($item->product_id) {
+            $item->update(['received_qty' => $newQty]);
+
+            // Only increment by the difference not already received
+            if ($item->product_id && $diff > 0) {
                 Product::where('id', $item->product_id)
-                    ->increment('stock_qty', $item->qty);
+                    ->increment('stock_qty', $diff);
             }
         }
 
@@ -103,14 +106,17 @@ class PurchaseOrderDetail extends Component
     public function markItemReceived(int $itemId, int $qty): void
     {
         $item = $this->po->items()->findOrFail($itemId);
-        $item->update(['received_qty' => min($qty, $item->qty)]);
 
-        // Update stock
-        if ($item->product_id) {
-            $diff = $qty - ($item->received_qty ?? 0);
-            if ($diff > 0) {
-                Product::where('id', $item->product_id)->increment('stock_qty', $diff);
-            }
+        // Bug: $item->received_qty is the OLD value, then we update it
+        $oldQty = (int) $item->received_qty;
+        $newQty = min($qty, $item->qty);
+        $diff = $newQty - $oldQty;
+
+        $item->update(['received_qty' => $newQty]);
+
+        // Update stock only for the difference
+        if ($item->product_id && $diff > 0) {
+            Product::where('id', $item->product_id)->increment('stock_qty', $diff);
         }
 
         // Check if all items received
@@ -125,6 +131,7 @@ class PurchaseOrderDetail extends Component
         ]);
 
         $this->po->refresh();
+        session()->flash('success', 'Item marked as received. Stock updated.');
     }
 
     public function cancelOrder(): void

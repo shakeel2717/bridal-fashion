@@ -14,37 +14,58 @@ class ProductForm extends Component
 {
     use WithFileUploads;
 
-    public ?int    $productId    = null;
-    public bool    $isEdit       = false;
-    public string  $name         = '';
-    public string  $categoryId   = '';
-    public string  $groupId      = '';
-    public string  $type         = 'rental';
-    public string  $rentalPrice  = '';
-    public string  $salePrice    = '';
-    public int     $stockQty     = 1;
-    public string  $notes        = '';
-    public bool    $isActive     = true;
-    public bool    $isAbandoned  = false;
-    public string  $abandonedPrice = '';
-    public string  $abandonedDate  = '';
-    public string  $abandonedNote  = '';
-    public $photo                = null;
+    public ?int $productId = null;
+
+    public bool $isEdit = false;
+
+    public string $name = '';
+
+    public string $categoryId = '';
+
+    public string $groupId = '';
+
+    public string $type = 'rental';
+
+    public string $rentalPrice = '';
+
+    public string $salePrice = '';
+
+    public int $stockQty = 1;
+
+    public string $notes = '';
+
+    public bool $isActive = true;
+
+    public bool $isAbandoned = false;
+
+    public string $abandonedPrice = '';
+
+    public string $abandonedDate = '';
+
+    public string $abandonedNote = '';
+
+    public $photo = null;
+
     public ?string $existingPhoto = null;
 
     // Per-item variants (code, color, size per qty)
     public array $itemVariants = [];
 
     // Inline vendor
-    public bool   $showVendorForm   = false;
-    public string $newVendorName    = '';
-    public string $newVendorPhone   = '';
+    public bool $showVendorForm = false;
+
+    public string $newVendorName = '';
+
+    public string $newVendorPhone = '';
+
     public string $newVendorAddress = '';
 
     // Inline group
-    public bool   $showGroupForm = false;
-    public string $newGroupName  = '';
-    public string $newGroupCode  = '';
+    public bool $showGroupForm = false;
+
+    public string $newGroupName = '';
+
+    public string $newGroupCode = '';
 
     public function updatedStockQty(): void
     {
@@ -54,8 +75,9 @@ class ProductForm extends Component
     public function updatedType(): void
     {
         if ($this->type === 'sale') {
-            $this->rentalPrice  = '';
+            $this->rentalPrice = '';
             $this->itemVariants = [];
+
             return;
         }
         if ($this->type === 'rental') {
@@ -68,10 +90,11 @@ class ProductForm extends Component
     {
         if ($this->isEdit || $this->type === 'sale') {
             $this->itemVariants = [];
+
             return;
         }
 
-        $needed  = max(1, (int)$this->stockQty);
+        $needed = max(1, (int) $this->stockQty);
         $current = count($this->itemVariants);
 
         if ($needed > $current) {
@@ -97,42 +120,48 @@ class ProductForm extends Component
     {
         $product = Product::findOrFail($id);
 
-        $this->productId      = $id;
-        $this->isEdit         = true;
-        $this->name           = $product->name;
-        $this->categoryId     = (string) $product->category_id;
-        $this->groupId        = (string) ($product->group_id ?? '');
-        $this->type           = $product->type;
-        $this->rentalPrice    = (string) $product->rental_price;
-        $this->salePrice      = (string) $product->sale_price;
-        $this->stockQty       = $product->stock_qty;
-        $this->notes          = $product->notes ?? '';
-        $this->isActive       = $product->is_active;
-        $this->isAbandoned    = $product->is_abandoned;
+        $this->productId = $id;
+        $this->isEdit = true;
+        $this->name = $product->name;
+        $this->categoryId = (string) $product->category_id;
+        $this->groupId = (string) ($product->group_id ?? '');
+        $this->type = $product->type;
+        $this->rentalPrice = (string) $product->rental_price;
+        $this->salePrice = (string) $product->sale_price;
+        $this->stockQty = $product->stock_qty;
+        $this->notes = $product->notes ?? '';
+        $this->isActive = $product->is_active;
+        $this->isAbandoned = $product->is_abandoned;
         $this->abandonedPrice = (string) ($product->abandoned_price ?? '');
-        $this->abandonedDate  = $product->abandoned_date?->format('Y-m-d') ?? '';
-        $this->abandonedNote  = $product->abandoned_note ?? '';
-        $this->existingPhoto  = $product->photo;
+        $this->abandonedDate = $product->abandoned_date?->format('Y-m-d') ?? '';
+        $this->abandonedNote = $product->abandoned_note ?? '';
+        $this->existingPhoto = $product->photo;
 
         // Edit: single variant for editing code/color/size
         $this->itemVariants = [[
-            'code'  => $product->code ?? '',
+            'code' => $product->code ?? '',
             'color' => $product->color ?? '',
-            'size'  => $product->size ?? '',
+            'size' => $product->size ?? '',
         ]];
 
         $this->dispatch('open-product-modal');
     }
 
+    public function updatedItemVariants(): void
+    {
+        // Just triggers re-render so duplicate warning shows live
+        // Actual validation happens on save
+    }
+
     public function save(): void
     {
         $rules = [
-            'name'       => 'required|string|max:200',
+            'name' => 'required|string|max:200',
             'categoryId' => 'required|exists:categories,id',
-            'type'       => 'required|in:rental,sale,both',
-            'stockQty'   => 'required|integer|min:1',
-            'notes'      => 'nullable|string|max:1000',
-            'photo'      => 'nullable|image|max:3072',
+            'type' => 'required|in:rental,sale,both',
+            'stockQty' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:1000',
+            'photo' => 'nullable|image|max:3072',
         ];
 
         if (in_array($this->type, ['rental', 'both'])) {
@@ -143,7 +172,7 @@ class ProductForm extends Component
         }
         if ($this->isAbandoned) {
             $rules['abandonedPrice'] = 'required|numeric|min:0';
-            $rules['abandonedDate']  = 'required|date';
+            $rules['abandonedDate'] = 'required|date';
         }
 
         // Validate at least first variant has a code
@@ -155,34 +184,66 @@ class ProductForm extends Component
             'itemVariants.*.code.required' => 'Each item must have a code.',
         ]);
 
+        // Validate codes — check for duplicates within the batch and against existing products
+        $usedCodes = [];
+        foreach ($this->itemVariants as $i => $v) {
+            $code = strtoupper(trim($v['code'] ?? ''));
+
+            if (empty($code)) {
+                $this->addError("itemVariants.{$i}.code", 'Code is required.');
+
+                return;
+            }
+
+            // Check duplicate within same batch
+            if (in_array($code, $usedCodes)) {
+                $this->addError("itemVariants.{$i}.code", "Code {$code} is already used in this batch.");
+
+                return;
+            }
+
+            // Check against existing products in DB (excluding current product if editing)
+            $exists = Product::where('code', $code)
+                ->when($this->productId, fn ($q) => $q->where('id', '!=', $this->productId))
+                ->exists();
+
+            if ($exists) {
+                $this->addError("itemVariants.{$i}.code", "Code {$code} already exists in the system.");
+
+                return;
+            }
+
+            $usedCodes[] = $code;
+        }
+
         $photoPath = $this->existingPhoto;
         if ($this->photo) {
             $photoPath = $this->photo->store('products', 'public');
         }
 
         $baseData = [
-            'name'           => $this->name,
-            'category_id'    => $this->categoryId,
-            'group_id'       => $this->groupId ?: null,
-            'type'           => $this->type,
-            'rental_price'   => in_array($this->type, ['rental', 'both']) ? ($this->rentalPrice ?: 0) : 0,
-            'sale_price'     => in_array($this->type, ['sale', 'both']) ? ($this->salePrice ?: 0) : 0,
+            'name' => $this->name,
+            'category_id' => $this->categoryId,
+            'group_id' => $this->groupId ?: null,
+            'type' => $this->type,
+            'rental_price' => in_array($this->type, ['rental', 'both']) ? ($this->rentalPrice ?: 0) : 0,
+            'sale_price' => in_array($this->type, ['sale', 'both']) ? ($this->salePrice ?: 0) : 0,
             'purchase_price' => 0,
-            'notes'          => $this->notes ?: null,
-            'is_active'      => $this->isActive,
-            'is_abandoned'   => $this->isAbandoned,
-            'abandoned_price'=> $this->isAbandoned ? $this->abandonedPrice : 0,
+            'notes' => $this->notes ?: null,
+            'is_active' => $this->isActive,
+            'is_abandoned' => $this->isAbandoned,
+            'abandoned_price' => $this->isAbandoned ? $this->abandonedPrice : 0,
             'abandoned_date' => $this->isAbandoned ? $this->abandonedDate : null,
             'abandoned_note' => $this->isAbandoned ? $this->abandonedNote : null,
-            'photo'          => $photoPath,
-            'updated_by'     => auth()->id(),
+            'photo' => $photoPath,
+            'updated_by' => auth()->id(),
         ];
 
         if ($this->isEdit) {
             $variant = $this->itemVariants[0] ?? [];
-            $baseData['code']      = strtoupper($variant['code'] ?? '');
-            $baseData['color']     = $variant['color'] ?: null;
-            $baseData['size']      = $variant['size'] ?: null;
+            $baseData['code'] = strtoupper($variant['code'] ?? '');
+            $baseData['color'] = $variant['color'] ?: null;
+            $baseData['size'] = $variant['size'] ?: null;
             $baseData['stock_qty'] = $this->stockQty;
 
             Product::findOrFail($this->productId)->update($baseData);
@@ -191,10 +252,10 @@ class ProductForm extends Component
         } elseif ($this->type === 'sale') {
             // Sale: single record with actual qty
             $variant = $this->itemVariants[0] ?? [];
-            $baseData['code']       = strtoupper($variant['code'] ?? '');
-            $baseData['color']      = $variant['color'] ?: null;
-            $baseData['size']       = $variant['size'] ?: null;
-            $baseData['stock_qty']  = 0; // starts at 0, PO will update
+            $baseData['code'] = strtoupper($variant['code'] ?? '');
+            $baseData['color'] = $variant['color'] ?: null;
+            $baseData['size'] = $variant['size'] ?: null;
+            $baseData['stock_qty'] = 0; // starts at 0, PO will update
             $baseData['created_by'] = auth()->id();
 
             Product::create($baseData);
@@ -207,9 +268,9 @@ class ProductForm extends Component
 
             for ($i = 0; $i < $qty; $i++) {
                 $variant = $this->itemVariants[$i] ?? [];
-                $baseData['code']      = strtoupper($variant['code'] ?? '');
-                $baseData['color']     = $variant['color'] ?: null;
-                $baseData['size']      = $variant['size'] ?: null;
+                $baseData['code'] = strtoupper($variant['code'] ?? '');
+                $baseData['color'] = $variant['color'] ?: null;
+                $baseData['size'] = $variant['size'] ?: null;
                 $baseData['stock_qty'] = 0;
                 Product::create($baseData);
             }
@@ -225,9 +286,9 @@ class ProductForm extends Component
     // Inline vendor
     public function openVendorForm(): void
     {
-        $this->showVendorForm   = true;
-        $this->newVendorName    = '';
-        $this->newVendorPhone   = '';
+        $this->showVendorForm = true;
+        $this->newVendorName = '';
+        $this->newVendorPhone = '';
         $this->newVendorAddress = '';
         $this->resetValidation();
     }
@@ -238,18 +299,18 @@ class ProductForm extends Component
             'newVendorName' => 'required|string|max:150',
         ]);
 
-        \App\Models\Vendor::create([
-            'name'       => $this->newVendorName,
-            'phone'      => $this->newVendorPhone ?: null,
-            'address'    => $this->newVendorAddress ?: null,
-            'is_active'  => true,
+        Vendor::create([
+            'name' => $this->newVendorName,
+            'phone' => $this->newVendorPhone ?: null,
+            'address' => $this->newVendorAddress ?: null,
+            'is_active' => true,
             'created_by' => auth()->id(),
             'updated_by' => auth()->id(),
         ]);
 
-        $this->showVendorForm   = false;
-        $this->newVendorName    = '';
-        $this->newVendorPhone   = '';
+        $this->showVendorForm = false;
+        $this->newVendorName = '';
+        $this->newVendorPhone = '';
         $this->newVendorAddress = '';
         $this->resetValidation();
     }
@@ -264,8 +325,8 @@ class ProductForm extends Component
     public function openGroupForm(): void
     {
         $this->showGroupForm = true;
-        $this->newGroupName  = '';
-        $this->newGroupCode  = '';
+        $this->newGroupName = '';
+        $this->newGroupCode = '';
         $this->resetValidation();
     }
 
@@ -276,17 +337,17 @@ class ProductForm extends Component
         ]);
 
         $group = ProductGroup::create([
-            'name'        => $this->newGroupName,
-            'code'        => $this->newGroupCode ?: null,
+            'name' => $this->newGroupName,
+            'code' => $this->newGroupCode ?: null,
             'category_id' => $this->categoryId ?: null,
-            'created_by'  => auth()->id(),
-            'updated_by'  => auth()->id(),
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
-        $this->groupId       = (string) $group->id;
+        $this->groupId = (string) $group->id;
         $this->showGroupForm = false;
-        $this->newGroupName  = '';
-        $this->newGroupCode  = '';
+        $this->newGroupName = '';
+        $this->newGroupCode = '';
         $this->resetValidation();
     }
 
@@ -298,38 +359,38 @@ class ProductForm extends Component
 
     public function resetForm(): void
     {
-        $this->productId      = null;
-        $this->isEdit         = false;
-        $this->name           = '';
-        $this->categoryId     = '';
-        $this->groupId        = '';
-        $this->type           = 'rental';
-        $this->rentalPrice    = '';
-        $this->salePrice      = '';
-        $this->stockQty       = 1;
-        $this->notes          = '';
-        $this->isActive       = true;
-        $this->isAbandoned    = false;
+        $this->productId = null;
+        $this->isEdit = false;
+        $this->name = '';
+        $this->categoryId = '';
+        $this->groupId = '';
+        $this->type = 'rental';
+        $this->rentalPrice = '';
+        $this->salePrice = '';
+        $this->stockQty = 1;
+        $this->notes = '';
+        $this->isActive = true;
+        $this->isAbandoned = false;
         $this->abandonedPrice = '';
-        $this->abandonedDate  = '';
-        $this->abandonedNote  = '';
-        $this->photo          = null;
-        $this->existingPhoto  = null;
-        $this->itemVariants   = [];
+        $this->abandonedDate = '';
+        $this->abandonedNote = '';
+        $this->photo = null;
+        $this->existingPhoto = null;
+        $this->itemVariants = [];
         $this->showVendorForm = false;
-        $this->newVendorName  = '';
+        $this->newVendorName = '';
         $this->newVendorPhone = '';
         $this->newVendorAddress = '';
-        $this->showGroupForm  = false;
-        $this->newGroupName   = '';
-        $this->newGroupCode   = '';
+        $this->showGroupForm = false;
+        $this->newGroupName = '';
+        $this->newGroupCode = '';
         $this->resetValidation();
     }
 
     public function render()
     {
         $categories = Category::active()->orderBy('name')->get();
-        $groups     = ProductGroup::orderBy('name')->get();
+        $groups = ProductGroup::orderBy('name')->get();
 
         return view('livewire.products.product-form',
             compact('categories', 'groups'));

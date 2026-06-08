@@ -15,6 +15,7 @@ use Livewire\Component;
 
 class PurchaseOrderCreate extends Component
 {
+    
     public string $vendorId = '';
 
     public string $vendorBillNumber = '';
@@ -136,23 +137,6 @@ class PurchaseOrderCreate extends Component
             $this->items[$i]['total_price'] = (string) ($qty * $price);
         }
     }
-
-    public function getSubtotalProperty(): float
-    {
-        return collect($this->items)->sum(fn ($i) => (float) ($i['total_price'] ?? 0));
-    }
-
-    public function getTotalProperty(): float
-    {
-        return max(0, $this->subtotal - (float) $this->discount);
-    }
-
-    public function getBalanceDueProperty(): float
-    {
-        return max(0, $this->total - (float) $this->initialPayment);
-    }
-
-    use Livewire\Attributes\Computed;
 
     #[Computed]
     public function subtotal(): float

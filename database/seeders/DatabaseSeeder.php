@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             VendorSeeder::class,
             CustomerSeeder::class,
-            ProductSeeder::class,
+            // ProductSeeder::class,
             FeatureToggleSeeder::class,
             AccountSeeder::class,
         ]);
