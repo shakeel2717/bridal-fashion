@@ -171,6 +171,28 @@
         @endif
     @endif
 
+    @if ($duplicateBookings->count() > 0)
+        <div
+            style="background:#fff5f5; border:1.5px solid #fc8181; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+            <div style="font-size:12px; font-weight:700; color:#c53030; margin-bottom:10px;">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Duplicate Bookings Detected — {{ $duplicateBookings->count() }} item(s) booked multiple times
+            </div>
+            @foreach ($duplicateBookings as $productId => $group)
+                <div style="font-size:11px; color:#c53030; padding:3px 0; border-bottom:1px solid #fed7d7;">
+                    <strong>{{ $group->first()->product?->code }}</strong>
+                    — {{ $group->first()->product?->name }}
+                    — booked {{ $group->count() }} times concurrently
+                </div>
+            @endforeach
+            <div style="margin-top:8px;">
+                <a href="{{ route('rentals.index') }}" style="font-size:11px; color:#c53030; font-weight:600;">
+                    View Rentals →
+                </a>
+            </div>
+        </div>
+    @endif
+
     {{-- Module Cards --}}
     <div class="section-label">Modules — تمام سیکشن</div>
 

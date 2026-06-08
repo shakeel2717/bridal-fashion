@@ -44,18 +44,44 @@
                     </div>
                     <div class="col-3">
                         <div style="font-size:10px; color:var(--text-muted);">Phone 1</div>
-                        <div style="font-weight:600;">{{ $rental->customer_phone1 }}</div>
+                        <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+                            {{ $rental->customer_phone1 }}
+                            <span
+                                style="font-size:10px; padding:1px 7px; border-radius:3px;
+              background:{{ ($rental->phone1_gender ?? 'male') === 'female' ? '#fff5f7' : '#ebf8ff' }};
+              color:{{ ($rental->phone1_gender ?? 'male') === 'female' ? '#97266d' : '#2c5282' }};">
+                                {{ ($rental->phone1_gender ?? 'male') === 'female' ? '♀ F' : '♂ M' }}
+                            </span>
+                        </div>
                     </div>
+
                     @if ($rental->customer_phone2)
                         <div class="col-3">
                             <div style="font-size:10px; color:var(--text-muted);">Phone 2</div>
-                            <div style="font-weight:600;">{{ $rental->customer_phone2 }}</div>
+                            <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+                                {{ $rental->customer_phone2 }}
+                                <span
+                                    style="font-size:10px; padding:1px 7px; border-radius:3px;
+              background:{{ ($rental->phone2_gender ?? 'male') === 'female' ? '#fff5f7' : '#ebf8ff' }};
+              color:{{ ($rental->phone2_gender ?? 'male') === 'female' ? '#97266d' : '#2c5282' }};">
+                                    {{ ($rental->phone2_gender ?? 'male') === 'female' ? '♀ F' : '♂ M' }}
+                                </span>
+                            </div>
                         </div>
                     @endif
+
                     @if ($rental->customer_whatsapp)
                         <div class="col-3">
                             <div style="font-size:10px; color:var(--text-muted);">WhatsApp</div>
-                            <div style="font-weight:600;">{{ $rental->customer_whatsapp }}</div>
+                            <div style="font-weight:600; display:flex; align-items:center; gap:6px;">
+                                {{ $rental->customer_whatsapp }}
+                                <span
+                                    style="font-size:10px; padding:1px 7px; border-radius:3px;
+              background:{{ ($rental->whatsapp_gender ?? 'male') === 'female' ? '#fff5f7' : '#ebf8ff' }};
+              color:{{ ($rental->whatsapp_gender ?? 'male') === 'female' ? '#97266d' : '#2c5282' }};">
+                                    {{ ($rental->whatsapp_gender ?? 'male') === 'female' ? '♀ F' : '♂ M' }}
+                                </span>
+                            </div>
                         </div>
                     @endif
                     @if ($rental->customer_cnic)

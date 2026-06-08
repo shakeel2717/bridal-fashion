@@ -83,8 +83,9 @@
 
                     <div class="col-4">
                         <label class="form-label">Discount (Rs.)</label>
-                        <input type="number" wire:model.lazy="discount" class="form-control" min="0"
-                            placeholder="0">
+                        <input type="number" wire:model.lazy="discount"
+                            wire:change="recalcItems"
+                            class="form-control" min="0" placeholder="0">
                     </div>
 
                     <div class="col-12">
@@ -155,12 +156,12 @@
                                 </div>
                                 <div class="col-1">
                                     <input type="number" wire:model.lazy="items.{{ $index }}.qty"
-                                        wire:change="updatedItems" class="form-control form-control-sm"
+                                        wire:change="recalcItems" class="form-control form-control-sm"
                                         min="1" style="text-align:center;">
                                 </div>
                                 <div class="col-2">
                                     <input type="number" wire:model.lazy="items.{{ $index }}.unit_price"
-                                        wire:change="updatedItems" class="form-control form-control-sm"
+                                        wire:change="recalcItems" class="form-control form-control-sm"
                                         min="0" placeholder="0">
                                 </div>
                                 <div class="col-2"

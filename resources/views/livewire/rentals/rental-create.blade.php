@@ -417,9 +417,8 @@
                         @if (count($searchResults) > 0)
                             <div class="product-search-dropdown">
                                 @foreach ($searchResults as $result)
-                                    <div class="search-item"
-                                        wire:click="{{ $result['available'] ? 'addItem(' . $result['id'] . ')' : '' }}"
-                                        style="{{ !$result['available'] ? 'opacity:0.5; cursor:not-allowed;' : '' }}">
+                                    <div class="search-item" wire:click="addItem({{ $result['id'] }})"
+                                        style="{{ !$result['available'] ? 'opacity:0.85;' : '' }} cursor:pointer;">
                                         <div class="d-flex align-items-center gap-3">
                                             @if ($result['photo'])
                                                 <img src="{{ Storage::url($result['photo']) }}"
@@ -489,7 +488,17 @@
                         </div>
 
                         @foreach ($items as $index => $item)
-                            <div class="rental-item-row">
+                            <div class="rental-item-row"
+                                style="{{ $item['double_booked'] ?? false ? 'border-left: 3px solid #e53e3e;' : '' }}">
+
+                                @if(isset($item['double_booked']) && $item['double_booked'] === true)
+                                    <div
+                                        style="background:#fff5f5; border:1px solid #fed7d7; border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:11px; color:#c53030; font-weight:600;">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                        Warning: This item is already booked for the selected date range.
+                                        You can still add it — admin will manage the conflict.
+                                    </div>
+                                @endif
                                 <button class="item-remove-btn" wire:click="removeItem({{ $index }})">
                                     <i class="bi bi-x"></i>
                                 </button>

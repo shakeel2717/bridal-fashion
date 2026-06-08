@@ -4,21 +4,34 @@ namespace App\Livewire\Vendors;
 
 use App\Models\Vendor;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class VendorList extends Component
 {
+    use WithFileUploads;
     use WithPagination;
 
-    public string $search   = '';
-    public string $name     = '';
-    public string $phone    = '';
-    public string $address  = '';
-    public string $notes    = '';
-    public bool   $isActive = true;
-    public bool   $showForm = false;
-    public ?int   $editId   = null;
-    public ?int   $deleteId = null;
+    public string $search = '';
+    
+    public string $name = '';
+    
+    public $vendorPhoto = null;
+    public ?string $existingVendorPhoto = null;
+
+    public string $phone = '';
+
+    public string $address = '';
+
+    public string $notes = '';
+
+    public bool $isActive = true;
+
+    public bool $showForm = false;
+
+    public ?int $editId = null;
+
+    public ?int $deleteId = null;
 
     public function updatedSearch(): void
     {
@@ -33,33 +46,44 @@ class VendorList extends Component
 
     public function openEdit(int $id): void
     {
-        $vendor          = Vendor::findOrFail($id);
-        $this->editId    = $id;
-        $this->name      = $vendor->name;
-        $this->phone     = $vendor->phone ?? '';
-        $this->address   = $vendor->address ?? '';
-        $this->notes     = $vendor->notes ?? '';
-        $this->isActive  = $vendor->is_active;
-        $this->showForm  = true;
+        $vendor = Vendor::findOrFail($id);
+        $this->editId = $id;
+        $this->name = $vendor->name;
+        $this->phone = $vendor->phone ?? '';
+        $this->existingVendorPhoto = $vendor->photo;
+        $this->address = $vendor->address ?? '';
+        $this->notes = $vendor->notes ?? '';
+        $this->isActive = $vendor->is_active;
+        $this->showForm = true;
     }
 
     public function save(): void
     {
         $this->validate([
-            'name'    => 'required|string|max:150',
-            'phone'   => 'nullable|string|max:20',
+            'name' => 'required|string|max:150',
+            'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
-            'notes'   => 'nullable|string|max:1000',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
+        $photoPath = $this->editId
+            ? Vendor::find($this->editId)?->photo
+            : null;
+
+        if ($this->vendorPhoto) {
+            $photoPath = $this->vendorPhoto->store('vendors', 'public');
+        }
+
         $data = [
-            'name'       => $this->name,
-            'phone'      => $this->phone ?: null,
-            'address'    => $this->address ?: null,
-            'notes'      => $this->notes ?: null,
-            'is_active'  => $this->isActive,
+            'name' => $this->name,
+            'phone' => $this->phone ?: null,
+            'photo' => $photoPath,
+            'address' => $this->address ?: null,
+            'notes' => $this->notes ?: null,
+            'is_active' => $this->isActive,
             'updated_by' => auth()->id(),
         ];
+
 
         if ($this->editId) {
             Vendor::findOrFail($this->editId)->update($data);
@@ -78,7 +102,7 @@ class VendorList extends Component
     {
         $vendor = Vendor::findOrFail($id);
         $vendor->update([
-            'is_active'  => !$vendor->is_active,
+            'is_active' => ! $vendor->is_active,
             'updated_by' => auth()->id(),
         ]);
     }
@@ -95,6 +119,7 @@ class VendorList extends Component
         if ($vendor->products()->count() > 0) {
             session()->flash('error', 'Cannot delete — vendor has products assigned.');
             $this->deleteId = null;
+
             return;
         }
 
@@ -105,11 +130,13 @@ class VendorList extends Component
 
     public function resetForm(): void
     {
-        $this->editId   = null;
-        $this->name     = '';
-        $this->phone    = '';
-        $this->address  = '';
-        $this->notes    = '';
+        $this->editId = null;
+        $this->name = '';
+        $this->existingVendorPhoto = null;
+        $this->phone = '';
+        $this->vendorPhoto = null;
+        $this->address = '';
+        $this->notes = '';
         $this->isActive = true;
         $this->showForm = false;
         $this->resetValidation();
@@ -118,9 +145,8 @@ class VendorList extends Component
     public function render()
     {
         $vendors = Vendor::withCount('products')
-            ->when($this->search, fn($q) =>
-                $q->where('name', 'like', "%{$this->search}%")
-                  ->orWhere('phone', 'like', "%{$this->search}%")
+            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
+                ->orWhere('phone', 'like', "%{$this->search}%")
             )
             ->latest()
             ->paginate(15);

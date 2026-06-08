@@ -231,14 +231,12 @@ class RentalCreate extends Component
 
         $alreadyAdded = collect($this->items)->pluck('product_id')->toArray();
 
-        // Find products already booked in the selected date range
+        // Still detect booked for display only — not blocking
         $bookedProductIds = RentalItem::whereHas('rental', function ($q) {
             $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->where(function ($q) {
-                    $q->where(function ($q) {
-                        $q->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
-                            ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate]);
-                    });
+                    $q->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
+                        ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate]);
                 });
         })->pluck('product_id')->toArray();
 
@@ -271,18 +269,11 @@ class RentalCreate extends Component
 
     public function addItem(int $productId): void
     {
-        // Check availability one more time before adding
         $isBooked = RentalItem::whereHas('rental', function ($q) {
             $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
                 ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate]);
         })->where('product_id', $productId)->exists();
-
-        if ($isBooked) {
-            $this->addError('items', 'This item is already booked for the selected dates.');
-
-            return;
-        }
 
         $product = Product::with('category')->findOrFail($productId);
 
@@ -297,6 +288,7 @@ class RentalCreate extends Component
             'rental_price' => (string) $product->rental_price,
             'note' => '',
             'addons' => [],
+            'double_booked' => $isBooked, // flag for warning display
         ];
 
         $this->productSearch = '';
@@ -437,17 +429,19 @@ class RentalCreate extends Component
                 }
             }
 
-            foreach ($this->securityDeposits as $deposit) {
-                if (! empty($deposit['item_name'])) {
-                    RentalSecurityDeposit::create([
-                        'rental_id' => $rental->id,
-                        'item_name' => $deposit['item_name'],
-                        'amount' => (float) ($deposit['amount'] ?? 0),
-                        'is_paid' => (bool) ($deposit['is_paid'] ?? false),
-                        'is_refunded' => false,
-                        'created_by' => auth()->id(),
-                    ]);
-                }
+        }
+
+        // Security deposits — outside items loop
+        foreach ($this->securityDeposits as $deposit) {
+            if (! empty($deposit['item_name'])) {
+                RentalSecurityDeposit::create([
+                    'rental_id' => $rental->id,
+                    'item_name' => $deposit['item_name'],
+                    'amount' => (float) ($deposit['amount'] ?? 0),
+                    'is_paid' => (bool) ($deposit['is_paid'] ?? false),
+                    'is_refunded' => false,
+                    'created_by' => auth()->id(),
+                ]);
             }
         }
 

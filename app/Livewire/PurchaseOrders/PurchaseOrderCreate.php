@@ -10,6 +10,7 @@ use App\Models\PurchaseOrderPayment;
 use App\Models\Vendor;
 use App\Services\AccountService;
 use Carbon\Carbon;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class PurchaseOrderCreate extends Component
@@ -121,8 +122,17 @@ class PurchaseOrderCreate extends Component
     public function updatedItems(): void
     {
         foreach ($this->items as $i => $item) {
-            $qty = (int) ($item['qty'] ?? 1);
-            $price = (float) ($item['unit_price'] ?? 0);
+            $qty = max(1, (int) ($item['qty'] ?? 1));
+            $price = max(0, (float) ($item['unit_price'] ?? 0));
+            $this->items[$i]['total_price'] = (string) ($qty * $price);
+        }
+    }
+
+    public function recalcItems(): void
+    {
+        foreach ($this->items as $i => $item) {
+            $qty = max(1, (int) ($item['qty'] ?? 1));
+            $price = max(0, (float) ($item['unit_price'] ?? 0));
             $this->items[$i]['total_price'] = (string) ($qty * $price);
         }
     }
@@ -138,6 +148,26 @@ class PurchaseOrderCreate extends Component
     }
 
     public function getBalanceDueProperty(): float
+    {
+        return max(0, $this->total - (float) $this->initialPayment);
+    }
+
+    use Livewire\Attributes\Computed;
+
+    #[Computed]
+    public function subtotal(): float
+    {
+        return collect($this->items)->sum(fn ($i) => (float) ($i['total_price'] ?? 0));
+    }
+
+    #[Computed]
+    public function total(): float
+    {
+        return max(0, $this->subtotal - (float) $this->discount);
+    }
+
+    #[Computed]
+    public function balanceDue(): float
     {
         return max(0, $this->total - (float) $this->initialPayment);
     }
@@ -190,8 +220,8 @@ class PurchaseOrderCreate extends Component
         $lastPo = PurchaseOrder::latest()->first();
         $poNumber = 'PO-'.str_pad(($lastPo ? $lastPo->id + 1 : 1), 4, '0', STR_PAD_LEFT);
 
-        $total = $this->total;
-        $paid = (float) $this->initialPayment;
+        $total   = $this->total;
+        $paid    = (float) $this->initialPayment;
         $balance = max(0, $total - $paid);
 
         $po = PurchaseOrder::create([

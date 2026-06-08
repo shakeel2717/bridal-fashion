@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Rental;
+use App\Models\RentalItem;
 use App\Models\RentalPayment;
 use App\Models\Sale;
 use Illuminate\Support\Carbon;
@@ -16,40 +17,40 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $today    = Carbon::today();
+        $today = Carbon::today();
         $tomorrow = Carbon::tomorrow();
 
         $stats = [
-            'total_customers'  => Customer::where('is_walkin', false)->count(),
-            'total_products'   => Product::active()->count(),
-            'active_rentals'   => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
-            'overdue'          => Rental::whereRaw('DATE(return_date) < ?', [$today->toDateString()])
-                                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
-            'pickup_today'     => Rental::whereRaw('DATE(pickup_date) = ?', [$today->toDateString()])
-                                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
-            'pickup_tomorrow'  => Rental::whereRaw('DATE(pickup_date) = ?', [$tomorrow->toDateString()])
-                                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
-            'return_tomorrow'  => Rental::whereRaw('DATE(return_date) = ?', [$tomorrow->toDateString()])
-                                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
-            'monthly_revenue'  => RentalPayment::whereRaw('DATE(payment_date) >= ?', [$today->startOfMonth()->toDateString()])
-                                    ->whereRaw('DATE(payment_date) <= ?', [$today->endOfMonth()->toDateString()])
-                                    ->sum('amount')
+            'total_customers' => Customer::where('is_walkin', false)->count(),
+            'total_products' => Product::active()->count(),
+            'active_rentals' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
+            'overdue' => Rental::whereRaw('DATE(return_date) < ?', [$today->toDateString()])
+                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
+            'pickup_today' => Rental::whereRaw('DATE(pickup_date) = ?', [$today->toDateString()])
+                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
+            'pickup_tomorrow' => Rental::whereRaw('DATE(pickup_date) = ?', [$tomorrow->toDateString()])
+                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
+            'return_tomorrow' => Rental::whereRaw('DATE(return_date) = ?', [$tomorrow->toDateString()])
+                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
+            'monthly_revenue' => RentalPayment::whereRaw('DATE(payment_date) >= ?', [$today->startOfMonth()->toDateString()])
+                ->whereRaw('DATE(payment_date) <= ?', [$today->endOfMonth()->toDateString()])
+                ->sum('amount')
                                 + Sale::whereMonth('sale_date', $today->month)
                                     ->whereYear('sale_date', $today->year)
                                     ->whereNotIn('status', ['cancelled'])
                                     ->sum('advance_paid'),
-            'pending_balance'  => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                                    ->sum('remaining_balance'),
-            'total_cash'       => Account::where('is_active', true)->sum('current_balance'),
-            'total_expenses'   => Expense::whereMonth('expense_date', $today->month)
-                                    ->whereYear('expense_date', $today->year)
-                                    ->sum('amount'),
-            'pending_po'       => PurchaseOrder::whereNotIn('status', ['received', 'cancelled'])
-                                    ->sum('balance_due'),
-            'total_sales'      => Sale::whereMonth('sale_date', $today->month)
-                                    ->whereYear('sale_date', $today->year)
-                                    ->whereNotIn('status', ['cancelled'])
-                                    ->count(),
+            'pending_balance' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->sum('remaining_balance'),
+            'total_cash' => Account::where('is_active', true)->sum('current_balance'),
+            'total_expenses' => Expense::whereMonth('expense_date', $today->month)
+                ->whereYear('expense_date', $today->year)
+                ->sum('amount'),
+            'pending_po' => PurchaseOrder::whereNotIn('status', ['received', 'cancelled'])
+                ->sum('balance_due'),
+            'total_sales' => Sale::whereMonth('sale_date', $today->month)
+                ->whereYear('sale_date', $today->year)
+                ->whereNotIn('status', ['cancelled'])
+                ->count(),
         ];
 
         $overdue = Rental::whereRaw('DATE(return_date) < ?', [$today->toDateString()])
@@ -70,8 +71,19 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'type', 'current_balance']);
 
+        // Duplicate bookings — same product booked in overlapping date ranges
+        $duplicateBookings = RentalItem::select('product_id')
+            ->with(['product:id,name,code', 'rental:id,customer_name,pickup_date,return_date,status'])
+            ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            )
+            ->get()
+            ->groupBy('product_id')
+            ->filter(fn ($group) => $group->count() > 1)
+            ->take(5);
+
         return view('dashboard', compact(
-            'stats', 'overdue', 'pickupToday', 'returnTomorrow', 'accounts'
+            'stats', 'overdue', 'pickupToday', 'returnTomorrow',
+            'accounts', 'duplicateBookings'
         ));
     }
 }

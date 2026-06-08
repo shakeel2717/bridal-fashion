@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Vendor.php
 
 namespace App\Models;
@@ -13,7 +14,9 @@ class Vendor extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name', 'phone', 'address', 'notes', 'is_active', 'created_by', 'updated_by',
+        'name', 'phone', 'address', 'email',
+        'notes', 'is_active', 'photo',
+        'created_by', 'updated_by',
     ];
 
     protected function casts(): array
