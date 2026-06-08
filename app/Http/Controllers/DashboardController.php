@@ -19,43 +19,50 @@ class DashboardController extends Controller
     {
         $today = Carbon::today();
         $tomorrow = Carbon::tomorrow();
+        $monthStart = $today->copy()->startOfMonth()->toDateString();
+        $monthEnd = $today->copy()->endOfMonth()->toDateString();
 
         $stats = [
             'total_customers' => Customer::where('is_walkin', false)->count(),
             'total_products' => Product::active()->count(),
             'active_rentals' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
             'overdue' => Rental::whereRaw('DATE(return_date) < ?', [$today->toDateString()])
-                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
+                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->count(),
             'pickup_today' => Rental::whereRaw('DATE(pickup_date) = ?', [$today->toDateString()])
                 ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
             'pickup_tomorrow' => Rental::whereRaw('DATE(pickup_date) = ?', [$tomorrow->toDateString()])
                 ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
             'return_tomorrow' => Rental::whereRaw('DATE(return_date) = ?', [$tomorrow->toDateString()])
                 ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])->count(),
-            'monthly_revenue' => RentalPayment::whereRaw('DATE(payment_date) >= ?', [$today->startOfMonth()->toDateString()])
-                ->whereRaw('DATE(payment_date) <= ?', [$today->endOfMonth()->toDateString()])
+            'monthly_revenue' => RentalPayment::whereRaw('DATE(payment_date) >= ?', [$monthStart])
+                ->whereRaw('DATE(payment_date) <= ?', [$monthEnd])
                 ->sum('amount')
-                                + Sale::whereMonth('sale_date', $today->month)
-                                    ->whereYear('sale_date', $today->year)
-                                    ->whereNotIn('status', ['cancelled'])
-                                    ->sum('advance_paid'),
-            'pending_balance' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->sum('remaining_balance'),
-            'total_cash' => Account::where('is_active', true)->sum('current_balance'),
+                + Sale::whereMonth('sale_date', $today->month)
+                    ->whereYear('sale_date', $today->year)
+                    ->whereNotIn('status', ['cancelled'])
+                    ->sum('advance_paid'),
             'total_expenses' => Expense::whereMonth('expense_date', $today->month)
                 ->whereYear('expense_date', $today->year)
                 ->sum('amount'),
-            'pending_po' => PurchaseOrder::whereNotIn('status', ['received', 'cancelled'])
-                ->sum('balance_due'),
             'total_sales' => Sale::whereMonth('sale_date', $today->month)
                 ->whereYear('sale_date', $today->year)
                 ->whereNotIn('status', ['cancelled'])
                 ->count(),
+            'pending_balance' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->sum('remaining_balance'),
+            'total_cash' => Account::where('is_active', true)->sum('current_balance'),
+            'pending_po' => PurchaseOrder::whereNotIn('status', ['received', 'cancelled'])
+                ->sum('balance_due'),
+
         ];
 
         $overdue = Rental::whereRaw('DATE(return_date) < ?', [$today->toDateString()])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-            ->with('items')->latest('return_date')->take(5)->get();
+            ->with('items')
+            ->latest('return_date')
+            ->take(5)
+            ->get();
 
         $pickupToday = Rental::whereRaw('DATE(pickup_date) = ?', [$today->toDateString()])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
