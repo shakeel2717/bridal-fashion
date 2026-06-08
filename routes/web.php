@@ -8,15 +8,15 @@ use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeesController;
 use App\Http\Controllers\ExpensesController;
+use App\Http\Controllers\FeatureTogglesController;
 use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\PurchaseOrdersController;
 use App\Http\Controllers\RentalsController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\VendorsController;
-use App\Http\Controllers\ReportsController;
-use App\Http\Controllers\FeatureTogglesController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -45,6 +45,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/advances', [AdvancesController::class, 'index'])->name('advances.index');
     Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
+    Route::get('/reports/item', [ReportsController::class, 'items'])->name('reports.item');
+    Route::get('/reports/all-items', [ReportsController::class, 'allItems'])->name('reports.all-items');
+    Route::get('/reports/top-items', [ReportsController::class, 'topItems'])->name('reports.top-items');
+    Route::get('/reports/purchase-sale', [ReportsController::class, 'purchaseSale'])->name('reports.purchase-sale');
+    Route::get('/reports/customer-vendor', [ReportsController::class, 'customerVendor'])->name('reports.customer-vendor');
     Route::get('/settings', fn () => view('coming-soon'))->name('settings.index');
     Route::get('/feature-toggles', [FeatureTogglesController::class, 'index'])->name('feature-toggles.index');
 });
