@@ -55,41 +55,58 @@ class AlertsDashboard extends Component
 
     public function render()
     {
-        $today = Carbon::today()->toDateString();
-        $tomorrow = Carbon::tomorrow()->toDateString();
+        $today = now()->toDateString();
+        $tomorrow = now()->addDay()->toDateString();
 
-        $overdue = Rental::with(['items'])
-            ->whereRaw('DATE(return_date) < ?', [$today])
+        $employees = User::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $overdue = Rental::whereRaw('DATE(return_date) < ?', [$today])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-            ->orderByRaw('DATE(return_date)')
+            ->with('items')
+            ->orderBy('return_date')
             ->get();
 
-        $returnToday = Rental::with(['items'])
-            ->whereRaw('DATE(return_date) = ?', [$today])
+        $returnToday = Rental::whereRaw('DATE(return_date) = ?', [$today])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->with('items')
             ->get();
 
-        $returnTomorrow = Rental::with(['items'])
-            ->whereRaw('DATE(return_date) = ?', [$tomorrow])
+        $returnTomorrow = Rental::whereRaw('DATE(return_date) = ?', [$tomorrow])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->with('items')
             ->get();
 
-        $pickupToday = Rental::with(['items'])
-            ->whereRaw('DATE(pickup_date) = ?', [$today])
+        $pickupToday = Rental::whereRaw('DATE(pickup_date) = ?', [$today])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->with('items')
             ->get();
 
-        $pickupTomorrow = Rental::with(['items'])
-            ->whereRaw('DATE(pickup_date) = ?', [$tomorrow])
+        $pickupTomorrow = Rental::whereRaw('DATE(pickup_date) = ?', [$tomorrow])
             ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->with('items')
             ->get();
 
-        $readyForPickup = Rental::with(['items'])
-            ->where('status', 'ready')
-            ->orderByRaw('DATE(pickup_date)')
+        $ready = Rental::where('status', 'ready')
+            ->with('items')
             ->get();
 
-        $employees = User::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        // Upcoming pickups — all future pickups beyond tomorrow, date-wise
+        $upcomingPickups = Rental::whereRaw('DATE(pickup_date) > ?', [$tomorrow])
+            ->whereNotIn('status', ['returned', 'cancelled', 'abandoned', 'picked_up'])
+            ->with('items')
+            ->orderBy('pickup_date')
+            ->get()
+            ->groupBy(fn ($r) => Carbon::parse($r->pickup_date)->format('Y-m-d'));
+
+        // Upcoming returns — all future returns beyond tomorrow, date-wise
+        $upcomingReturns = Rental::whereRaw('DATE(return_date) > ?', [$tomorrow])
+            ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->with('items')
+            ->orderBy('return_date')
+            ->get()
+            ->groupBy(fn ($r) => Carbon::parse($r->return_date)->format('Y-m-d'));
 
         $counts = [
             'overdue' => $overdue->count(),
@@ -97,13 +114,16 @@ class AlertsDashboard extends Component
             'return_tomorrow' => $returnTomorrow->count(),
             'pickup_today' => $pickupToday->count(),
             'pickup_tomorrow' => $pickupTomorrow->count(),
-            'ready' => $readyForPickup->count(),
+            'ready' => $ready->count(),
+            'upcoming_pickups' => $upcomingPickups->sum(fn ($g) => $g->count()),
+            'upcoming_returns' => $upcomingReturns->sum(fn ($g) => $g->count()),
         ];
 
         return view('livewire.notifications.alerts-dashboard', compact(
             'overdue', 'returnToday', 'returnTomorrow',
-            'pickupToday', 'pickupTomorrow', 'readyForPickup',
-            'employees', 'counts', 'today', 'tomorrow'
+            'pickupToday', 'pickupTomorrow', 'ready',
+            'upcomingPickups', 'upcomingReturns',
+            'employees', 'counts'
         ));
     }
 }
