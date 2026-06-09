@@ -12,10 +12,10 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AdminUserSeeder::class,
-            EmployeeSeeder::class,
-            CategorySeeder::class,
-            VendorSeeder::class,
-            CustomerSeeder::class,
+            // EmployeeSeeder::class,
+            // CategorySeeder::class,
+            // VendorSeeder::class,
+            // CustomerSeeder::class,
             // ProductSeeder::class,
             FeatureToggleSeeder::class,
             AccountSeeder::class,
