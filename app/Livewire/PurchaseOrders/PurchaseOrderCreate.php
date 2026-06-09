@@ -15,7 +15,6 @@ use Livewire\Component;
 
 class PurchaseOrderCreate extends Component
 {
-    
     public string $vendorId = '';
 
     public string $vendorBillNumber = '';
@@ -160,7 +159,12 @@ class PurchaseOrderCreate extends Component
     public function saveVendor(): void
     {
         $this->validate([
-            'newVendorName' => 'required|string|max:150',
+            'vendorId' => 'required|exists:vendors,id',
+            'orderDate' => 'required|date',
+            'vendorBillNumber' => 'required|string|max:100',
+            'initialPayment' => 'nullable|numeric|min:0',
+        ], [
+            'vendorBillNumber.required' => 'Vendor bill number is required.',
         ]);
 
         $vendor = Vendor::create([
@@ -204,8 +208,8 @@ class PurchaseOrderCreate extends Component
         $lastPo = PurchaseOrder::latest()->first();
         $poNumber = 'PO-'.str_pad(($lastPo ? $lastPo->id + 1 : 1), 4, '0', STR_PAD_LEFT);
 
-        $total   = $this->total;
-        $paid    = (float) $this->initialPayment;
+        $total = $this->total;
+        $paid = (float) $this->initialPayment;
         $balance = max(0, $total - $paid);
 
         $po = PurchaseOrder::create([

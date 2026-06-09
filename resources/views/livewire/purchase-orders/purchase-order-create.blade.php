@@ -62,9 +62,15 @@
                     </div>
 
                     <div class="col-6">
-                        <label class="form-label">Vendor Bill Number</label>
-                        <input type="text" wire:model="vendorBillNumber" class="form-control"
+                        <label class="form-label">
+                            Vendor Bill Number <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" wire:model="vendorBillNumber"
+                            class="form-control @error('vendorBillNumber') is-invalid @enderror"
                             placeholder="e.g. VB-2024-001">
+                        @error('vendorBillNumber')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="col-4">
@@ -81,29 +87,22 @@
                         <input type="date" wire:model="expectedDate" class="form-control">
                     </div>
 
-                    <div class="col-4">
-                        <label class="form-label">Discount (Rs.)</label>
-                        <input type="number" wire:model.lazy="discount"
-                            wire:change="recalcItems"
-                            class="form-control" min="0" placeholder="0">
-                    </div>
-
-                    <div class="col-12">
+                    {{-- <div class="col-12">
                         <label class="form-label">Notes</label>
                         <textarea wire:model="notes" class="form-control" rows="2" placeholder="Any notes..."></textarea>
-                    </div>
+                    </div> --}}
                 </div>
             </div>
 
             {{-- Items --}}
-            <div class="table-card mb-3" style="padding:20px;">
+            <div class="table-card mb-3" style="padding:20px; overflow:visible;">
                 <div
                     style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
                     <i class="bi bi-box me-1"></i> Items
                 </div>
 
                 {{-- Product Search --}}
-                <div style="position:relative; margin-bottom:14px;">
+                <div style="position:relative; margin-bottom:10px;">
                     <input type="text" wire:model.live.debounce.300ms="productSearch" wire:keyup="searchProducts"
                         class="form-control form-control-sm" placeholder="Search existing product to add...">
 
@@ -128,80 +127,107 @@
                 </div>
 
                 <button type="button" wire:click="addCustomItem"
-                    style="background:none; border:1.5px dashed var(--border); border-radius:6px; padding:6px 14px; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; width:100%; margin-bottom:14px;">
+                    style="background:none; border:1.5px dashed var(--border); border-radius:6px; padding:5px 14px; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; width:100%; margin-bottom:12px;">
                     <i class="bi bi-plus me-1"></i> Add Custom Item (not in system)
                 </button>
 
                 @error('items')
-                    <div class="alert alert-danger py-2 mb-3" style="font-size:12px;">{{ $message }}</div>
+                    <div class="alert alert-danger py-2 mb-2" style="font-size:12px;">{{ $message }}</div>
                 @enderror
 
-                {{-- Items Grid --}}
-                @if (count($items) > 0)
-                    <div class="po-item-row header">
-                        <div>Item</div>
-                        <div style="text-align:center;">Qty</div>
-                        <div style="text-align:right;">Unit Price</div>
-                        <div style="text-align:right;">Total</div>
-                        <div></div>
-                    </div>
-
-                    @foreach ($items as $index => $item)
-                        <div style="background:#f7fafc; border-radius:8px; padding:12px; margin-bottom:8px;">
-                            <div class="row g-2 align-items-center">
-                                <div class="col-5">
+                {{-- Excel-style Table --}}
+                <table class="table mb-0" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th style="width:40px; text-align:center;">Sr</th>
+                            <th style="width:100px;">Design #</th>
+                            <th>Item Name</th>
+                            <th style="width:80px; text-align:center;">Qty</th>
+                            <th style="width:110px; text-align:right;">Unit Price</th>
+                            <th style="width:110px; text-align:right;">Total</th>
+                            <th style="width:40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($items as $index => $item)
+                            <tr>
+                                <td style="text-align:center; font-weight:700; color:var(--text-muted);">
+                                    {{ $index + 1 }}
+                                </td>
+                                <td>
+                                    <input type="text" wire:model="items.{{ $index }}.item_code"
+                                        class="form-control form-control-sm" placeholder="Code"
+                                        style="font-family:monospace; text-transform:uppercase;"
+                                        {{ $item['product_id'] ? 'readonly' : '' }}>
+                                </td>
+                                <td>
                                     <input type="text" wire:model="items.{{ $index }}.item_name"
                                         class="form-control form-control-sm" placeholder="Item name"
                                         {{ $item['product_id'] ? 'readonly' : '' }}>
-                                </div>
-                                <div class="col-1">
+                                    @if ($item['product_id'])
+                                        <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">
+                                            Linked to product
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
                                     <input type="number" wire:model.lazy="items.{{ $index }}.qty"
-                                        wire:change="recalcItems" class="form-control form-control-sm"
-                                        min="1" style="text-align:center;">
-                                </div>
-                                <div class="col-2">
+                                        wire:change="recalcItems" class="form-control form-control-sm" min="1"
+                                        style="text-align:center;">
+                                </td>
+                                <td>
                                     <input type="number" wire:model.lazy="items.{{ $index }}.unit_price"
-                                        wire:change="recalcItems" class="form-control form-control-sm"
-                                        min="0" placeholder="0">
-                                </div>
-                                <div class="col-2"
-                                    style="text-align:right; font-size:13px; font-weight:700; color:var(--navy);">
+                                        wire:change="recalcItems" class="form-control form-control-sm" min="0"
+                                        style="text-align:right;" placeholder="0">
+                                </td>
+                                <td
+                                    style="text-align:right; font-weight:700; color:var(--navy); vertical-align:middle;">
                                     Rs. {{ number_format((float) ($item['total_price'] ?? 0), 0) }}
-                                </div>
-                                <div class="col-2 d-flex gap-1">
-                                    <input type="text" wire:model="items.{{ $index }}.item_code"
-                                        class="form-control form-control-sm" placeholder="Code"
-                                        {{ $item['product_id'] ? 'readonly' : '' }}>
+                                </td>
+                                <td style="text-align:center; vertical-align:middle;">
                                     <button type="button" wire:click="removeItem({{ $index }})"
-                                        style="background:none; border:none; color:#fc8181; font-size:18px; cursor:pointer; padding:0 6px; flex-shrink:0;">
+                                        style="background:none; border:none; color:#fc8181; font-size:18px; cursor:pointer; padding:0;">
                                         <i class="bi bi-x"></i>
                                     </button>
-                                </div>
-                            </div>
-                            @if ($item['product_id'])
-                                <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">
-                                    <span class="tbl-code-badge"
-                                        style="font-size:10px;">{{ $item['item_code'] }}</span>
-                                    Linked to product
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-                @else
-                    <div
-                        style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px; border:2px dashed var(--border); border-radius:8px;">
-                        Search products or add custom items above
-                    </div>
-                @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">
+                                    Search products or add custom items above
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if (count($items) > 0)
+                        <tfoot>
+                            <tr>
+                                <td colspan="5"
+                                    style="text-align:right; font-size:12px; color:var(--text-muted); padding-top:10px;">
+                                    Subtotal
+                                </td>
+                                <td style="text-align:right; font-weight:700; padding-top:10px;">
+                                    Rs. {{ number_format($this->subtotal, 0) }}
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
             </div>
 
-            {{-- Payment --}}
+            {{-- Discount + Payment --}}
             <div class="table-card" style="padding:20px;">
                 <div
                     style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
-                    <i class="bi bi-cash me-1"></i> Initial Payment (optional)
+                    <i class="bi bi-cash me-1"></i> Discount & Payment
                 </div>
                 <div class="row g-3">
+                    <div class="col-4">
+                        <label class="form-label">Discount (Rs.)</label>
+                        <input type="number" wire:model.lazy="discount" wire:change="recalcItems"
+                            class="form-control" min="0" placeholder="0">
+                    </div>
                     <div class="col-4">
                         <label class="form-label">Amount Paid (Rs.)</label>
                         <input type="number" wire:model.lazy="initialPayment" class="form-control" min="0"
