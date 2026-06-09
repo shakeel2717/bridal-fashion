@@ -26,7 +26,7 @@ class ProductForm extends Component
 
     public string $type = 'rental';
 
-    public string $rentalPrice = '';
+    public string $rentalPrice = '0';
 
     public string $salePrice = '';
 
@@ -365,7 +365,7 @@ class ProductForm extends Component
         $this->categoryId = '';
         $this->groupId = '';
         $this->type = 'rental';
-        $this->rentalPrice = '';
+        $this->rentalPrice = '0';
         $this->salePrice = '';
         $this->stockQty = 1;
         $this->notes = '';

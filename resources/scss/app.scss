@@ -50,9 +50,9 @@ $modal-content-border-radius: 10px;
   --topbar-h: 54px;
   --body-bg: #f0f2f5;
   --card-bg: #ffffff;
-  --text-primary: #1a2340;
-  --text-muted: #718096;
-  --border: #e2e8f0;
+  --text-primary: #000000;
+  --text-muted: #333333;
+  --border: #000000;
   --radius: 8px;
   --radius-lg: 12px;
 }
@@ -751,4 +751,330 @@ textarea.form-control {
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+
+// ── Global Typography ─────────────────────────────────
+body,
+p,
+span,
+div,
+label,
+td,
+th,
+li,
+a {
+  color: #000000;
+}
+
+.form-label {
+  color: #000000;
+  font-weight: 600;
+}
+
+.form-control,
+.form-select {
+  color: #000000;
+  border-color: #000000;
+
+  &::placeholder {
+    color: #888888 !important;
+    font-style: italic;
+  }
+
+  &:focus {
+    border-color: #8a6200 !important;
+    border-width: 2px;
+    background-color: #1a2340 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(138, 98, 0, 0.25) !important;
+    outline: none;
+
+    &::placeholder {
+      color: #aaaaaa !important;
+    }
+  }
+}
+
+// Also cover textarea
+textarea.form-control:focus {
+  border-color: #8a6200 !important;
+  border-width: 2px;
+  background-color: #1a2340 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(138, 98, 0, 0.25) !important;
+}
+
+// Select dropdown arrow stays visible on dark background
+select.form-select:focus {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+// ── Tables — Striped + Black Borders ──────────────────
+.table {
+  border: 2px solid #000000;
+  border-collapse: collapse;
+
+  thead tr th {
+    background: #1a2340;
+    color: #ffffff !important;
+    border: 1px solid #000000;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 12px;
+  }
+
+  tbody tr td {
+    border: 1px solid #000000;
+    color: #000000;
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+
+  tbody tr:nth-child(odd) {
+    background-color: #f9f9f9;
+  }
+
+  tbody tr:nth-child(even) {
+    background-color: #ffffff;
+  }
+
+  tbody tr:hover {
+    background-color: #fef9ef !important;
+  }
+
+  tfoot tr td {
+    border: 1px solid #000000;
+    color: #000000;
+    font-weight: 700;
+    padding: 10px 12px;
+  }
+}
+
+// ── Cards — Black Borders ─────────────────────────────
+.table-card {
+  border: 2px solid #000000 !important;
+  border-radius: 8px;
+
+  .table-card-header {
+    border-bottom: 2px solid #000000;
+  }
+}
+
+.stat-card {
+  border: 2px solid #000000 !important;
+
+  .stat-label {
+    color: #000000 !important;
+    font-weight: 700;
+  }
+
+  .stat-value {
+    color: #000000 !important;
+  }
+
+  .stat-sub {
+    color: #333333 !important;
+  }
+}
+
+.module-card {
+  border: 2px solid #000000 !important;
+
+  .mod-name {
+    color: #000000 !important;
+    font-weight: 700;
+  }
+}
+
+.info-card {
+  border: 2px solid #000000 !important;
+
+  .info-card-title {
+    color: #000000 !important;
+    font-weight: 700;
+    border-bottom: 1px solid #000000;
+  }
+
+  .item-name {
+    color: #000000 !important;
+    font-weight: 600;
+  }
+
+  .item-code {
+    color: #333333 !important;
+  }
+}
+
+.account-card {
+  border: 2px solid #000000 !important;
+
+  .account-name {
+    color: #000000 !important;
+    font-weight: 700;
+  }
+
+  .account-balance {
+    color: #000000 !important;
+  }
+
+  .account-type-label {
+    color: #333333 !important;
+  }
+
+  .account-balance-label {
+    color: #333333 !important;
+  }
+}
+
+// ── Sidebar stays navy ────────────────────────────────
+.sidebar,
+.sidebar *,
+.topbar,
+.topbar * {
+  // Keep original sidebar and topbar colors — don't override
+}
+
+// ── Page titles ───────────────────────────────────────
+.page-title {
+  color: #000000 !important;
+  font-weight: 800;
+}
+
+.page-subtitle {
+  color: #333333 !important;
+}
+
+.section-label {
+  color: #000000 !important;
+  font-weight: 700;
+}
+
+// ── Table card title ──────────────────────────────────
+.table-card-title {
+  color: #000000 !important;
+  font-weight: 700;
+}
+
+// ── Summary boxes ─────────────────────────────────────
+.summary-row {
+  .s-label {
+    color: #ffffff !important; // stays white inside navy box
+  }
+
+  .s-value {
+    color: #ffffff !important;
+  }
+}
+
+// ── Badges stay as-is — they have their own background colors ──
+
+// ── Action buttons text ───────────────────────────────
+.action-btn {
+  color: #000000;
+  border-color: #000000;
+
+  &:hover {
+    background: #000000;
+    color: #ffffff;
+  }
+}
+
+// ── Text muted override ───────────────────────────────
+.text-muted {
+  color: #333333 !important;
+}
+
+// ── Search dropdown ───────────────────────────────────
+.product-search-dropdown {
+  border: 2px solid #000000;
+
+  .search-item {
+    border-bottom: 1px solid #000000;
+
+    .search-item-code {
+      color: #000000;
+      font-weight: 700;
+    }
+
+    .search-item-name {
+      color: #000000;
+    }
+
+    .search-item-category {
+      color: #333333;
+    }
+  }
+}
+
+// ── Rental item row ───────────────────────────────────
+.rental-item-row {
+  border: 1.5px solid #000000 !important;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 12px;
+
+  .item-code {
+    color: #000000 !important;
+    font-weight: 700;
+  }
+
+  .item-name {
+    color: #000000 !important;
+  }
+}
+
+// ── PO item row ───────────────────────────────────────
+.po-item-row {
+  border-bottom: 1px solid #000000;
+  color: #000000;
+}
+
+// ── Tabs ──────────────────────────────────────────────
+.tab-pill {
+  color: #000000;
+  border: 1px solid #000000;
+
+  &.active {
+    background: #000000;
+    color: #ffffff;
+  }
+}
+
+.notif-tab-btn {
+  color: #000000;
+  border-bottom: 2px solid transparent;
+
+  &.active {
+    color: #000000;
+    border-bottom-color: var(--gold);
+    font-weight: 700;
+  }
+}
+
+// ── Month nav ─────────────────────────────────────────
+.month-nav-btn {
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+::placeholder {
+  color: #d8d8d8 !important;
+  opacity: 1;
+  font-style: italic;
+}
+
+::-webkit-input-placeholder {
+  color: #d8d8d8 !important;
+  font-style: italic;
+}
+
+::-moz-placeholder {
+  color: #d8d8d8 !important;
+  font-style: italic;
+}
+
+:-ms-input-placeholder {
+  color: #d8d8d8 !important;
+  font-style: italic;
 }
