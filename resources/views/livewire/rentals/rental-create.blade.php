@@ -40,7 +40,7 @@
     @if ($step === 1)
         <div class="row g-3">
             <div class="col-8">
-                <div class="table-card" style="padding:20px;">
+                <div class="table-card mb-3" style="padding:16px 20px; overflow:visible;">
                     <div class="mb-4">
                         <label class="form-label">Customer Type</label>
                         <div class="walkin-toggle" style="max-width:300px;">
