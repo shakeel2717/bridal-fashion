@@ -14,9 +14,9 @@
                     <div class="row g-3">
 
                         {{-- Name --}}
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label">Product Name <span class="text-danger">*</span></label>
-                            <input type="text" wire:model="name"
+                            <input type="text" wire:model="name" id="pf_name"
                                 class="form-control @error('name') is-invalid @enderror"
                                 placeholder="e.g. Red Bridal Lahnga">
                             @error('name')
@@ -27,16 +27,57 @@
                         {{-- Category --}}
                         <div class="col-6">
                             <label class="form-label">Category <span class="text-danger">*</span></label>
-                            <select wire:model.live="categoryId"
-                                class="form-select @error('categoryId') is-invalid @enderror">
-                                <option value="">Select category...</option>
-                                @foreach ($categories as $cat)
-                                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('categoryId')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            @if (!$showCategoryForm)
+                                <div class="d-flex gap-2">
+                                    <select wire:model.live="categoryId" id="pf_category"
+                                        class="form-select @error('categoryId') is-invalid @enderror">
+                                        <option value="">Select category...</option>
+                                        @foreach ($categories as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->name }}
+                                                ({{ $cat->code }})</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="openCategoryForm"
+                                        class="btn btn-outline-secondary" style="padding:0 12px;" title="Add category">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                                @error('categoryId')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            @else
+                                <div
+                                    style="background:#f0fff4; border:1.5px solid #9ae6b4; border-radius:8px; padding:10px;">
+                                    <div style="font-size:11px; font-weight:700; color:#276749; margin-bottom:8px;">
+                                        <i class="bi bi-folder-plus me-1"></i> New Category
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-7">
+                                            <input type="text" wire:model="newCategoryName"
+                                                class="form-control form-control-sm @error('newCategoryName') is-invalid @enderror"
+                                                placeholder="Category name *">
+                                            @error('newCategoryName')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-5">
+                                            <input type="text" wire:model="newCategoryCode"
+                                                class="form-control form-control-sm @error('newCategoryCode') is-invalid @enderror"
+                                                placeholder="Code e.g. BL *" style="text-transform:uppercase;">
+                                            @error('newCategoryCode')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-12 d-flex gap-2">
+                                            <button wire:click="saveCategory" class="btn btn-sm btn-success flex-fill">
+                                                <i class="bi bi-check me-1"></i> Save
+                                            </button>
+                                            <button wire:click="cancelCategoryForm"
+                                                class="btn btn-sm btn-outline-secondary">Cancel</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Product Group --}}
@@ -199,20 +240,6 @@
                                 <label class="form-label">Size / Waist</label>
                                 <input type="text" wire:model="itemVariants.0.size" class="form-control"
                                     placeholder="e.g. 36, Free">
-                            </div>
-                        @endif
-
-                        {{-- Rental Price --}}
-                        @if (in_array($type, ['rental', 'both']))
-                            <div class="col-4">
-                                <label class="form-label">Rental Price (Rs.) <span
-                                        class="text-danger">*</span></label>
-                                <input type="number" wire:model="rentalPrice"
-                                    class="form-control @error('rentalPrice') is-invalid @enderror" placeholder="0"
-                                    min="0" step="0.01">
-                                @error('rentalPrice')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
                             </div>
                         @endif
 

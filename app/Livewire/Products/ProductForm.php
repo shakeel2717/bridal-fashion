@@ -20,6 +20,12 @@ class ProductForm extends Component
 
     public string $name = '';
 
+    public bool $showCategoryForm = false;
+
+    public string $newCategoryName = '';
+
+    public string $newCategoryCode = '';
+
     public string $categoryId = '';
 
     public string $groupId = '';
@@ -110,7 +116,6 @@ class ProductForm extends Component
     public function openCreate(): void
     {
         $this->resetForm();
-        // Initialize one variant row
         $this->itemVariants = [['code' => '', 'color' => '', 'size' => '']];
         $this->dispatch('open-product-modal');
     }
@@ -164,9 +169,6 @@ class ProductForm extends Component
             'photo' => 'nullable|image|max:3072',
         ];
 
-        if (in_array($this->type, ['rental', 'both'])) {
-            $rules['rentalPrice'] = 'required|numeric|min:0';
-        }
         if (in_array($this->type, ['sale', 'both'])) {
             $rules['salePrice'] = 'required|numeric|min:0';
         }
@@ -226,7 +228,7 @@ class ProductForm extends Component
             'category_id' => $this->categoryId,
             'group_id' => $this->groupId ?: null,
             'type' => $this->type,
-            'rental_price' => in_array($this->type, ['rental', 'both']) ? ($this->rentalPrice ?: 0) : 0,
+            'rental_price' => 0,
             'sale_price' => in_array($this->type, ['sale', 'both']) ? ($this->salePrice ?: 0) : 0,
             'purchase_price' => 0,
             'notes' => $this->notes ?: null,
@@ -367,6 +369,9 @@ class ProductForm extends Component
         $this->type = 'rental';
         $this->rentalPrice = '0';
         $this->salePrice = '';
+        $this->showCategoryForm = false;
+        $this->newCategoryName = '';
+        $this->newCategoryCode = '';
         $this->stockQty = 1;
         $this->notes = '';
         $this->isActive = true;
@@ -376,7 +381,7 @@ class ProductForm extends Component
         $this->abandonedNote = '';
         $this->photo = null;
         $this->existingPhoto = null;
-        $this->itemVariants = [];
+        $this->itemVariants = [['code' => '', 'color' => '', 'size' => '']]; // always start with 1 row
         $this->showVendorForm = false;
         $this->newVendorName = '';
         $this->newVendorPhone = '';
@@ -384,6 +389,44 @@ class ProductForm extends Component
         $this->showGroupForm = false;
         $this->newGroupName = '';
         $this->newGroupCode = '';
+        $this->resetValidation();
+    }
+
+    public function openCategoryForm(): void
+    {
+        $this->showCategoryForm = true;
+        $this->newCategoryName = '';
+        $this->newCategoryCode = '';
+        $this->resetValidation();
+    }
+
+    public function saveCategory(): void
+    {
+        $this->validate([
+            'newCategoryName' => 'required|string|max:150',
+            'newCategoryCode' => 'required|string|max:10|unique:categories,code',
+        ], [
+            'newCategoryCode.unique' => 'This code is already used.',
+        ]);
+
+        $cat = Category::create([
+            'name' => $this->newCategoryName,
+            'code' => strtoupper($this->newCategoryCode),
+            'is_active' => true,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->categoryId = (string) $cat->id;
+        $this->showCategoryForm = false;
+        $this->newCategoryName = '';
+        $this->newCategoryCode = '';
+        $this->resetValidation();
+    }
+
+    public function cancelCategoryForm(): void
+    {
+        $this->showCategoryForm = false;
         $this->resetValidation();
     }
 
