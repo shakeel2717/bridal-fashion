@@ -796,6 +796,15 @@ a {
   }
 }
 
+.page-header-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-main, #f4f6f9);
+    padding-bottom: 8px;
+    margin-bottom: 0 !important;
+}
+
 // Also cover textarea
 textarea.form-control:focus {
   border-color: #8a6200 !important;

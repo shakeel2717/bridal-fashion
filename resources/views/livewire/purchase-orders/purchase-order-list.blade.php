@@ -5,14 +5,17 @@
         </div>
     @endif
 
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-            <div class="page-title">Purchase Orders</div>
-            <div class="page-subtitle">Vendor purchases & stock management</div>
+    <div class="page-header-sticky">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <div class="page-title">Purchase Orders</div>
+                <div class="page-subtitle">Vendor purchases & stock management</div>
+            </div>
+            <a href="{{ route('purchase-orders.create') }}"
+                class="btn btn-primary btn-sm d-flex align-items-center gap-2">
+                <i class="bi bi-plus-lg"></i> New Purchase Order
+            </a>
         </div>
-        <a href="{{ route('purchase-orders.create') }}" class="btn btn-primary btn-sm d-flex align-items-center gap-2">
-            <i class="bi bi-plus-lg"></i> New Purchase Order
-        </a>
     </div>
 
     {{-- Stats --}}

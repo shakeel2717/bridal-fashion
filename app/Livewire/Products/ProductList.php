@@ -16,6 +16,8 @@ class ProductList extends Component
 
     public string $filterGroup = '';
 
+    public string $filterStock = 'zero';
+
     public string $search = '';
 
     public string $filterType = '';
@@ -50,6 +52,11 @@ class ProductList extends Component
     }
 
     public function updatedFilterCategory(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterStock(): void
     {
         $this->resetPage();
     }
@@ -170,6 +177,7 @@ class ProductList extends Component
             ->when($this->filterCategory, fn ($q) => $q->where('category_id', $this->filterCategory))
             ->when($this->filterStatus === 'active', fn ($q) => $q->where('is_active', true)->where('is_abandoned', false))
             ->when($this->filterStatus === 'abandoned', fn ($q) => $q->where('is_abandoned', true))
+            ->when($this->filterStock === 'zero', fn ($q) => $q->where('stock_qty', 0))
             ->when($this->filterStatus === 'inactive', fn ($q) => $q->where('is_active', false))
             ->when($this->filterGroup, fn ($q) => $q->where('group_id', $this->filterGroup))
             ->latest()
@@ -184,6 +192,7 @@ class ProductList extends Component
             'abandoned' => Product::where('is_abandoned', true)->count(),
             'inactive' => Product::where('is_active', false)->count(),
             'total' => Product::count(),
+            'zero_stock' => Product::where('stock_qty', 0)->count(),
         ];
 
         $expenses = $this->expenseProductId

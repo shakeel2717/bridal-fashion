@@ -11,15 +11,17 @@
     @endif
 
     {{-- Header --}}
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-            <div class="page-title">Products</div>
-            <div class="page-subtitle">Manage inventory items</div>
+    <div class="page-header-sticky">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <div class="page-title">Products</div>
+                <div class="page-subtitle">Manage inventory items</div>
+            </div>
+            <button class="btn btn-primary btn-sm d-flex align-items-center gap-2"
+                wire:click="$dispatch('open-create-product')">
+                <i class="bi bi-plus-lg"></i> Add Product
+            </button>
         </div>
-        <button class="btn btn-primary btn-sm d-flex align-items-center gap-2"
-            wire:click="$dispatch('open-create-product')">
-            <i class="bi bi-plus-lg"></i> Add Product
-        </button>
     </div>
 
     {{-- Stat pills --}}
@@ -58,8 +60,16 @@
                         wire:click="$set('filterStatus','abandoned')">Abandoned</button>
                     <button class="tab-pill {{ $filterStatus === 'inactive' ? 'active' : '' }}"
                         wire:click="$set('filterStatus','inactive')">Inactive</button>
-                    <button class="tab-pill {{ $filterStatus === '' ? 'active' : '' }}"
-                        wire:click="$set('filterStatus','')">All</button>
+                    <button class="tab-pill {{ $filterStock === 'zero' ? 'active' : '' }}"
+                        wire:click="$set('filterStock','zero')">
+                        Zero Stock
+                        <span
+                            style="font-size:10px; background:#e53e3e; color:#fff; padding:0 5px; border-radius:3px; margin-left:4px;">
+                            {{ $counts['zero_stock'] }}
+                        </span>
+                    </button>
+                    <button class="tab-pill {{ $filterStock === '' ? 'active' : '' }}"
+                        wire:click="$set('filterStock','')">All</button>
                 </div>
 
                 {{-- Type filter --}}
@@ -89,6 +99,7 @@
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
+                    <th style="width:40px; text-align:center;">Sr</th>
                     <th>Code</th>
                     <th>Product Name</th>
                     <th>Category</th>
@@ -103,6 +114,9 @@
             <tbody>
                 @forelse($products as $product)
                     <tr class="{{ $product->is_abandoned ? 'abandoned-row' : '' }}">
+                        <td style="text-align:center; font-size:12px; color:var(--text-muted); font-weight:600;">
+                            {{ $products->firstItem() + $loop->index }}
+                        </td>
                         <td>
                             <span class="product-code-badge">{{ $product->code }}</span>
                         </td>
