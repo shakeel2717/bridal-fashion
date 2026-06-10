@@ -88,21 +88,25 @@
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
+                    <th style="width:40px; text-align:center;">Sr</th>
                     <th>PO Number</th>
                     <th>Vendor</th>
                     <th>Bill #</th>
                     <th>Date</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Paid</th>
-                    <th>Balance</th>
-                    <th>Item Status</th>
+                    <th style="text-align:center;">Items</th>
+                    <th style="text-align:right;">Total</th>
+                    <th style="text-align:right;">Paid</th>
+                    <th style="text-align:right;">Balance</th>
+                    <th>Status</th>
                     <th style="width:70px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($orders as $order)
                     <tr>
+                        <td style="text-align:center; font-size:12px; color:var(--text-muted); font-weight:600;">
+                            {{ $orders->firstItem() + $loop->index }}
+                        </td>
                         <td>
                             <span style="font-family:monospace; font-size:12px; font-weight:700; color:var(--navy);">
                                 {{ $order->po_number }}
@@ -120,15 +124,15 @@
                         <td style="font-size:13px; text-align:center; font-weight:600;">
                             {{ $order->items->count() }}
                         </td>
-                        <td style="font-size:13px; font-weight:600;">
+                        <td style="font-size:13px; font-weight:600; text-align:right;">
                             Rs. {{ number_format($order->total_amount, 0) }}
                         </td>
-                        <td style="font-size:13px; color:#276749; font-weight:600;">
+                        <td style="font-size:13px; color:#276749; font-weight:600; text-align:right;">
                             Rs. {{ number_format($order->amount_paid, 0) }}
                         </td>
                         <td
-                            style="font-size:13px; font-weight:700;
-                               color:{{ $order->balance_due > 0 ? '#e53e3e' : '#38a169' }};">
+                            style="font-size:13px; font-weight:700; text-align:right;
+           color:{{ $order->balance_due > 0 ? '#e53e3e' : '#38a169' }};">
                             Rs. {{ number_format($order->balance_due, 0) }}
                         </td>
                         <td>
@@ -153,6 +157,29 @@
                     </tr>
                 @endforelse
             </tbody>
+            @if ($orders->count() > 0)
+                <tfoot>
+                    <tr style="background:#1a2340;">
+                        <td colspan="6"
+                            style="text-align:right; font-weight:700; font-size:12px; color:#fff; padding:10px 12px;">
+                            Page Total ({{ $orders->count() }} records)
+                        </td>
+                        <td style="text-align:right; font-weight:800; color:#fff; padding:10px 12px; font-size:13px;">
+                            Rs. {{ number_format($orders->sum('total_amount'), 0) }}
+                        </td>
+                        <td
+                            style="text-align:right; font-weight:800; color:#68d391; padding:10px 12px; font-size:13px;">
+                            Rs. {{ number_format($orders->sum('amount_paid'), 0) }}
+                        </td>
+                        <td
+                            style="text-align:right; font-weight:800; padding:10px 12px; font-size:13px;
+                   color:{{ $orders->sum('balance_due') > 0 ? '#fc8181' : '#68d391' }};">
+                            Rs. {{ number_format($orders->sum('balance_due'), 0) }}
+                        </td>
+                        <td colspan="2" style="padding:10px 12px;"></td>
+                    </tr>
+                </tfoot>
+            @endif
         </table>
 
         @if (!$hasSearched && !$search && !$filterStatus && !$filterVendor)

@@ -55,21 +55,21 @@ class PurchaseOrderList extends Component
 
     public function render()
     {
+        $hasFilter = $this->hasSearched || $this->search || $this->filterStatus
+             || $this->filterVendor || $this->dateFrom || $this->dateTo;
+
         $orders = PurchaseOrder::with(['vendor', 'items'])
-            ->when(! $this->hasSearched && ! $this->search && ! $this->filterStatus
-                   && ! $this->filterVendor && ! $this->dateFrom,
-                fn ($q) => $q->whereRaw('1=0') // return nothing by default
-            )
-            ->when($this->search, fn ($q) => $q->where('po_number', 'like', "%{$this->search}%")
-                ->orWhere('vendor_bill_number', 'like', "%{$this->search}%")
-                ->orWhereHas('vendor', fn ($v) => $v->where('name', 'like', "%{$this->search}%")
-                )
+            ->when(! $hasFilter, fn ($q) => $q->whereRaw('1=0'))
+            ->when($this->search, fn ($q) => $q->where(function ($q) {
+                $q->where('po_number', 'like', "%{$this->search}%")
+                    ->orWhere('vendor_bill_number', 'like', "%{$this->search}%")
+                    ->orWhereHas('vendor', fn ($v) => $v->where('name', 'like', "%{$this->search}%")
+                    );
+            })
             )
             ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))
-            ->when($this->dateFrom, fn ($q) => $q->whereRaw('DATE(order_date) >= ?', [$this->dateFrom])
-            )
-            ->when($this->dateTo, fn ($q) => $q->whereRaw('DATE(order_date) <= ?', [$this->dateTo])
-            )
+            ->when($this->dateFrom, fn ($q) => $q->whereRaw('DATE(order_date) >= ?', [$this->dateFrom]))
+            ->when($this->dateTo, fn ($q) => $q->whereRaw('DATE(order_date) <= ?', [$this->dateTo]))
             ->when($this->filterVendor, fn ($q) => $q->where('vendor_id', $this->filterVendor))
             ->latest()
             ->paginate(15);
