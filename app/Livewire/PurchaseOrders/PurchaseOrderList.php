@@ -4,6 +4,7 @@ namespace App\Livewire\PurchaseOrders;
 
 use App\Models\PurchaseOrder;
 use App\Models\Vendor;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -11,16 +12,22 @@ class PurchaseOrderList extends Component
 {
     use WithPagination;
 
+    #[Url]
     public string $search = '';
 
+    #[Url]
     public string $filterStatus = '';
 
+    #[Url]
     public string $dateFrom = '';
 
+    #[Url]
     public string $dateTo = '';
 
+    #[Url]
     public string $filterVendor = '';
 
+    #[Url]
     public bool $hasSearched = false;
 
     public function updatedSearch(): void
@@ -53,10 +60,23 @@ class PurchaseOrderList extends Component
         $this->resetPage();
     }
 
+    public function showAll(): void
+    {
+        $this->hasSearched = true;
+        $this->filterStatus = '';
+        $this->resetPage();
+    }
+
     public function render()
     {
-        $hasFilter = $this->hasSearched || $this->search || $this->filterStatus
-             || $this->filterVendor || $this->dateFrom || $this->dateTo;
+        // Consider "searched" if any filter is set OR if we're beyond page 1
+        $hasFilter = $this->hasSearched
+            || $this->search
+            || $this->filterStatus
+            || $this->filterVendor
+            || $this->dateFrom
+            || $this->dateTo
+            || $this->getPage() > 1;  // ← this is the key fix
 
         $orders = PurchaseOrder::with(['vendor', 'items'])
             ->when(! $hasFilter, fn ($q) => $q->whereRaw('1=0'))
@@ -65,8 +85,7 @@ class PurchaseOrderList extends Component
                     ->orWhere('vendor_bill_number', 'like', "%{$this->search}%")
                     ->orWhereHas('vendor', fn ($v) => $v->where('name', 'like', "%{$this->search}%")
                     );
-            })
-            )
+            }))
             ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))
             ->when($this->dateFrom, fn ($q) => $q->whereRaw('DATE(order_date) >= ?', [$this->dateFrom]))
             ->when($this->dateTo, fn ($q) => $q->whereRaw('DATE(order_date) <= ?', [$this->dateTo]))
@@ -84,8 +103,7 @@ class PurchaseOrderList extends Component
             'total' => PurchaseOrder::count(),
         ];
 
-        $totalBalance = PurchaseOrder::whereNotIn('status', ['cancelled'])
-            ->sum('balance_due');
+        $totalBalance = PurchaseOrder::whereNotIn('status', ['cancelled'])->sum('balance_due');
 
         return view('livewire.purchase-orders.purchase-order-list',
             compact('orders', 'vendors', 'counts', 'totalBalance'));
