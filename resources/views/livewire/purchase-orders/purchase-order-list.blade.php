@@ -96,7 +96,7 @@
                     <th>Total</th>
                     <th>Paid</th>
                     <th>Balance</th>
-                    <th>Status</th>
+                    <th>Item Status</th>
                     <th style="width:70px;">Actions</th>
                 </tr>
             </thead>

@@ -19,8 +19,17 @@ class PurchaseOrderCreate extends Component
 
     public string $vendorBillNumber = '';
 
-    public string $orderDate = '';
+    public string $newItemQty = '1';
 
+    public ?int $pendingProductId = null;
+
+    public string $pendingProductName = '';
+
+    public string $pendingProductCode = '';
+
+    public string $newItemPrice = '0';
+
+    public string $orderDate = '';
 
     public string $notes = '';
 
@@ -51,9 +60,64 @@ class PurchaseOrderCreate extends Component
     {
         $this->orderDate = now()->format('Y-m-d');
         $this->initialPaymentDate = now()->format('Y-m-d');
+        $this->newItemQty = '1';
+        $this->newItemPrice = '0';
         $defaultAccount = Account::where('is_default', true)->first()
     ?? Account::where('is_active', true)->first();
         $this->initialPaymentAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
+    }
+
+    public function selectProductForRow(int $productId): void
+    {
+        $product = Product::findOrFail($productId);
+
+        $this->pendingProductId = $product->id;
+        $this->pendingProductName = $product->name;
+        $this->pendingProductCode = $product->code;
+        $this->newItemPrice = (string) $product->purchase_price;
+        $this->productSearch = $product->code.' — '.$product->name;
+        $this->searchResults = [];
+        $this->dispatch('focus-po-qty');
+    }
+
+    public function addItemToTable(): void
+    {
+        if (! $this->pendingProductId && empty($this->productSearch)) {
+            return;
+        }
+
+        $qty = max(1, (int) $this->newItemQty);
+        $price = max(0, (float) $this->newItemPrice);
+
+        // Use pending or search for a product
+        $productId = $this->pendingProductId;
+        $productName = $this->pendingProductName;
+        $productCode = $this->pendingProductCode;
+
+        if (! $productId) {
+            return;
+        }
+
+        array_unshift($this->items, [
+            'product_id' => $productId,
+            'item_name' => $productName,
+            'item_code' => $productCode,
+            'qty' => $qty,
+            'unit_price' => (string) $price,
+            'total_price' => (string) ($qty * $price),
+            'notes' => '',
+        ]);
+
+        // Reset all
+        $this->productSearch = '';
+        $this->searchResults = [];
+        $this->newItemQty = '1';
+        $this->newItemPrice = '0';
+        $this->pendingProductId = null;
+        $this->pendingProductName = '';
+        $this->pendingProductCode = '';
+        $this->recalcItems();
+        $this->dispatch('focus-po-search');
     }
 
     public function searchProducts(): void
@@ -70,8 +134,9 @@ class PurchaseOrderCreate extends Component
         $directMatches = Product::with(['category', 'group'])
             ->where('is_active', true)
             ->where(function ($q) {
-                $q->where('code', 'like', "%{$this->productSearch}%")
-                    ->orWhere('name', 'like', "%{$this->productSearch}%");
+                // Exact code match OR name contains search term
+                $q->where('code', $this->productSearch)  // exact code
+                    ->orWhere('name', 'like', "%{$this->productSearch}%"); // name partial
             })
             ->whereNotIn('id', $alreadyAdded)
             ->get();
@@ -113,21 +178,7 @@ class PurchaseOrderCreate extends Component
 
     public function addProduct(int $productId): void
     {
-        $product = Product::findOrFail($productId);
-
-        array_unshift($this->items, [
-            'product_id' => $product->id,
-            'item_name' => $product->name,
-            'item_code' => $product->code,
-            'qty' => 1,
-            'unit_price' => (string) $product->purchase_price,
-            'total_price' => (string) $product->purchase_price,
-            'notes' => '',
-        ]);
-
-        $this->productSearch = '';
-        $this->searchResults = [];
-        $this->recalcItems();
+        $this->selectProductForRow($productId);
     }
 
     public function removeItem(int $index): void
@@ -272,7 +323,7 @@ class PurchaseOrderCreate extends Component
             PurchaseOrderPayment::create([
                 'purchase_order_id' => $po->id,
                 'amount' => $paid,
-                'payment_date'      => $this->initialPaymentDate ?: now()->toDateString(),
+                'payment_date' => $this->initialPaymentDate ?: now()->toDateString(),
                 'payment_method' => $this->paymentMethod,
                 'type' => 'payment',
                 'note' => 'Initial payment on order',

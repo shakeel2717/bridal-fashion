@@ -61,3 +61,13 @@
 
     &:last-child { border-bottom: none; }
 }
+
+.po-items-table {
+    tbody tr {
+        // Reset Bootstrap striped
+        &:nth-child(odd),
+        &:nth-child(even) {
+            background-color: transparent !important;
+        }
+    }
+}
