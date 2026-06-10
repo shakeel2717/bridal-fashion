@@ -13,10 +13,11 @@ class VendorList extends Component
     use WithPagination;
 
     public string $search = '';
-    
+
     public string $name = '';
-    
+
     public $vendorPhoto = null;
+
     public ?string $existingVendorPhoto = null;
 
     public string $phone = '';
@@ -42,6 +43,7 @@ class VendorList extends Component
     {
         $this->resetForm();
         $this->showForm = true;
+        $this->dispatch('focus-vendor-name');
     }
 
     public function openEdit(int $id): void
@@ -55,6 +57,7 @@ class VendorList extends Component
         $this->notes = $vendor->notes ?? '';
         $this->isActive = $vendor->is_active;
         $this->showForm = true;
+        $this->dispatch('focus-vendor-name');
     }
 
     public function save(): void
@@ -83,7 +86,6 @@ class VendorList extends Component
             'is_active' => $this->isActive,
             'updated_by' => auth()->id(),
         ];
-
 
         if ($this->editId) {
             Vendor::findOrFail($this->editId)->update($data);

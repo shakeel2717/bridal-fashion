@@ -36,7 +36,7 @@
                     <div style="padding:16px;">
                         <div class="mb-3">
                             <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                            <input type="text" wire:model="name"
+                            <input type="text" id="vendor_name_input" wire:model="name"
                                 class="form-control @error('name') is-invalid @enderror" placeholder="e.g. Ali Fabrics">
                             @error('name')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -131,9 +131,9 @@
                                 <td style="color:var(--text-muted); font-size:11px;">{{ $vendor->id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
-                                        @if($vendor->photo)
-    <img src="{{ Storage::url($vendor->photo) }}"
-         style="width:32px; height:32px; object-fit:cover; border-radius:50%; border:1px solid var(--border); flex-shrink:0;">
+                                        @if ($vendor->photo)
+                                            <img src="{{ Storage::url($vendor->photo) }}"
+                                                style="width:32px; height:32px; object-fit:cover; border-radius:50%; border:1px solid var(--border); flex-shrink:0;">
                                         @else
                                             <div
                                                 style="width:32px; height:32px; background:var(--navy); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
@@ -225,4 +225,20 @@
             </div>
         </div>
     @endif
+
+    @push('scripts')
+        <script>
+            document.addEventListener('livewire:initialized', () => {
+                Livewire.on('focus-vendor-name', () => {
+                    setTimeout(() => {
+                        const el = document.getElementById('vendor_name_input');
+                        if (el) {
+                            el.focus();
+                            el.select();
+                        }
+                    }, 150);
+                });
+            });
+        </script>
+    @endpush
 </div>
