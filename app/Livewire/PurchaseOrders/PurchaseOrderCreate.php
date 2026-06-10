@@ -21,13 +21,14 @@ class PurchaseOrderCreate extends Component
 
     public string $orderDate = '';
 
-    public string $expectedDate = '';
 
     public string $notes = '';
 
     public string $discount = '0';
 
     public string $initialPaymentAccountId = '';
+
+    public string $initialPaymentDate = '';
 
     public string $initialPayment = '0';
 
@@ -49,6 +50,7 @@ class PurchaseOrderCreate extends Component
     public function mount(): void
     {
         $this->orderDate = now()->format('Y-m-d');
+        $this->initialPaymentDate = now()->format('Y-m-d');
         $defaultAccount = Account::where('is_default', true)->first()
     ?? Account::where('is_active', true)->first();
         $this->initialPaymentAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
@@ -64,30 +66,56 @@ class PurchaseOrderCreate extends Component
 
         $alreadyAdded = collect($this->items)->pluck('product_id')->filter()->toArray();
 
-        $this->searchResults = Product::with('category')
+        // Find directly matching products
+        $directMatches = Product::with(['category', 'group'])
             ->where('is_active', true)
             ->where(function ($q) {
                 $q->where('code', 'like', "%{$this->productSearch}%")
                     ->orWhere('name', 'like', "%{$this->productSearch}%");
             })
             ->whereNotIn('id', $alreadyAdded)
-            ->limit(8)
-            ->get()
-            ->map(fn ($p) => [
-                'id' => $p->id,
-                'code' => $p->code,
-                'name' => $p->name,
-                'purchase_price' => $p->purchase_price,
-                'category' => $p->category->name ?? '',
-            ])
+            ->get();
+
+        // Get group IDs from direct matches
+        $groupIds = $directMatches
+            ->whereNotNull('group_id')
+            ->pluck('group_id')
+            ->unique()
+            ->filter()
             ->toArray();
+
+        // Get other products from same groups
+        $groupProducts = collect();
+        if (! empty($groupIds)) {
+            $groupProducts = Product::with(['category', 'group'])
+                ->where('is_active', true)
+                ->whereIn('group_id', $groupIds)
+                ->whereNotIn('id', $directMatches->pluck('id')->toArray())
+                ->whereNotIn('id', $alreadyAdded)
+                ->get();
+        }
+
+        // Merge: direct matches first, then group siblings
+        $all = $directMatches->merge($groupProducts)->take(12);
+
+        $directIds = $directMatches->pluck('id')->toArray();
+
+        $this->searchResults = $all->map(fn ($p) => [
+            'id' => $p->id,
+            'code' => $p->code,
+            'name' => $p->name,
+            'purchase_price' => $p->purchase_price,
+            'category' => $p->category->name ?? '',
+            'group' => $p->group->name ?? null,
+            'is_direct' => in_array($p->id, $directIds),
+        ])->toArray();
     }
 
     public function addProduct(int $productId): void
     {
         $product = Product::findOrFail($productId);
 
-        $this->items[] = [
+        array_unshift($this->items, [
             'product_id' => $product->id,
             'item_name' => $product->name,
             'item_code' => $product->code,
@@ -95,23 +123,11 @@ class PurchaseOrderCreate extends Component
             'unit_price' => (string) $product->purchase_price,
             'total_price' => (string) $product->purchase_price,
             'notes' => '',
-        ];
+        ]);
 
         $this->productSearch = '';
         $this->searchResults = [];
-    }
-
-    public function addCustomItem(): void
-    {
-        $this->items[] = [
-            'product_id' => null,
-            'item_name' => '',
-            'item_code' => '',
-            'qty' => 1,
-            'unit_price' => '0',
-            'total_price' => '0',
-            'notes' => '',
-        ];
+        $this->recalcItems();
     }
 
     public function removeItem(int $index): void
@@ -155,16 +171,12 @@ class PurchaseOrderCreate extends Component
         return max(0, $this->total - (float) $this->initialPayment);
     }
 
-    // Inline vendor
     public function saveVendor(): void
     {
         $this->validate([
-            'vendorId' => 'required|exists:vendors,id',
-            'orderDate' => 'required|date',
-            'vendorBillNumber' => 'required|string|max:100',
-            'initialPayment' => 'nullable|numeric|min:0',
+            'newVendorName' => 'required|string|max:150',
         ], [
-            'vendorBillNumber.required' => 'Vendor bill number is required.',
+            'newVendorName.required' => 'Vendor name is required.',
         ]);
 
         $vendor = Vendor::create([
@@ -179,6 +191,7 @@ class PurchaseOrderCreate extends Component
         $this->showVendorForm = false;
         $this->newVendorName = '';
         $this->newVendorPhone = '';
+        $this->resetValidation();
     }
 
     public function save(string $status = 'ordered'): void
@@ -191,6 +204,18 @@ class PurchaseOrderCreate extends Component
 
         if (empty($this->items)) {
             $this->addError('items', 'Please add at least one item.');
+
+            return;
+        }
+
+        // Check duplicate vendor + bill number
+        $duplicate = PurchaseOrder::where('vendor_id', $this->vendorId)
+            ->where('vendor_bill_number', $this->vendorBillNumber)
+            ->exists();
+
+        if ($duplicate) {
+            $this->addError('vendorBillNumber',
+                'A PO with this vendor and bill number already exists. Please verify.');
 
             return;
         }
@@ -217,7 +242,7 @@ class PurchaseOrderCreate extends Component
             'vendor_bill_number' => $this->vendorBillNumber ?: null,
             'vendor_id' => $this->vendorId,
             'order_date' => Carbon::parse($this->orderDate)->toDateString(),
-            'expected_date' => $this->expectedDate ? Carbon::parse($this->expectedDate)->toDateString() : null,
+            'expected_date' => Carbon::parse($this->orderDate)->toDateString(),
             'status' => $status,
             'total_amount' => $total,
             'amount_paid' => $paid,
@@ -247,7 +272,7 @@ class PurchaseOrderCreate extends Component
             PurchaseOrderPayment::create([
                 'purchase_order_id' => $po->id,
                 'amount' => $paid,
-                'payment_date' => now()->toDateString(),
+                'payment_date'      => $this->initialPaymentDate ?: now()->toDateString(),
                 'payment_method' => $this->paymentMethod,
                 'type' => 'payment',
                 'note' => 'Initial payment on order',

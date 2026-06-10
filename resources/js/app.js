@@ -53,6 +53,10 @@ window.setupEnterNav = function(container) {
             if (e.key !== 'Enter') return;
             const tag = e.target.tagName.toLowerCase();
             if (tag === 'textarea' || tag === 'button') return;
+
+            // Skip PO product search — it has its own enter handler
+            if (e.target.id === 'po_product_search') return;
+
             if (tag === 'select' || tag === 'input') {
                 e.preventDefault();
                 window.focusNext(e.target);
