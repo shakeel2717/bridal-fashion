@@ -338,6 +338,11 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label">Payment Date</label>
+                    <input type="date" wire:model="paymentDate" class="form-control">
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label">Receive Into Account</label>
                     <select wire:model="advanceAccountId" class="form-select">
                         <option value="">Select account...</option>

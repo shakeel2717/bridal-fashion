@@ -80,12 +80,6 @@ class ProductForm extends Component
 
     public function updatedType(): void
     {
-        if ($this->type === 'sale') {
-            $this->rentalPrice = '';
-            $this->itemVariants = [];
-
-            return;
-        }
         if ($this->type === 'rental') {
             $this->salePrice = '';
         }
@@ -94,8 +88,13 @@ class ProductForm extends Component
 
     protected function rebuildVariants(): void
     {
-        if ($this->isEdit || $this->type === 'sale') {
-            $this->itemVariants = [];
+        if ($this->isEdit) {
+            return;
+        }
+
+        if ($this->type === 'sale') {
+            // Sale always has exactly 1 variant (code only)
+            $this->itemVariants = [['code' => $this->itemVariants[0]['code'] ?? '', 'color' => '', 'size' => '']];
 
             return;
         }

@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/SaleItem.php
 
 namespace App\Models;
@@ -9,14 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SaleItem extends Model
 {
     protected $fillable = [
-        'sale_id', 'product_id', 'product_name', 'product_code',
+        'sale_id', 'product_id', 'product_name', 'product_code', 'pickup_status', 'taken_at',
         'sale_price', 'qty', 'custom_option_label', 'custom_option_price', 'notes',
     ];
 
     protected function casts(): array
     {
         return [
-            'sale_price'          => 'decimal:2',
+            'sale_price' => 'decimal:2',
             'custom_option_price' => 'decimal:2',
         ];
     }

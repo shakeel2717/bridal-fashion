@@ -20,9 +20,18 @@
                 @endif
             </div>
         </div>
-        <a href="{{ route('sales.index') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Back
-        </a>
+
+        <div class="d-flex gap-2">
+            <button wire:click="openEdit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil me-1"></i> Edit
+            </button>
+            <button wire:click="confirmDeleteSale" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash me-1"></i> Delete
+            </button>
+            <a href="{{ route('sales.index') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+        </div>
     </div>
 
     <div class="row g-3">
@@ -77,6 +86,7 @@
                             <th style="font-size:10px;">Code</th>
                             <th style="font-size:10px;">Product</th>
                             <th style="font-size:10px; text-align:center;">Qty</th>
+                            <th style="width:120px; text-align:center;">Pickup</th>
                             <th style="font-size:10px; text-align:right;">Price</th>
                             <th style="font-size:10px; text-align:right;">Subtotal</th>
                         </tr>
@@ -102,6 +112,30 @@
                                     @endif
                                 </td>
                                 <td style="text-align:center; font-weight:600;">{{ $item->qty }}</td>
+                                {{-- In tbody foreach --}}
+                                <td style="text-align:center;">
+                                    @if ($item->pickup_status === 'taken')
+                                        <div>
+                                            <span
+                                                style="font-size:11px; background:#f0fff4; color:#276749; padding:3px 8px; border-radius:4px; font-weight:700; display:block; margin-bottom:4px;">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Taken
+                                            </span>
+                                            <div style="font-size:10px; color:var(--text-muted);">
+                                                {{ \Carbon\Carbon::parse($item->taken_at)->format('d/m/Y') }}
+                                            </div>
+                                            <button wire:click="markItemPending({{ $item->id }})"
+                                                style="font-size:10px; background:none; border:none; color:#718096; cursor:pointer; padding:0; margin-top:2px; text-decoration:underline;">
+                                                Undo
+                                            </button>
+                                        </div>
+                                    @else
+                                        <button wire:click="markItemTaken({{ $item->id }})"
+                                            class="btn btn-sm btn-outline-success"
+                                            style="font-size:11px; padding:3px 10px;">
+                                            <i class="bi bi-bag-check me-1"></i> Mark Taken
+                                        </button>
+                                    @endif
+                                </td>
                                 <td style="text-align:right;">Rs. {{ number_format($item->sale_price, 0) }}</td>
                                 <td style="text-align:right; font-weight:700; color:var(--navy);">
                                     Rs.
@@ -112,7 +146,7 @@
                     </tbody>
                     <tfoot>
                         <tr style="border-top:2px solid var(--navy);">
-                            <td colspan="4"
+                            <td colspan="5"
                                 style="text-align:right; font-weight:700; font-size:14px; padding-top:10px;">
                                 Total
                             </td>
@@ -339,6 +373,210 @@
                         </span>
                         Yes, Cancel Sale
                     </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showEditModal)
+        <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5); z-index:1055;">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title"><i class="bi bi-pencil me-2"></i> Edit Sale</h6>
+                        <button type="button" class="btn-close" wire:click="$set('showEditModal',false)"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+
+                            {{-- Section: Customer --}}
+                            <div class="col-12">
+                                <div
+                                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:6px;">
+                                    <i class="bi bi-person me-1"></i> Customer Info
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Customer Name <span class="text-danger">*</span></label>
+                                <input type="text" wire:model="editCustomerName"
+                                    class="form-control @error('editCustomerName') is-invalid @enderror">
+                                @error('editCustomerName')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Phone 1 <span class="text-danger">*</span></label>
+                                <input type="text" wire:model="editCustomerPhone1"
+                                    class="form-control @error('editCustomerPhone1') is-invalid @enderror">
+                                @error('editCustomerPhone1')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Phone 2</label>
+                                <input type="text" wire:model="editCustomerPhone2" class="form-control">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">CNIC</label>
+                                <input type="text" wire:model="editCustomerCnic" class="form-control"
+                                    placeholder="00000-0000000-0">
+                            </div>
+
+                            {{-- Section: Sale Info --}}
+                            <div class="col-12" style="margin-top:8px;">
+                                <div
+                                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:6px;">
+                                    <i class="bi bi-receipt me-1"></i> Sale Info
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Sale Date <span class="text-danger">*</span></label>
+                                <input type="date" wire:model="editSaleDate"
+                                    class="form-control @error('editSaleDate') is-invalid @enderror">
+                                @error('editSaleDate')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Bill Ref</label>
+                                <input type="text" wire:model="editBillRef" class="form-control"
+                                    placeholder="e.g. S-1001">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Status</label>
+                                <select wire:model="editStatus" class="form-select">
+                                    <option value="completed">Completed</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Handled By</label>
+                                <select wire:model="editEmployeeId" class="form-select">
+                                    <option value="">None</option>
+                                    @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
+                                        <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Notes</label>
+                                <textarea wire:model="editNotes" class="form-control" rows="2"></textarea>
+                            </div>
+
+                            {{-- Section: Payment --}}
+                            <div class="col-12" style="margin-top:8px;">
+                                <div
+                                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:6px;">
+                                    <i class="bi bi-cash me-1"></i> Payment
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Total Amount (Rs.) <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" wire:model.lazy="editTotalAmount"
+                                    class="form-control @error('editTotalAmount') is-invalid @enderror"
+                                    min="0">
+                                @error('editTotalAmount')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Advance Paid (Rs.) <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" wire:model.lazy="editAdvancePaid"
+                                    class="form-control @error('editAdvancePaid') is-invalid @enderror"
+                                    min="0">
+                                @error('editAdvancePaid')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Remaining Balance</label>
+                                <div
+                                    style="padding:8px 12px; background:#fff5f5; border-radius:8px; border:1px solid #fed7d7; font-weight:700; color:#e53e3e; font-size:14px;">
+                                    Rs.
+                                    {{ number_format(max(0, (float) $editTotalAmount - (float) $editAdvancePaid), 0) }}
+                                </div>
+                            </div>
+
+                            {{-- Section: Items (price edit only) --}}
+                            <div class="col-12" style="margin-top:8px;">
+                                <div
+                                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:6px;">
+                                    <i class="bi bi-cart me-1"></i> Items
+                                    <span style="font-size:10px; font-weight:400; margin-left:4px;">(you can edit price
+                                        and qty)</span>
+                                </div>
+                                <table class="table mb-0" style="font-size:12px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Name</th>
+                                            <th style="width:80px; text-align:center;">Qty</th>
+                                            <th style="width:120px; text-align:right;">Price (Rs.)</th>
+                                            <th style="width:110px; text-align:right;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($sale->items as $saleItem)
+                                            <tr>
+                                                <td style="font-family:monospace; font-weight:700;">
+                                                    {{ $saleItem->product_code }}</td>
+                                                <td>{{ $saleItem->product_name }}</td>
+                                                <td style="text-align:center;">
+                                                    <input type="number"
+                                                        wire:model.lazy="editItems.{{ $saleItem->id }}.qty"
+                                                        class="form-control form-control-sm"
+                                                        style="text-align:center; width:60px;" min="1">
+                                                </td>
+                                                <td>
+                                                    <input type="number"
+                                                        wire:model.lazy="editItems.{{ $saleItem->id }}.sale_price"
+                                                        class="form-control form-control-sm" style="text-align:right;"
+                                                        min="0">
+                                                </td>
+                                                <td style="text-align:right; font-weight:700;">
+                                                    Rs. {{ number_format($saleItem->sale_price * $saleItem->qty, 0) }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="modal-footer gap-2">
+                        <button class="btn btn-sm btn-outline-secondary"
+                            wire:click="$set('showEditModal',false)">Cancel</button>
+                        <button class="btn btn-sm btn-primary" wire:click="saveEdit">
+                            <i class="bi bi-check me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showDeleteConfirm)
+        <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title text-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i> Delete Sale
+                        </h6>
+                    </div>
+                    <div class="modal-body" style="font-size:13px;">
+                        Are you sure? This will <strong>restore stock</strong> for all items and permanently delete the
+                        sale.
+                    </div>
+                    <div class="modal-footer gap-2">
+                        <button class="btn btn-sm btn-outline-secondary"
+                            wire:click="$set('showDeleteConfirm',false)">Cancel</button>
+                        <button class="btn btn-sm btn-danger" wire:click="deleteSale">Yes, Delete</button>
+                    </div>
                 </div>
             </div>
         </div>

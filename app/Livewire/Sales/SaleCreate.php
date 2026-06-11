@@ -32,6 +32,7 @@ class SaleCreate extends Component
     public string $customerPhone1 = '';
 
     public string $customerPhone2 = '';
+    public string $paymentDate = '';
 
     public string $customerCnic = '';
 
@@ -63,6 +64,7 @@ class SaleCreate extends Component
     public function mount(): void
     {
         $this->saleDate = now()->format('Y-m-d');
+        $this->paymentDate = now()->format('Y-m-d');
         $defaultAccount = Account::where('is_default', true)->first()
             ?? Account::where('is_active', true)->first();
         $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
@@ -289,7 +291,7 @@ class SaleCreate extends Component
                 $advance,
                 'sale_payment',
                 "Sale advance — {$this->customerName} (#{$sale->id})",
-                now()->toDateString(),
+                Carbon::parse($this->paymentDate)->toDateString(),
                 $sale,
             );
         }

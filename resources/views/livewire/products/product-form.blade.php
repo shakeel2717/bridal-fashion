@@ -34,7 +34,8 @@
                                         <option value="">Select category...</option>
                                         @foreach ($categories as $cat)
                                             <option value="{{ $cat->id }}">{{ $cat->name }}
-                                                ({{ $cat->code }})</option>
+                                                ({{ $cat->code }})
+                                            </option>
                                         @endforeach
                                     </select>
                                     <button type="button" wire:click="openCategoryForm"
@@ -143,27 +144,35 @@
                             </select>
                         </div>
 
-                        {{-- Qty --}}
-                        <div class="col-4">
-                            <label class="form-label">
-                                @if ($type === 'sale')
-                                    How Many Items to Create
-                                @else
-                                    How Many Separate Records
-                                    <span style="font-size:10px; color:var(--text-muted); font-weight:400;">(not
-                                        stock)</span>
-                                @endif
-                            </label>
-                            <input type="number" wire:model.live="stockQty"
-                                class="form-control @error('stockQty') is-invalid @enderror" min="1"
-                                @if ($isEdit) readonly @endif>
-                            @error('stockQty')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                        {{-- Qty — only for rental/both --}}
+@if($type !== 'sale')
+<div class="col-4">
+    <label class="form-label">
+        How Many Separate Records
+        <span style="font-size:10px; color:var(--text-muted); font-weight:400;">(not stock)</span>
+    </label>
+    <input type="number" wire:model.live="stockQty"
+        class="form-control @error('stockQty') is-invalid @enderror" min="1"
+        @if($isEdit) readonly @endif>
+    @error('stockQty') <div class="invalid-feedback">{{ $message }}</div> @enderror
+</div>
+@endif
 
-                        {{-- Per Item: Code, Color, Size --}}
-                        @if (!$isEdit && count($itemVariants) > 0)
+                        {{-- For SALE type: simple single code input --}}
+                        @if (!$isEdit && $type === 'sale')
+                            <div class="col-4">
+                                <label class="form-label">Design # (Code) <span class="text-danger">*</span></label>
+                                <input type="text" wire:model="itemVariants.0.code"
+                                    class="form-control @error('itemVariants.0.code') is-invalid @enderror"
+                                    placeholder="e.g. SH-001"
+                                    style="text-transform:uppercase; font-family:monospace;">
+                                @error('itemVariants.0.code')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- For RENTAL/BOTH type: full per-item grid --}}
+                        @elseif(!$isEdit && in_array($type, ['rental', 'both']) && count($itemVariants) > 0)
                             <div class="col-12">
                                 <div
                                     style="background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:14px;">
@@ -171,16 +180,14 @@
                                         style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px;">
                                         <i class="bi bi-list-ul me-1"></i>
                                         Item Details
-                                        <span style="font-weight:400; font-size:10px; margin-left:6px;">
-                                            (code required for each item)
-                                        </span>
+                                        <span style="font-weight:400; font-size:10px; margin-left:6px;">(code required
+                                            for each item)</span>
                                     </div>
                                     <div
                                         style="display:grid; grid-template-columns: 50px 1fr 1fr 1fr; gap:8px; margin-bottom:6px;">
                                         <div style="font-size:10px; font-weight:700; color:var(--text-muted);">#</div>
                                         <div style="font-size:10px; font-weight:700; color:var(--text-muted);">CODE
-                                            <span style="color:#e53e3e;">*</span>
-                                        </div>
+                                            <span style="color:#e53e3e;">*</span></div>
                                         <div style="font-size:10px; font-weight:700; color:var(--text-muted);">COLOR
                                         </div>
                                         <div style="font-size:10px; font-weight:700; color:var(--text-muted);">SIZE
