@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\AdvancesController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\DashboardController;
@@ -51,6 +52,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/purchase-sale', [ReportsController::class, 'purchaseSale'])->name('reports.purchase-sale');
     Route::get('/reports/customer-vendor', [ReportsController::class, 'customerVendor'])->name('reports.customer-vendor');
     Route::get('/settings', fn () => view('coming-soon'))->name('settings.index');
+    Route::get('/backup', [BackupController::class, 'index'])->name('backup.index');
+    Route::get('/backup/download/{filename}', [BackupController::class, 'download'])->name('backup.download');
+
     Route::get('/feature-toggles', [FeatureTogglesController::class, 'index'])->name('feature-toggles.index');
 });
 

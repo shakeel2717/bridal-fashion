@@ -372,6 +372,17 @@
                 </a>
             </div>
         @endif
+
+        @if (auth()->user()->isAdmin())
+            <div class="col-2">
+                <a href="{{ route('backup.index') }}" class="module-card">
+                    <div class="mod-icon-wrap pink" style="background:#fff5f7;">
+                        <i class="bi bi-database-check" style="font-size:22px; color:#d53f8c;"></i>
+                    </div>
+                    <div class="mod-name">Backup</div>
+                </a>
+            </div>
+        @endif
     </div>
 
     {{-- Alert Row --}}
