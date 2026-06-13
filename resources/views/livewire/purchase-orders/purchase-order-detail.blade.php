@@ -292,7 +292,7 @@
                     <tr>
                         <th>Return #</th>
                         <th>Date</th>
-                        <th style="text-align:center;">Items</th>
+                        <th>Items Returned</th>
                         <th style="text-align:right;">Value</th>
                         <th>Resolution</th>
                         <th>Status</th>
@@ -307,7 +307,15 @@
                                 {{ $ret->return_number }}
                             </td>
                             <td>{{ $ret->return_date->format('d/m/Y') }}</td>
-                            <td style="text-align:center;">{{ $ret->items->count() }}</td>
+                            <td>
+                                @foreach ($ret->items as $ri)
+                                    <div style="font-size:11px; line-height:1.6;">
+                                        <span class="tbl-code-badge" style="font-size:9px;">{{ $ri->item_code }}</span>
+                                        <span style="color:var(--text-primary);">{{ $ri->item_name }}</span>
+                                        <span style="color:var(--text-muted);">× {{ $ri->qty_returned }}</span>
+                                    </div>
+                                @endforeach
+                            </td>
                             <td style="text-align:right; font-weight:700; color:#e53e3e;">
                                 Rs. {{ number_format($ret->total_amount, 0) }}
                             </td>

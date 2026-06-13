@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\SaleReturn;
 use App\Services\AccountService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -245,6 +246,75 @@ class SaleDetail extends Component
     public function confirmDeleteSale(): void
     {
         $this->showDeleteConfirm = true;
+    }
+
+    // ── Resolve Sale Return ───────────────────────────────
+    public ?int $resolvingReturnId = null;
+
+    public string $resolveResolution = 'refund';
+
+    public string $resolveStatus = 'resolved';
+
+    public string $resolveRefundAmount = '0';
+
+    public string $resolveRefundAccountId = '';
+
+    public string $resolveRefundDate = '';
+
+    public function openResolveReturn(int $returnId): void
+    {
+        $this->resolvingReturnId = $returnId;
+        $ret = SaleReturn::findOrFail($returnId);
+        $this->resolveResolution    = $ret->resolution === 'pending' ? 'refund' : $ret->resolution;
+        $this->resolveStatus        = 'resolved';
+        $this->resolveRefundAmount  = (string) ($ret->total_amount ?? 0);
+        $this->resolveRefundDate    = now()->format('Y-m-d');
+        $this->resolveRefundAccountId = '';
+    }
+
+    public function cancelResolve(): void
+    {
+        $this->resolvingReturnId = null;
+    }
+
+    public function saveReturnResolution(): void
+    {
+        $rules = [
+            'resolveResolution' => 'required|in:refund,replacement',
+            'resolveStatus'     => 'required|in:pending,received,resolved',
+        ];
+
+        if ($this->resolveResolution === 'refund') {
+            $rules['resolveRefundAmount']    = 'required|numeric|min:0';
+            $rules['resolveRefundAccountId'] = 'required|exists:accounts,id';
+        }
+
+        $this->validate($rules);
+
+        $ret = SaleReturn::findOrFail($this->resolvingReturnId);
+
+        $ret->update([
+            'resolution'        => $this->resolveResolution,
+            'status'            => $this->resolveStatus,
+            'refund_amount'     => $this->resolveResolution === 'refund' ? (float) $this->resolveRefundAmount : null,
+            'refund_date'       => $this->resolveResolution === 'refund' ? $this->resolveRefundDate : null,
+            'refund_account_id' => $this->resolveResolution === 'refund' ? (int) $this->resolveRefundAccountId : null,
+        ]);
+
+        if ($this->resolveResolution === 'refund' && (float) $this->resolveRefundAmount > 0) {
+            AccountService::debit(
+                (int) $this->resolveRefundAccountId,
+                (float) $this->resolveRefundAmount,
+                'sale_return_refund',
+                "Refund for sale return {$ret->return_number} — {$this->sale->customer_name}",
+                $this->resolveRefundDate ?: now()->toDateString(),
+                $ret,
+            );
+        }
+
+        $this->resolvingReturnId = null;
+        $this->sale->refresh();
+        session()->flash('success', "Return {$ret->return_number} resolved.");
     }
 
     public bool $showDeleteConfirm = false;

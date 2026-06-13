@@ -10,90 +10,74 @@ use App\Models\SaleItem;
 use App\Models\User;
 use App\Services\AccountService;
 use Carbon\Carbon;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class SaleCreate extends Component
 {
-    public string $advanceAccountId = '';
-
-    public string $phone1Gender = 'male';
-
-    public string $phone2Gender = 'male';
-
-    // Customer
-    public string $customerType = 'existing';
+    // ── Customer ──────────────────────────────────────────
+    public ?int $customerId = null;
 
     public string $customerSearch = '';
 
-    public ?int $customerId = null;
-
-    public string $customerName = '';
-
-    public string $customerPhone1 = '';
-
-    public string $customerPhone2 = '';
-    public string $paymentDate = '';
-
-    public string $customerCnic = '';
-
-    public string $deliveryAddress = '';
-
     public ?array $foundCustomers = null;
 
-    // Sale details
-    public string $billRef = '';
-
+    // ── Header ────────────────────────────────────────────
     public string $saleDate = '';
+
+    public string $billRef = '';
 
     public string $employeeId = '';
 
-    public string $notes = '';
-
-    // Items
+    // ── Product search row ────────────────────────────────
     public string $productSearch = '';
 
     public array $searchResults = [];
 
+    public ?int $pendingProductId = null;
+
+    public string $pendingProductName = '';
+
+    public string $pendingProductCode = '';
+
+    public string $newItemQty = '1';
+
+    public string $newItemPrice = '0';
+
+    // ── Items table ───────────────────────────────────────
     public array $items = [];
 
-    // Payment
-    public string $totalAmount = '0';
+    // ── Payment ───────────────────────────────────────────
+    public string $discount = '0';
 
     public string $advancePaid = '0';
 
+    public string $paymentDate = '';
+
+    public string $advanceAccountId = '';
+
     public function mount(): void
     {
-        $this->saleDate = now()->format('Y-m-d');
+        $this->saleDate    = now()->format('Y-m-d');
         $this->paymentDate = now()->format('Y-m-d');
+
+        // Auto-select Walk-in Customer
+        $walkin = Customer::where('is_walkin', true)->first();
+        if ($walkin) {
+            $this->customerId     = $walkin->id;
+            $this->customerSearch = $walkin->name;
+        }
+
         $defaultAccount = Account::where('is_default', true)->first()
             ?? Account::where('is_active', true)->first();
         $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
     }
 
-    // ── Customer ──────────────────────────────────────────
-    public function setCustomerType(string $type): void
-    {
-        $this->customerType = $type;
-        $this->customerId = null;
-        $this->customerName = '';
-        $this->customerPhone1 = '';
-        $this->customerPhone2 = '';
-        $this->customerCnic = '';
-        $this->deliveryAddress = '';
-        $this->customerSearch = '';
-        $this->foundCustomers = null;
-    }
-
-    public function setGender(string $field, string $gender): void
-    {
-        $this->$field = $gender;
-    }
-
+    // ── Customer Search ───────────────────────────────────
     public function searchCustomers(): void
     {
         if (strlen($this->customerSearch) < 2) {
             $this->foundCustomers = null;
-
             return;
         }
 
@@ -110,177 +94,212 @@ class SaleCreate extends Component
 
     public function selectCustomer(int $id): void
     {
-        $customer = Customer::findOrFail($id);
-        $this->customerId = $id;
-        $this->customerName = $customer->name;
-        $this->customerPhone1 = $customer->phone1;
-        $this->customerPhone2 = $customer->phone2 ?? '';
-        $this->customerCnic = $customer->cnic ?? '';
-        $this->deliveryAddress = $customer->address ?? '';
+        $customer             = Customer::findOrFail($id);
+        $this->customerId     = $id;
         $this->customerSearch = $customer->name;
         $this->foundCustomers = null;
     }
 
-    // ── Products ──────────────────────────────────────────
+    public function clearCustomer(): void
+    {
+        $walkin = Customer::where('is_walkin', true)->first();
+        $this->customerId     = $walkin?->id;
+        $this->customerSearch = $walkin?->name ?? 'Walk-in Customer';
+        $this->foundCustomers = null;
+    }
+
+    // ── Product Search (PO-style with groups) ─────────────
+    public function selectProductForRow(int $productId): void
+    {
+        $product = Product::findOrFail($productId);
+
+        $this->pendingProductId   = $product->id;
+        $this->pendingProductName = $product->name;
+        $this->pendingProductCode = $product->code;
+        $this->newItemPrice       = (string) $product->sale_price;
+        $this->productSearch      = $product->code.' — '.$product->name;
+        $this->searchResults      = [];
+        $this->dispatch('focus-sale-qty');
+    }
+
+    public function addItemToTable(): void
+    {
+        if (! $this->pendingProductId) {
+            return;
+        }
+
+        $qty   = max(1, (int) $this->newItemQty);
+        $price = max(0, (float) $this->newItemPrice);
+
+        array_unshift($this->items, [
+            'product_id'  => $this->pendingProductId,
+            'item_name'   => $this->pendingProductName,
+            'item_code'   => $this->pendingProductCode,
+            'qty'         => $qty,
+            'unit_price'  => (string) $price,
+            'total_price' => (string) ($qty * $price),
+        ]);
+
+        $this->productSearch      = '';
+        $this->searchResults      = [];
+        $this->newItemQty         = '1';
+        $this->newItemPrice       = '0';
+        $this->pendingProductId   = null;
+        $this->pendingProductName = '';
+        $this->pendingProductCode = '';
+        $this->dispatch('focus-sale-search');
+    }
+
     public function searchProducts(): void
     {
         if (strlen($this->productSearch) < 2) {
             $this->searchResults = [];
-
             return;
         }
 
-        $alreadyAdded = collect($this->items)->pluck('product_id')->toArray();
+        $alreadyAdded = collect($this->items)->pluck('product_id')->filter()->toArray();
 
-        $this->searchResults = Product::with('category')
+        // Direct matches (exact code OR name partial)
+        $directMatches = Product::with(['category', 'group'])
             ->where('is_active', true)
             ->where('is_abandoned', false)
             ->whereIn('type', ['sale', 'both'])
             ->where('stock_qty', '>', 0)
             ->where(function ($q) {
-                $q->where('code', 'like', "%{$this->productSearch}%")
+                $q->where('code', $this->productSearch)
                     ->orWhere('name', 'like', "%{$this->productSearch}%");
             })
             ->whereNotIn('id', $alreadyAdded)
-            ->limit(8)
-            ->get()
-            ->map(fn ($p) => [
-                'id' => $p->id,
-                'code' => $p->code,
-                'name' => $p->name,
-                'sale_price' => $p->sale_price,
-                'stock_qty' => $p->stock_qty,
-                'size' => $p->size,
-                'category' => $p->category->name ?? '',
-            ])
-            ->toArray();
+            ->get();
+
+        // Group siblings
+        $groupIds = $directMatches
+            ->whereNotNull('group_id')
+            ->pluck('group_id')
+            ->unique()->filter()->toArray();
+
+        $groupProducts = collect();
+        if (! empty($groupIds)) {
+            $groupProducts = Product::with(['category', 'group'])
+                ->where('is_active', true)
+                ->where('is_abandoned', false)
+                ->whereIn('type', ['sale', 'both'])
+                ->where('stock_qty', '>', 0)
+                ->whereIn('group_id', $groupIds)
+                ->whereNotIn('id', $directMatches->pluck('id')->toArray())
+                ->whereNotIn('id', $alreadyAdded)
+                ->get();
+        }
+
+        $all      = $directMatches->merge($groupProducts)->take(12);
+        $directIds = $directMatches->pluck('id')->toArray();
+
+        $this->searchResults = $all->map(fn ($p) => [
+            'id'             => $p->id,
+            'code'           => $p->code,
+            'name'           => $p->name,
+            'sale_price'     => $p->sale_price,
+            'stock_qty'      => $p->stock_qty,
+            'category'       => $p->category->name ?? '',
+            'group'          => $p->group->name ?? null,
+            'is_direct'      => in_array($p->id, $directIds),
+        ])->toArray();
     }
 
-    public function addItem(int $productId): void
+    public function addProduct(int $productId): void
     {
-        $product = Product::with('category')->findOrFail($productId);
-
-        $this->items[] = [
-            'product_id' => $product->id,
-            'code' => $product->code,
-            'name' => $product->name,
-            'category' => $product->category->name ?? '',
-            'size' => $product->size ?? '',
-            'sale_price' => (string) $product->sale_price,
-            'max_qty' => $product->stock_qty,
-            'qty' => 1,
-            'addons' => [],
-        ];
-
-        $this->productSearch = '';
-        $this->searchResults = [];
-        $this->recalcTotal();
+        $this->selectProductForRow($productId);
     }
 
     public function removeItem(int $index): void
     {
         array_splice($this->items, $index, 1);
-        $this->recalcTotal();
     }
 
-    public function addAddon(int $itemIndex): void
+    public function recalcItems(): void
     {
-        $this->items[$itemIndex]['addons'][] = ['label' => '', 'price' => '0'];
-    }
-
-    public function removeAddon(int $itemIndex, int $addonIndex): void
-    {
-        array_splice($this->items[$itemIndex]['addons'], $addonIndex, 1);
-        $this->recalcTotal();
-    }
-
-    public function recalcTotal(): void
-    {
-        $total = 0;
-        foreach ($this->items as $item) {
-            $qty = (int) ($item['qty'] ?? 1);
-            $price = (float) ($item['sale_price'] ?? 0);
-            $total += $price * $qty;
-            foreach ($item['addons'] ?? [] as $addon) {
-                $total += (float) ($addon['price'] ?? 0);
-            }
+        foreach ($this->items as $i => $item) {
+            $qty   = max(1, (int) ($item['qty'] ?? 1));
+            $price = max(0, (float) ($item['unit_price'] ?? 0));
+            $this->items[$i]['total_price'] = (string) ($qty * $price);
         }
-        $this->totalAmount = (string) $total;
+    }
+
+    public function updatedItems(): void
+    {
+        $this->recalcItems();
+    }
+
+    #[Computed]
+    public function subtotal(): float
+    {
+        return collect($this->items)->sum(fn ($i) => (float) ($i['total_price'] ?? 0));
+    }
+
+    #[Computed]
+    public function total(): float
+    {
+        return max(0, $this->subtotal - (float) $this->discount);
+    }
+
+    #[Computed]
+    public function balanceDue(): float
+    {
+        return max(0, $this->total - (float) $this->advancePaid);
     }
 
     // ── Save ──────────────────────────────────────────────
     public function save(): void
     {
         $this->validate([
-            'customerName' => 'required|string|max:150',
-            'customerPhone1' => 'required|string|max:20',
-            'saleDate' => 'required|date',
-            'advancePaid' => 'required|numeric|min:0',
-            'employeeId' => 'nullable|exists:users,id',
+            'customerId' => 'required|exists:customers,id',
+            'saleDate'   => 'required|date',
+            'advancePaid' => 'nullable|numeric|min:0',
+            'employeeId'  => 'nullable|exists:users,id',
         ]);
 
         if (empty($this->items)) {
             $this->addError('items', 'Please add at least one item.');
-
             return;
         }
 
-        $this->recalcTotal();
-        $total = (float) $this->totalAmount;
-        $advance = (float) $this->advancePaid;
+        $customer  = Customer::findOrFail($this->customerId);
+        $total     = $this->total;
+        $advance   = (float) $this->advancePaid;
         $remaining = max(0, $total - $advance);
 
-        $customerId = $this->customerId;
-        if ($this->customerType === 'walkin' || ! $customerId) {
-            $walkIn = Customer::where('is_walkin', true)->first();
-            $customerId = $walkIn?->id;
-        }
-
         $sale = Sale::create([
-            'bill_ref' => $this->billRef ?: null,
-            'customer_id' => $customerId,
-            'customer_name' => $this->customerName,
-            'customer_phone1' => $this->customerPhone1,
-            'customer_phone2' => $this->customerPhone2 ?: null,
-            'customer_cnic' => $this->customerCnic ?: null,
-            'delivery_address' => $this->deliveryAddress ?: null,
-            'sale_date' => Carbon::parse($this->saleDate)->toDateString(),
+            'bill_ref'               => $this->billRef ?: null,
+            'customer_id'            => $this->customerId,
+            'customer_name'          => $customer->name,
+            'customer_phone1'        => $customer->phone1 ?? '0000-0000000',
+            'customer_phone2'        => $customer->phone2 ?? null,
+            'customer_cnic'          => $customer->cnic ?? null,
+            'delivery_address'       => $customer->address ?? null,
+            'sale_date'              => Carbon::parse($this->saleDate)->toDateString(),
             'advance_payment_method' => Account::find($this->advanceAccountId)?->name ?? 'cash',
-            'status' => 'completed',
-            'total_amount' => $total,
-            'phone1_gender' => $this->phone1Gender,
-            'phone2_gender' => $this->phone2Gender,
-            'advance_paid' => $advance,
-            'remaining_balance' => $remaining,
-            'employee_id' => $this->employeeId ?: null,
-            'notes' => $this->notes ?: null,
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id(),
+            'status'                 => 'completed',
+            'total_amount'           => $total,
+            'discount'               => (float) $this->discount,
+            'advance_paid'           => $advance,
+            'remaining_balance'      => $remaining,
+            'employee_id'            => $this->employeeId ?: null,
+            'created_by'             => auth()->id(),
+            'updated_by'             => auth()->id(),
         ]);
 
         foreach ($this->items as $item) {
-            $addonLabels = collect($item['addons'] ?? [])
-                ->filter(fn ($a) => ! empty($a['label']))
-                ->map(fn ($a) => $a['label'])
-                ->join(', ');
-
-            $addonTotal = collect($item['addons'] ?? [])
-                ->sum(fn ($a) => (float) ($a['price'] ?? 0));
-
             $qty = (int) ($item['qty'] ?? 1);
 
             SaleItem::create([
-                'sale_id' => $sale->id,
-                'product_id' => $item['product_id'],
-                'product_name' => $item['name'],
-                'product_code' => $item['code'],
-                'sale_price' => (float) $item['sale_price'],
-                'qty' => $qty,
-                'custom_option_label' => $addonLabels ?: null,
-                'custom_option_price' => $addonTotal,
+                'sale_id'      => $sale->id,
+                'product_id'   => $item['product_id'],
+                'product_name' => $item['item_name'],
+                'product_code' => $item['item_code'],
+                'sale_price'   => (float) $item['unit_price'],
+                'qty'          => $qty,
             ]);
 
-            // Deduct stock
             Product::where('id', $item['product_id'])
                 ->decrement('stock_qty', $qty);
         }
@@ -290,7 +309,7 @@ class SaleCreate extends Component
                 (int) $this->advanceAccountId,
                 $advance,
                 'sale_payment',
-                "Sale advance — {$this->customerName} (#{$sale->id})",
+                "Sale advance — {$customer->name} (#{$sale->id})",
                 Carbon::parse($this->paymentDate)->toDateString(),
                 $sale,
             );
@@ -308,7 +327,7 @@ class SaleCreate extends Component
         $accounts = Account::where('is_active', true)
             ->orderByDesc('is_default')
             ->orderBy('name')
-            ->get(['id', 'name', 'type']);
+            ->get(['id', 'name']);
 
         return view('livewire.sales.sale-create', compact('employees', 'accounts'));
     }

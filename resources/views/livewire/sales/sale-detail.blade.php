@@ -356,11 +356,12 @@
                     <tr>
                         <th>Return #</th>
                         <th>Date</th>
-                        <th style="text-align:center;">Items</th>
+                        <th>Items Returned</th>
                         <th style="text-align:right;">Value</th>
                         <th>Resolution</th>
                         <th>Status</th>
                         <th style="text-align:right;">Refund</th>
+                        <th style="width:80px;"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -370,24 +371,141 @@
                                 {{ $ret->return_number }}
                             </td>
                             <td>{{ $ret->return_date->format('d/m/Y') }}</td>
-                            <td style="text-align:center;">{{ $ret->items->count() }}</td>
+                            <td>
+                                @foreach ($ret->items as $ri)
+                                    <div style="font-size:11px; line-height:1.6;">
+                                        <span class="tbl-code-badge" style="font-size:9px;">{{ $ri->item_code }}</span>
+                                        <span style="color:var(--text-primary);">{{ $ri->item_name }}</span>
+                                        <span style="color:var(--text-muted);">× {{ $ri->qty_returned }}</span>
+                                    </div>
+                                @endforeach
+                            </td>
                             <td style="text-align:right; font-weight:700; color:#e53e3e;">
                                 Rs. {{ number_format($ret->total_amount, 0) }}
                             </td>
                             <td>
-                                <span style="font-size:11px; background:{{ $ret->resolution === 'refund' ? '#fff5f5' : ($ret->resolution === 'replacement' ? '#ebf8ff' : '#f7fafc') }}; color:{{ $ret->resolution === 'refund' ? '#c53030' : ($ret->resolution === 'replacement' ? '#2c5282' : '#718096') }}; padding:2px 8px; border-radius:4px; font-weight:600;">
+                                @php
+                                    $resColor = match($ret->resolution) {
+                                        'refund'      => ['bg' => '#fff5f5', 'text' => '#c53030'],
+                                        'replacement' => ['bg' => '#ebf8ff', 'text' => '#2c5282'],
+                                        default       => ['bg' => '#fffbeb', 'text' => '#b7791f'],
+                                    };
+                                @endphp
+                                <span style="font-size:11px; background:{{ $resColor['bg'] }}; color:{{ $resColor['text'] }}; padding:2px 8px; border-radius:4px; font-weight:600;">
                                     {{ ucfirst($ret->resolution) }}
                                 </span>
                             </td>
                             <td>
-                                <span style="font-size:11px; background:#f7fafc; color:#718096; padding:2px 8px; border-radius:4px;">
+                                @php
+                                    $stColor = match($ret->status) {
+                                        'resolved' => ['bg' => '#f0fff4', 'text' => '#276749'],
+                                        'received' => ['bg' => '#ebf8ff', 'text' => '#2c5282'],
+                                        default    => ['bg' => '#fffbeb', 'text' => '#b7791f'],
+                                    };
+                                @endphp
+                                <span style="font-size:11px; background:{{ $stColor['bg'] }}; color:{{ $stColor['text'] }}; padding:2px 8px; border-radius:4px; font-weight:600;">
                                     {{ ucfirst($ret->status) }}
                                 </span>
                             </td>
                             <td style="text-align:right; color:#276749; font-weight:700;">
                                 {{ $ret->refund_amount ? 'Rs. '.number_format($ret->refund_amount, 0) : '—' }}
                             </td>
+                            <td style="text-align:center;">
+                                @if ($ret->resolution === 'pending' || $ret->status !== 'resolved')
+                                    <button class="btn btn-sm btn-outline-warning action-btn"
+                                        wire:click="openResolveReturn({{ $ret->id }})"
+                                        title="Resolve this return">
+                                        <i class="bi bi-pencil" style="font-size:11px;"></i> Resolve
+                                    </button>
+                                @else
+                                    <span style="font-size:11px; color:#276749;">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </span>
+                                @endif
+                            </td>
                         </tr>
+
+                        {{-- Inline Resolve Form --}}
+                        @if ($resolvingReturnId === $ret->id)
+                            <tr>
+                                <td colspan="8" style="padding:0;">
+                                    <div style="background:#fffbeb; border:1.5px solid #f6e05e; border-radius:8px; padding:16px; margin:4px 8px 8px;">
+                                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#b7791f; margin-bottom:12px;">
+                                            <i class="bi bi-patch-check me-1"></i> Resolve Return {{ $ret->return_number }}
+                                            <span style="font-size:10px; font-weight:400; color:#718096; margin-left:8px;">
+                                                Returned value: Rs. {{ number_format($ret->total_amount, 0) }}
+                                            </span>
+                                        </div>
+
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-auto">
+                                                <label class="form-label">Resolution <span class="text-danger">*</span></label>
+                                                <select wire:model.live="resolveResolution" class="form-select form-select-sm" style="width:220px;">
+                                                    <option value="refund">Refund — we pay customer back</option>
+                                                    <option value="replacement">Replacement — send new items</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-auto">
+                                                <label class="form-label">Update Status</label>
+                                                <select wire:model="resolveStatus" class="form-select form-select-sm" style="width:160px;">
+                                                    <option value="received">Received (items back)</option>
+                                                    <option value="resolved">Resolved (fully done)</option>
+                                                </select>
+                                            </div>
+
+                                            @if ($resolveResolution === 'refund')
+                                                <div class="col-auto">
+                                                    <label class="form-label">Refund Amount (Rs.)</label>
+                                                    <input type="number" wire:model="resolveRefundAmount"
+                                                        class="form-control form-control-sm @error('resolveRefundAmount') is-invalid @enderror"
+                                                        style="width:130px;" min="0">
+                                                    @error('resolveRefundAmount') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                </div>
+                                                <div class="col-auto">
+                                                    <label class="form-label">Pay From Account <span class="text-danger">*</span></label>
+                                                    <select wire:model="resolveRefundAccountId"
+                                                        class="form-select form-select-sm @error('resolveRefundAccountId') is-invalid @enderror"
+                                                        style="width:180px;">
+                                                        <option value="">Select account...</option>
+                                                        @foreach ($accounts as $acc)
+                                                            <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('resolveRefundAccountId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                </div>
+                                                <div class="col-auto">
+                                                    <label class="form-label">Refund Date</label>
+                                                    <input type="date" wire:model="resolveRefundDate"
+                                                        class="form-control form-control-sm" style="width:150px;">
+                                                </div>
+                                            @endif
+
+                                            @if ($resolveResolution === 'replacement')
+                                                <div class="col-auto">
+                                                    <div class="alert alert-info py-1 mb-0" style="font-size:11px;">
+                                                        <i class="bi bi-info-circle me-1"></i>
+                                                        Send replacement items to customer and update stock manually.
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            <div class="col-auto ms-auto d-flex gap-2 align-items-end">
+                                                <button class="btn btn-sm btn-outline-secondary"
+                                                    wire:click="cancelResolve">Cancel</button>
+                                                <button class="btn btn-sm btn-warning fw-700"
+                                                    wire:click="saveReturnResolution"
+                                                    wire:loading.attr="disabled">
+                                                    <span wire:loading wire:target="saveReturnResolution">
+                                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                                    </span>
+                                                    <i class="bi bi-check-lg me-1"></i> Save Resolution
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endif
                     @endforeach
                 </tbody>
             </table>
