@@ -178,6 +178,10 @@
                         class="sb-item {{ request()->routeIs('expenses.*') ? 'active' : '' }}" data-label="Expenses">
                         <i class="bi bi-receipt-cutoff"></i>
                     </a>
+                    <a href="{{ route('loans.index') }}"
+                        class="sb-item {{ request()->routeIs('loans.*') ? 'active' : '' }}" data-label="Loans">
+                        <i class="bi bi-person-lines-fill"></i>
+                    </a>
                 @endif
 
                 @if (auth()->user()->canAccess('reports'))

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountsController;
+use App\Http\Controllers\LoansController;
 use App\Http\Controllers\AdvancesController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BackupController;
@@ -39,6 +40,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase-orders/{purchaseOrder}/return', [PurchaseOrdersController::class, 'return'])->name('purchase-orders.return');
     Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrdersController::class, 'show'])->name('purchase-orders.show');
     Route::get('/accounts', [AccountsController::class, 'index'])->name('accounts.index');
+    Route::get('/loans', [LoansController::class, 'index'])->name('loans.index');
+    Route::get('/loans/{lender}', [LoansController::class, 'show'])->name('loans.show');
     Route::get('/expenses', [ExpensesController::class, 'index'])->name('expenses.index');
     Route::get('/products', [ProductsController::class, 'index'])->name('products.index');
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories.index');
