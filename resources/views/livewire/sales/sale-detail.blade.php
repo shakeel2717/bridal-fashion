@@ -281,6 +281,12 @@
                     Actions
                 </div>
                 <div class="d-flex flex-column gap-2">
+                    @if (in_array($sale->status, ['completed', 'pending']))
+                        <a href="{{ route('sales.return', $sale->id) }}"
+                            class="btn btn-sm btn-outline-warning w-100">
+                            <i class="bi bi-arrow-return-left me-1"></i> Process Return
+                        </a>
+                    @endif
                     @if ($sale->status === 'completed' || $sale->status === 'pending')
                         <button class="btn btn-sm btn-outline-danger w-100" wire:click="cancelSale">
                             <i class="bi bi-x-circle me-1"></i> Cancel Sale
@@ -338,6 +344,56 @@
 
         </div>
     </div>
+
+    {{-- Returns History --}}
+    @if ($sale->returns->count() > 0)
+        <div class="table-card mt-3" style="padding:16px 20px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px;">
+                <i class="bi bi-arrow-return-left me-1"></i> Returns History
+            </div>
+            <table class="table mb-0" style="font-size:12px;">
+                <thead>
+                    <tr>
+                        <th>Return #</th>
+                        <th>Date</th>
+                        <th style="text-align:center;">Items</th>
+                        <th style="text-align:right;">Value</th>
+                        <th>Resolution</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Refund</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($sale->returns as $ret)
+                        <tr>
+                            <td style="font-family:monospace; font-weight:700; color:var(--navy);">
+                                {{ $ret->return_number }}
+                            </td>
+                            <td>{{ $ret->return_date->format('d/m/Y') }}</td>
+                            <td style="text-align:center;">{{ $ret->items->count() }}</td>
+                            <td style="text-align:right; font-weight:700; color:#e53e3e;">
+                                Rs. {{ number_format($ret->total_amount, 0) }}
+                            </td>
+                            <td>
+                                <span style="font-size:11px; background:{{ $ret->resolution === 'refund' ? '#fff5f5' : ($ret->resolution === 'replacement' ? '#ebf8ff' : '#f7fafc') }}; color:{{ $ret->resolution === 'refund' ? '#c53030' : ($ret->resolution === 'replacement' ? '#2c5282' : '#718096') }}; padding:2px 8px; border-radius:4px; font-weight:600;">
+                                    {{ ucfirst($ret->resolution) }}
+                                </span>
+                            </td>
+                            <td>
+                                <span style="font-size:11px; background:#f7fafc; color:#718096; padding:2px 8px; border-radius:4px;">
+                                    {{ ucfirst($ret->status) }}
+                                </span>
+                            </td>
+                            <td style="text-align:right; color:#276749; font-weight:700;">
+                                {{ $ret->refund_amount ? 'Rs. '.number_format($ret->refund_amount, 0) : '—' }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
     {{-- Password Confirm Modal --}}
     @if ($showCancelConfirm)
         <div class="confirm-modal-overlay">

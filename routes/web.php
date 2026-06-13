@@ -31,9 +31,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/rentals/{rental}/edit', [RentalsController::class, 'edit'])->name('rentals.edit');
     Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
     Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create');
+    Route::get('/sales/{sale}/return', [SalesController::class, 'return'])->name('sales.return');
     Route::get('/sales/{sale}', [SalesController::class, 'show'])->name('sales.show');
     Route::get('/purchase-orders', [PurchaseOrdersController::class, 'index'])->name('purchase-orders.index');
     Route::get('/purchase-orders/create', [PurchaseOrdersController::class, 'create'])->name('purchase-orders.create');
+    Route::get('/purchase-orders/{purchaseOrder}/edit', [PurchaseOrdersController::class, 'edit'])->name('purchase-orders.edit');
+    Route::get('/purchase-orders/{purchaseOrder}/return', [PurchaseOrdersController::class, 'return'])->name('purchase-orders.return');
     Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrdersController::class, 'show'])->name('purchase-orders.show');
     Route::get('/accounts', [AccountsController::class, 'index'])->name('accounts.index');
     Route::get('/expenses', [ExpensesController::class, 'index'])->name('expenses.index');

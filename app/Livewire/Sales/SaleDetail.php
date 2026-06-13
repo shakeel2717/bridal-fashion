@@ -304,7 +304,7 @@ class SaleDetail extends Component
 
     public function render()
     {
-        $this->sale->load(['items.product', 'customer', 'employee']);
+        $this->sale->load(['items.product', 'customer', 'employee', 'returns.items']);
 
         $remaining = max(0, $this->sale->total_amount - $this->sale->advance_paid);
 

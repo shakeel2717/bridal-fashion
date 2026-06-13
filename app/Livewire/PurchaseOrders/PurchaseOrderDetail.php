@@ -6,7 +6,9 @@ use App\Models\Account;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderPayment;
+use App\Models\PurchaseReturn;
 use App\Services\AccountService;
+use Carbon\Carbon;
 use Livewire\Component;
 
 class PurchaseOrderDetail extends Component
@@ -25,10 +27,94 @@ class PurchaseOrderDetail extends Component
 
     public bool $showReceiveForm = false;
 
+    // Return resolve form
+    public ?int $resolvingReturnId = null;
+
+    public string $resolveResolution = 'refund';
+
+    public string $resolveStatus = 'resolved';
+
+    public string $resolveRefundAmount = '0';
+
+    public string $resolveRefundAccountId = '';
+
+    public string $resolveRefundDate = '';
+
     public function mount(PurchaseOrder $po): void
     {
         $this->po = $po;
         $this->paymentDate = now()->format('Y-m-d');
+        $this->resolveRefundDate = now()->format('Y-m-d');
+
+        $defaultAccount = Account::where('is_default', true)->first()
+            ?? Account::where('is_active', true)->first();
+        $this->resolveRefundAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
+    }
+
+    public function openResolveReturn(int $returnId): void
+    {
+        $return = PurchaseReturn::with('items')->findOrFail($returnId);
+
+        $this->resolvingReturnId = $returnId;
+        $this->resolveResolution = 'refund';
+        $this->resolveStatus = 'resolved';
+        $this->resolveRefundAmount = (string) $return->total_amount;
+        $this->resolveRefundDate = now()->format('Y-m-d');
+
+        $defaultAccount = Account::where('is_default', true)->first()
+            ?? Account::where('is_active', true)->first();
+        $this->resolveRefundAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
+
+        $this->resetValidation();
+    }
+
+    public function cancelResolve(): void
+    {
+        $this->resolvingReturnId = null;
+        $this->resetValidation();
+    }
+
+    public function saveReturnResolution(): void
+    {
+        $this->validate([
+            'resolveResolution' => 'required|in:refund,replacement',
+            'resolveStatus'     => 'required|in:sent,resolved',
+        ]);
+
+        if ($this->resolveResolution === 'refund') {
+            $this->validate([
+                'resolveRefundAmount'    => 'required|numeric|min:0',
+                'resolveRefundDate'      => 'required|date',
+                'resolveRefundAccountId' => 'required|exists:accounts,id',
+            ]);
+        }
+
+        $return = PurchaseReturn::findOrFail($this->resolvingReturnId);
+
+        $return->update([
+            'resolution'       => $this->resolveResolution,
+            'status'           => $this->resolveStatus,
+            'refund_amount'    => $this->resolveResolution === 'refund' ? (float) $this->resolveRefundAmount : null,
+            'refund_date'      => $this->resolveResolution === 'refund' ? Carbon::parse($this->resolveRefundDate)->toDateString() : null,
+            'refund_account_id' => $this->resolveResolution === 'refund' ? (int) $this->resolveRefundAccountId : null,
+            'updated_by'       => auth()->id(),
+        ]);
+
+        // Credit account if refund — vendor is sending us money back
+        if ($this->resolveResolution === 'refund' && (float) $this->resolveRefundAmount > 0) {
+            AccountService::credit(
+                (int) $this->resolveRefundAccountId,
+                (float) $this->resolveRefundAmount,
+                'purchase_return_refund',
+                "Return refund — {$this->po->vendor->name} ({$return->return_number})",
+                $this->resolveRefundDate,
+                $return,
+            );
+        }
+
+        $this->resolvingReturnId = null;
+        $this->po->refresh();
+        session()->flash('success', "Return {$return->return_number} updated.");
     }
 
     public function addPayment(): void
@@ -146,7 +232,7 @@ class PurchaseOrderDetail extends Component
 
     public function render()
     {
-        $this->po->load(['vendor', 'items.product', 'payments.createdBy', 'createdBy']);
+        $this->po->load(['vendor', 'items.product', 'payments.createdBy', 'returns.items', 'createdBy']);
 
         $totalPaid = $this->po->payments->where('type', 'payment')->sum('amount');
         $balanceDue = max(0, $this->po->total_amount - $totalPaid);

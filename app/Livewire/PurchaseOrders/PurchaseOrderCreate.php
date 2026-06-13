@@ -15,6 +15,10 @@ use Livewire\Component;
 
 class PurchaseOrderCreate extends Component
 {
+    public ?int $purchaseOrderId = null;
+
+    public bool $isEditMode = false;
+
     public string $vendorId = '';
 
     public string $vendorBillNumber = '';
@@ -56,14 +60,41 @@ class PurchaseOrderCreate extends Component
 
     public string $newVendorPhone = '';
 
-    public function mount(): void
+    public function mount(?PurchaseOrder $purchaseOrder = null): void
     {
-        $this->orderDate = now()->format('Y-m-d');
-        $this->initialPaymentDate = now()->format('Y-m-d');
+        if ($purchaseOrder && $purchaseOrder->exists) {
+            $this->isEditMode = true;
+            $this->purchaseOrderId = $purchaseOrder->id;
+
+            $this->vendorId = (string) $purchaseOrder->vendor_id;
+            $this->vendorBillNumber = $purchaseOrder->vendor_bill_number ?? '';
+            $this->orderDate = Carbon::parse($purchaseOrder->order_date)->format('Y-m-d');
+            $this->discount = (string) $purchaseOrder->discount;
+            $this->notes = $purchaseOrder->notes ?? '';
+
+            // Load items
+            $this->items = $purchaseOrder->items->map(fn ($item) => [
+                'product_id' => $item->product_id,
+                'item_name'  => $item->item_name,
+                'item_code'  => $item->item_code ?? '',
+                'qty'        => (string) $item->qty,
+                'unit_price' => (string) $item->unit_price,
+                'total_price' => (string) $item->total_price,
+                'notes'      => $item->notes ?? '',
+            ])->toArray();
+
+            // In edit mode, don't pre-fill payment fields — payments are managed on detail page
+            $this->initialPayment = '0';
+            $this->initialPaymentDate = now()->format('Y-m-d');
+        } else {
+            $this->orderDate = now()->format('Y-m-d');
+            $this->initialPaymentDate = now()->format('Y-m-d');
+        }
+
         $this->newItemQty = '1';
         $this->newItemPrice = '0';
         $defaultAccount = Account::where('is_default', true)->first()
-    ?? Account::where('is_active', true)->first();
+            ?? Account::where('is_active', true)->first();
         $this->initialPaymentAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
     }
 
@@ -89,7 +120,6 @@ class PurchaseOrderCreate extends Component
         $qty = max(1, (int) $this->newItemQty);
         $price = max(0, (float) $this->newItemPrice);
 
-        // Use pending or search for a product
         $productId = $this->pendingProductId;
         $productName = $this->pendingProductName;
         $productCode = $this->pendingProductCode;
@@ -108,7 +138,6 @@ class PurchaseOrderCreate extends Component
             'notes' => '',
         ]);
 
-        // Reset all
         $this->productSearch = '';
         $this->searchResults = [];
         $this->newItemQty = '1';
@@ -130,18 +159,15 @@ class PurchaseOrderCreate extends Component
 
         $alreadyAdded = collect($this->items)->pluck('product_id')->filter()->toArray();
 
-        // Find directly matching products
         $directMatches = Product::with(['category', 'group'])
             ->where('is_active', true)
             ->where(function ($q) {
-                // Exact code match OR name contains search term
-                $q->where('code', $this->productSearch)  // exact code
-                    ->orWhere('name', 'like', "%{$this->productSearch}%"); // name partial
+                $q->where('code', $this->productSearch)
+                    ->orWhere('name', 'like', "%{$this->productSearch}%");
             })
             ->whereNotIn('id', $alreadyAdded)
             ->get();
 
-        // Get group IDs from direct matches
         $groupIds = $directMatches
             ->whereNotNull('group_id')
             ->pluck('group_id')
@@ -149,7 +175,6 @@ class PurchaseOrderCreate extends Component
             ->filter()
             ->toArray();
 
-        // Get other products from same groups
         $groupProducts = collect();
         if (! empty($groupIds)) {
             $groupProducts = Product::with(['category', 'group'])
@@ -160,9 +185,7 @@ class PurchaseOrderCreate extends Component
                 ->get();
         }
 
-        // Merge: direct matches first, then group siblings
         $all = $directMatches->merge($groupProducts)->take(12);
-
         $directIds = $directMatches->pluck('id')->toArray();
 
         $this->searchResults = $all->map(fn ($p) => [
@@ -250,7 +273,6 @@ class PurchaseOrderCreate extends Component
         $this->validate([
             'vendorId' => 'required|exists:vendors,id',
             'orderDate' => 'required|date',
-            'initialPayment' => 'nullable|numeric|min:0',
         ]);
 
         if (empty($this->items)) {
@@ -259,19 +281,21 @@ class PurchaseOrderCreate extends Component
             return;
         }
 
-        // Check duplicate vendor + bill number
-        $duplicate = PurchaseOrder::where('vendor_id', $this->vendorId)
-            ->where('vendor_bill_number', $this->vendorBillNumber)
-            ->exists();
+        // Duplicate bill number check (exclude current PO in edit mode)
+        $duplicateQuery = PurchaseOrder::where('vendor_id', $this->vendorId)
+            ->where('vendor_bill_number', $this->vendorBillNumber);
 
-        if ($duplicate) {
+        if ($this->isEditMode) {
+            $duplicateQuery->where('id', '!=', $this->purchaseOrderId);
+        }
+
+        if ($duplicateQuery->exists()) {
             $this->addError('vendorBillNumber',
                 'A PO with this vendor and bill number already exists. Please verify.');
 
             return;
         }
 
-        // Validate items
         foreach ($this->items as $i => $item) {
             if (empty($item['item_name'])) {
                 $this->addError("items.{$i}.item_name", 'Item name required.');
@@ -280,57 +304,102 @@ class PurchaseOrderCreate extends Component
             }
         }
 
-        // Generate PO number
+        $total = $this->total;
+
+        if ($this->isEditMode) {
+            $po = PurchaseOrder::findOrFail($this->purchaseOrderId);
+
+            $alreadyPaid = $po->amount_paid;
+            $balance = max(0, $total - $alreadyPaid);
+
+            $po->update([
+                'vendor_id'          => $this->vendorId,
+                'vendor_bill_number' => $this->vendorBillNumber ?: null,
+                'order_date'         => Carbon::parse($this->orderDate)->toDateString(),
+                'expected_date'      => Carbon::parse($this->orderDate)->toDateString(),
+                'status'             => $status,
+                'total_amount'       => $total,
+                'balance_due'        => $balance,
+                'discount'           => (float) $this->discount,
+                'notes'              => $this->notes ?: null,
+                'updated_by'         => auth()->id(),
+            ]);
+
+            // Replace items
+            $po->items()->delete();
+            foreach ($this->items as $item) {
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $po->id,
+                    'product_id'        => $item['product_id'] ?: null,
+                    'item_name'         => $item['item_name'],
+                    'item_code'         => $item['item_code'] ?: null,
+                    'qty'               => (int) ($item['qty'] ?? 1),
+                    'unit_price'        => (float) ($item['unit_price'] ?? 0),
+                    'total_price'       => (float) ($item['total_price'] ?? 0),
+                    'received_qty'      => 0,
+                    'returned_qty'      => 0,
+                    'notes'             => $item['notes'] ?: null,
+                ]);
+            }
+
+            session()->flash('success', "Purchase Order {$po->po_number} updated.");
+            $this->redirect(route('purchase-orders.show', $po->id));
+
+            return;
+        }
+
+        // ── Create mode ────────────────────────────────────────────
+        $this->validate(['initialPayment' => 'nullable|numeric|min:0']);
+
         $lastPo = PurchaseOrder::latest()->first();
         $poNumber = 'PO-'.str_pad(($lastPo ? $lastPo->id + 1 : 1), 4, '0', STR_PAD_LEFT);
 
-        $total = $this->total;
         $paid = (float) $this->initialPayment;
         $balance = max(0, $total - $paid);
 
         $po = PurchaseOrder::create([
-            'po_number' => $poNumber,
+            'po_number'          => $poNumber,
             'vendor_bill_number' => $this->vendorBillNumber ?: null,
-            'vendor_id' => $this->vendorId,
-            'order_date' => Carbon::parse($this->orderDate)->toDateString(),
-            'expected_date' => Carbon::parse($this->orderDate)->toDateString(),
-            'status' => $status,
-            'total_amount' => $total,
-            'amount_paid' => $paid,
-            'balance_due' => $balance,
-            'discount' => (float) $this->discount,
-            'notes' => $this->notes ?: null,
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id(),
+            'vendor_id'          => $this->vendorId,
+            'order_date'         => Carbon::parse($this->orderDate)->toDateString(),
+            'expected_date'      => Carbon::parse($this->orderDate)->toDateString(),
+            'status'             => $status,
+            'total_amount'       => $total,
+            'amount_paid'        => $paid,
+            'balance_due'        => $balance,
+            'discount'           => (float) $this->discount,
+            'notes'              => $this->notes ?: null,
+            'created_by'         => auth()->id(),
+            'updated_by'         => auth()->id(),
         ]);
 
         foreach ($this->items as $item) {
             PurchaseOrderItem::create([
                 'purchase_order_id' => $po->id,
-                'product_id' => $item['product_id'] ?: null,
-                'item_name' => $item['item_name'],
-                'item_code' => $item['item_code'] ?: null,
-                'qty' => (int) ($item['qty'] ?? 1),
-                'unit_price' => (float) ($item['unit_price'] ?? 0),
-                'total_price' => (float) ($item['total_price'] ?? 0),
-                'received_qty' => 0,
-                'returned_qty' => 0,
-                'notes' => $item['notes'] ?: null,
+                'product_id'        => $item['product_id'] ?: null,
+                'item_name'         => $item['item_name'],
+                'item_code'         => $item['item_code'] ?: null,
+                'qty'               => (int) ($item['qty'] ?? 1),
+                'unit_price'        => (float) ($item['unit_price'] ?? 0),
+                'total_price'       => (float) ($item['total_price'] ?? 0),
+                'received_qty'      => 0,
+                'returned_qty'      => 0,
+                'notes'             => $item['notes'] ?: null,
             ]);
         }
 
         if ($paid > 0) {
             PurchaseOrderPayment::create([
                 'purchase_order_id' => $po->id,
-                'amount' => $paid,
-                'payment_date' => $this->initialPaymentDate ?: now()->toDateString(),
-                'payment_method' => $this->paymentMethod,
-                'type' => 'payment',
-                'note' => 'Initial payment on order',
-                'created_by' => auth()->id(),
+                'amount'            => $paid,
+                'payment_date'      => $this->initialPaymentDate ?: now()->toDateString(),
+                'payment_method'    => $this->paymentMethod,
+                'type'              => 'payment',
+                'note'              => 'Initial payment on order',
+                'created_by'        => auth()->id(),
             ]);
 
-            if ($paid > 0 && ! empty($this->initialPaymentAccountId)) {
+            if (! empty($this->initialPaymentAccountId)) {
                 AccountService::debit(
                     (int) $this->initialPaymentAccountId,
                     $paid,

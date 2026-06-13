@@ -1,10 +1,11 @@
 <div>
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <div class="page-title">New Purchase Order</div>
-            <div class="page-subtitle">Create vendor purchase order</div>
+            <div class="page-title">{{ $isEditMode ? 'Edit Purchase Order' : 'New Purchase Order' }}</div>
+            <div class="page-subtitle">{{ $isEditMode ? 'Update vendor purchase order' : 'Create vendor purchase order' }}</div>
         </div>
-        <a href="{{ route('purchase-orders.index') }}" class="btn btn-sm btn-outline-secondary">
+        <a href="{{ $isEditMode ? route('purchase-orders.show', $purchaseOrderId) : route('purchase-orders.index') }}"
+            class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> Back
         </a>
     </div>
@@ -278,32 +279,42 @@
             <div class="table-card mb-3" style="padding:20px;">
                 <div
                     style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
-                    <i class="bi bi-cash me-1"></i> Discount & Payment
+                    <i class="bi bi-cash me-1"></i> Discount{{ $isEditMode ? '' : ' & Payment' }}
                 </div>
                 <div class="row g-3">
-                    <div class="col-4">
-                        <label class="form-label">Pay From Account</label>
-                        <select wire:model="initialPaymentAccountId" class="form-select">
-                            <option value="">Select account...</option>
-                            @foreach ($accounts as $acc)
-                                <option value="{{ $acc->id }}">{{ $acc->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-4">
-                        <label class="form-label">Amount Paid (Rs.)</label>
-                        <input type="number" wire:model.lazy="initialPayment" class="form-control" min="0"
-                            placeholder="0">
-                    </div>
-                    <div class="col-4">
-                        <label class="form-label">Payment Date</label>
-                        <input type="date" wire:model="initialPaymentDate" class="form-control">
-                    </div>
-                    <div class="col-12">
+                    @if (!$isEditMode)
+                        <div class="col-4">
+                            <label class="form-label">Pay From Account</label>
+                            <select wire:model="initialPaymentAccountId" class="form-select">
+                                <option value="">Select account...</option>
+                                @foreach ($accounts as $acc)
+                                    <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Amount Paid (Rs.)</label>
+                            <input type="number" wire:model.lazy="initialPayment" class="form-control" min="0"
+                                placeholder="0">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Payment Date</label>
+                            <input type="date" wire:model="initialPaymentDate" class="form-control">
+                        </div>
+                    @endif
+                    <div class="{{ $isEditMode ? 'col-12' : 'col-12' }}">
                         <label class="form-label">Discount (Rs.)</label>
                         <input type="number" wire:model.lazy="discount" wire:change="recalcItems"
                             class="form-control" min="0" placeholder="0">
                     </div>
+                    @if ($isEditMode)
+                        <div class="col-12">
+                            <div class="alert alert-info py-2 mb-0" style="font-size:12px;">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Payments are managed on the <a href="{{ route('purchase-orders.show', $purchaseOrderId) }}">order detail page</a>.
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
             <div class="table-card mb-3" style="padding:0; overflow:hidden;">
@@ -374,10 +385,14 @@
                     <span wire:loading wire:target="save">
                         <span class="spinner-border spinner-border-sm me-2"></span>
                     </span>
-                    <i class="bi bi-check-circle me-2"></i> Place Order
+                    @if ($isEditMode)
+                        <i class="bi bi-check-circle me-2"></i> Update Order
+                    @else
+                        <i class="bi bi-check-circle me-2"></i> Place Order
+                    @endif
                 </button>
                 <button class="btn btn-outline-secondary w-100" wire:click="save('draft')">
-                    <i class="bi bi-save me-1"></i> Save as Draft
+                    <i class="bi bi-save me-1"></i> {{ $isEditMode ? 'Update as Draft' : 'Save as Draft' }}
                 </button>
             </div>
         </div>

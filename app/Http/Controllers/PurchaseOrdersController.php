@@ -13,4 +13,14 @@ class PurchaseOrdersController extends Controller
     {
         return view('purchase-orders.show', ['po' => $purchaseOrder]);
     }
+
+    public function edit(PurchaseOrder $purchaseOrder)
+    {
+        return view('purchase-orders.edit', ['purchaseOrder' => $purchaseOrder]);
+    }
+
+    public function return(PurchaseOrder $purchaseOrder)
+    {
+        return view('purchase-orders.return', ['purchaseOrder' => $purchaseOrder]);
+    }
 }

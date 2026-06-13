@@ -144,10 +144,16 @@
                             </span>
                         </td>
                         <td>
-                            <a href="{{ route('purchase-orders.show', $order->id) }}"
-                                class="btn btn-sm btn-outline-secondary action-btn">
-                                <i class="bi bi-eye" style="font-size:12px;"></i>
-                            </a>
+                            <div class="d-flex gap-1">
+                                <a href="{{ route('purchase-orders.show', $order->id) }}"
+                                    class="btn btn-sm btn-outline-secondary action-btn" title="View">
+                                    <i class="bi bi-eye" style="font-size:12px;"></i>
+                                </a>
+                                <a href="{{ route('purchase-orders.edit', $order->id) }}"
+                                    class="btn btn-sm btn-outline-primary action-btn" title="Edit">
+                                    <i class="bi bi-pencil" style="font-size:12px;"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 @empty
