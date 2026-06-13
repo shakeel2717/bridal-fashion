@@ -54,7 +54,7 @@ class CategoryList extends Component
     public function save(): void
     {
         $this->validate([
-            'name' => 'required|string|max:100',
+            'name' => 'required|string|unique:categories,name|max:100',
             'code' => [
                 'required', 'string', 'max:20',
                 Rule::unique('categories', 'code')
