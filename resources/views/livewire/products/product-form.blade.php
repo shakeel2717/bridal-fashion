@@ -5,7 +5,7 @@
                 <div class="modal-header">
                     <h6 class="modal-title">
                         <i class="bi bi-tags me-2"></i>
-                        {{ $isEdit ? 'Edit Product' : 'Add New Product' }}
+                        {{ $isEdit ? 'Edit Stock' : 'Add New Stock' }}
                     </h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" wire:click="resetForm"></button>
                 </div>
@@ -19,7 +19,7 @@
 
                             {{-- Name --}}
                             <div class="col-6">
-                                <label class="form-label">Product Name <span class="text-danger">*</span></label>
+                                <label class="form-label">Stock Name <span class="text-danger">*</span></label>
                                 <input type="text" wire:model="name" id="pf_name"
                                     class="form-control @error('name') is-invalid @enderror"
                                     placeholder="e.g. Red Bridal Lahnga">
@@ -87,10 +87,10 @@
                                 @endif
                             </div>
 
-                            {{-- Product Group --}}
+                            {{-- Stock Group --}}
                             <div class="col-6">
                                 <label class="form-label">
-                                    Product Group
+                                    Stock Group
                                     <span style="font-size:10px; color:var(--text-muted); font-weight:400;">(link
                                         similar
                                         items)</span>
@@ -282,7 +282,7 @@
                             {{-- Photo --}}
                             <div class="col-12">
                                 <label class="form-label">
-                                    Product Photo
+                                    Stock Photo
                                     <span style="color:var(--text-muted); font-weight:400; font-size:11px;">(optional,
                                         max
                                         3MB)</span>
@@ -383,7 +383,7 @@
                             <span wire:loading wire:target="save">
                                 <span class="spinner-border spinner-border-sm me-1"></span>
                             </span>
-                            {{ $isEdit ? 'Update Product' : 'Save Product' }}
+                            {{ $isEdit ? 'Update Stock' : 'Save Stock' }}
                         </button>
                     </div>
                 </div>

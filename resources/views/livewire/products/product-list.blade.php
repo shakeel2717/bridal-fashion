@@ -14,12 +14,12 @@
     <div class="page-header-sticky">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <div>
-                <div class="page-title">Products</div>
+                <div class="page-title">Stock</div>
                 <div class="page-subtitle">Manage inventory items</div>
             </div>
             <button class="btn btn-primary btn-sm d-flex align-items-center gap-2"
                 wire:click="$dispatch('open-create-product')">
-                <i class="bi bi-plus-lg"></i> Add Product
+                <i class="bi bi-plus-lg"></i> Add Stock
             </button>
         </div>
     </div>

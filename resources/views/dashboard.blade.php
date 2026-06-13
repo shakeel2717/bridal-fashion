@@ -236,7 +236,7 @@
                     <div class="mod-icon-wrap purple">
                         <i class="bi bi-tags-fill" style="font-size:22px; color:#805ad5;"></i>
                     </div>
-                    <div class="mod-name">Products</div>
+                    <div class="mod-name">Stock</div>
                 </a>
             </div>
         @endif
