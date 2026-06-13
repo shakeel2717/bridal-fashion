@@ -100,7 +100,7 @@
             <thead>
                 <tr>
                     <th style="width:40px; text-align:center;">Sr</th>
-                    <th>Code</th>
+                    <th>Design#</th>
                     <th>Product Name</th>
                     <th>Category</th>
                     <th>Size</th>
