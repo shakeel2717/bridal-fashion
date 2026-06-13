@@ -281,6 +281,7 @@ class ProductForm extends Component
 
         $this->dispatch('product-saved');
         $this->dispatch('close-product-modal');
+        $this->dispatch('refresh-page');
         $this->resetForm();
     }
 

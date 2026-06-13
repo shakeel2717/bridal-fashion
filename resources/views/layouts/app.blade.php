@@ -70,8 +70,8 @@
 
             {{-- Sidebar --}}
             <div class="app-sidebar">
-                <a href="{{ route('dashboard') }}"
-                    class="sb-item {{ request()->routeIs('dashboard') ? 'active' : '' }}" data-label="Dashboard">
+                <a href="{{ route('dashboard') }}" class="sb-item {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                    data-label="Dashboard">
                     <i class="bi bi-grid-1x2"></i>
                 </a>
 
@@ -207,6 +207,16 @@
 
     @livewireScripts
     @stack('scripts')
+
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            Livewire.on('refresh-page', () => {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            });
+        });
+    </script>
 </body>
 
 </html>
