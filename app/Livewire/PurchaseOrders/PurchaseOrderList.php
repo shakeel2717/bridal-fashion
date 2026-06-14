@@ -84,6 +84,9 @@ class PurchaseOrderList extends Component
                 $q->where('po_number', 'like', "%{$this->search}%")
                     ->orWhere('vendor_bill_number', 'like', "%{$this->search}%")
                     ->orWhereHas('vendor', fn ($v) => $v->where('name', 'like', "%{$this->search}%")
+                    )
+                    ->orWhereHas('items', fn ($i) => $i->where('item_code', $this->search) // exact code match
+                        ->orWhere('item_name', 'like', "%{$this->search}%")
                     );
             }))
             ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))

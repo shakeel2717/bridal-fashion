@@ -56,9 +56,9 @@
             <div class="d-flex gap-2 align-items-center">
                 <div class="tab-pills" style="margin-bottom:0;">
                     <button class="tab-pill {{ $filterStatus === '' && $hasSearched ? 'active' : '' }}"
-        wire:click="showAll">
-    All
-</button>
+                        wire:click="showAll">
+                        All
+                    </button>
                     <button class="tab-pill {{ $filterStatus === 'draft' ? 'active' : '' }}"
                         wire:click="$set('hasSearched', true); $set('filterStatus','draft')">Draft</button>
                     <button class="tab-pill {{ $filterStatus === 'ordered' ? 'active' : '' }}"
@@ -84,7 +84,7 @@
             </div>
             <div style="width:240px;">
                 <input type="text" wire:model.live.debounce.400ms="search" class="form-control form-control-sm"
-                    placeholder="Search PO#, bill#, vendor...">
+                    placeholder="Search PO#, bill#, vendor, product code...">
             </div>
         </div>
 
