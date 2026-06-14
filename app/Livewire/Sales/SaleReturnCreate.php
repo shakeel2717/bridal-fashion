@@ -45,17 +45,17 @@ class SaleReturnCreate extends Component
 
         $sale->load('items');
         $this->returnItems = $sale->items->map(fn ($i) => [
-            'selected'     => false,
+            'selected' => false,
             'sale_item_id' => $i->id,
-            'product_id'   => $i->product_id,
-            'item_name'    => $i->product_name ?? $i->product?->name ?? 'Item',
-            'item_code'    => $i->product_code ?? $i->product?->code ?? '',
-            'max_qty'      => $i->qty,
+            'product_id' => $i->product_id,
+            'item_name' => $i->product_name ?? $i->product?->name ?? 'Item',
+            'item_code' => $i->product_code ?? $i->product?->code ?? '',
+            'max_qty' => $i->qty,
             'qty_returned' => '1',
-            'unit_price'   => (string) $i->sale_price,
-            'total_price'  => (string) $i->sale_price,
-            'reason'       => 'damage',
-            'condition'    => 'good', // good = restore to stock; damaged = don't restore
+            'unit_price' => (string) $i->sale_price,
+            'total_price' => (string) $i->sale_price,
+            'reason' => 'damage',
+            'condition' => 'good', // good = restore to stock; damaged = don't restore
         ])->toArray();
     }
 
@@ -105,6 +105,7 @@ class SaleReturnCreate extends Component
 
         if (empty($selected)) {
             $this->addError('returnItems', 'Select at least one item to return.');
+
             return;
         }
 
@@ -115,8 +116,8 @@ class SaleReturnCreate extends Component
 
         if ($this->resolution === 'refund') {
             $this->validate([
-                'refundAmount'    => 'required|numeric|min:0',
-                'refundDate'      => 'required|date',
+                'refundAmount' => 'required|numeric|min:0',
+                'refundDate' => 'required|date',
                 'refundAccountId' => 'required|exists:accounts,id',
             ]);
         }
@@ -128,19 +129,19 @@ class SaleReturnCreate extends Component
         $total = collect($selected)->sum(fn ($i) => (float) $i['total_price']);
 
         $return = SaleReturn::create([
-            'return_number'    => $returnNumber,
-            'sale_id'          => $this->sale->id,
-            'customer_name'    => $this->sale->customer_name,
-            'return_date'      => Carbon::parse($this->returnDate)->toDateString(),
-            'total_amount'     => $total,
-            'resolution'       => $this->resolution,
-            'refund_amount'    => $this->resolution === 'refund' ? (float) $this->refundAmount : null,
-            'refund_date'      => $this->resolution === 'refund' ? Carbon::parse($this->refundDate)->toDateString() : null,
+            'return_number' => $returnNumber,
+            'sale_id' => $this->sale->id,
+            'customer_name' => $this->sale->customer_name,
+            'return_date' => Carbon::parse($this->returnDate)->toDateString(),
+            'total_amount' => $total,
+            'resolution' => $this->resolution,
+            'refund_amount' => $this->resolution === 'refund' ? (float) $this->refundAmount : null,
+            'refund_date' => $this->resolution === 'refund' ? Carbon::parse($this->refundDate)->toDateString() : null,
             'refund_account_id' => $this->resolution === 'refund' ? $this->refundAccountId : null,
-            'status'           => $this->resolution === 'pending' ? 'pending' : 'resolved',
-            'notes'            => $this->notes ?: null,
-            'created_by'       => auth()->id(),
-            'updated_by'       => auth()->id(),
+            'status' => $this->resolution === 'pending' ? 'pending' : 'resolved',
+            'notes' => $this->notes ?: null,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
         foreach ($selected as $item) {
@@ -148,21 +149,35 @@ class SaleReturnCreate extends Component
 
             SaleReturnItem::create([
                 'sale_return_id' => $return->id,
-                'sale_item_id'   => $item['sale_item_id'],
-                'product_id'     => $item['product_id'],
-                'item_name'      => $item['item_name'],
-                'item_code'      => $item['item_code'] ?: null,
-                'qty_returned'   => $qty,
-                'unit_price'     => (float) $item['unit_price'],
-                'total_price'    => (float) $item['total_price'],
-                'reason'         => $item['reason'] ?: null,
-                'condition'      => $item['condition'] ?: 'good',
+                'sale_item_id' => $item['sale_item_id'],
+                'product_id' => $item['product_id'],
+                'item_name' => $item['item_name'],
+                'item_code' => $item['item_code'] ?: null,
+                'qty_returned' => $qty,
+                'unit_price' => (float) $item['unit_price'],
+                'total_price' => (float) $item['total_price'],
+                'reason' => $item['reason'] ?: null,
+                'condition' => $item['condition'] ?: 'good',
             ]);
 
-            // Restore stock if item is in good condition
+            // Step 1: Handle returned item stock
             if ($item['product_id'] && $item['condition'] === 'good') {
+                // Customer returned it in good condition → goes back to shelf
                 Product::where('id', $item['product_id'])
                     ->increment('stock_qty', $qty);
+            }
+            // If damaged → don't restore stock (item is unusable)
+
+            // Step 2: Handle replacement stock separately
+            if ($this->resolution === 'replacement' && $item['product_id']) {
+                // We are sending customer a NEW item from stock
+                // Only decrement if item is damaged (good condition already net-zero above)
+                if ($item['condition'] === 'damaged') {
+                    // Damaged returned (not restocked) + new one sent out = -1 net
+                    Product::where('id', $item['product_id'])
+                        ->decrement('stock_qty', $qty);
+                }
+                // Good condition: +1 from return, -1 for replacement sent = 0 net — already correct
             }
         }
 

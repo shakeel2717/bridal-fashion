@@ -26,7 +26,8 @@
 
             {{-- Items to Return --}}
             <div class="table-card mb-3" style="padding:20px;">
-                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
+                <div
+                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
                     <i class="bi bi-box-arrow-left me-1"></i> Select Items to Return
                 </div>
 
@@ -55,14 +56,14 @@
                                     <td style="text-align:center;">
                                         <input type="checkbox"
                                             wire:model.live="returnItems.{{ $index }}.selected"
-                                            wire:change="recalc"
-                                            class="form-check-input"
+                                            wire:change="recalc" class="form-check-input"
                                             style="width:16px; height:16px; cursor:pointer;">
                                     </td>
                                     <td>
                                         <div style="font-weight:600;">{{ $item['item_name'] }}</div>
                                         @if ($item['item_code'])
-                                            <span class="tbl-code-badge" style="font-size:10px;">{{ $item['item_code'] }}</span>
+                                            <span class="tbl-code-badge"
+                                                style="font-size:10px;">{{ $item['item_code'] }}</span>
                                         @endif
                                     </td>
                                     <td style="text-align:center; font-weight:700; color:var(--navy);">
@@ -71,22 +72,19 @@
                                     <td style="text-align:center;">
                                         <input type="number"
                                             wire:model.lazy="returnItems.{{ $index }}.qty_returned"
-                                            wire:change="recalc"
-                                            class="form-control form-control-sm"
-                                            min="1" max="{{ $item['max_qty'] }}"
-                                            style="text-align:center; width:70px;"
+                                            wire:change="recalc" class="form-control form-control-sm" min="1"
+                                            max="{{ $item['max_qty'] }}" style="text-align:center; width:70px;"
                                             {{ !$active ? 'disabled' : '' }}>
                                     </td>
                                     <td style="text-align:right;">
                                         Rs. {{ number_format((float) $item['unit_price'], 0) }}
                                     </td>
                                     <td style="text-align:right; font-weight:700; color:#e53e3e;">
-                                        {{ $active ? 'Rs. '.number_format((float) $item['total_price'], 0) : '—' }}
+                                        {{ $active ? 'Rs. ' . number_format((float) $item['total_price'], 0) : '—' }}
                                     </td>
                                     <td>
                                         <select wire:model="returnItems.{{ $index }}.reason"
-                                            class="form-select form-select-sm"
-                                            {{ !$active ? 'disabled' : '' }}>
+                                            class="form-select form-select-sm" {{ !$active ? 'disabled' : '' }}>
                                             <option value="damage">Damage</option>
                                             <option value="wrong_item">Wrong Item</option>
                                             <option value="quality">Quality Issue</option>
@@ -99,10 +97,12 @@
                         @if ($this->total > 0)
                             <tfoot>
                                 <tr>
-                                    <td colspan="5" style="text-align:right; font-weight:700; padding-top:10px; font-size:13px; color:var(--text-muted);">
+                                    <td colspan="5"
+                                        style="text-align:right; font-weight:700; padding-top:10px; font-size:13px; color:var(--text-muted);">
                                         Return Total
                                     </td>
-                                    <td style="text-align:right; font-weight:800; font-size:15px; color:#e53e3e; padding-top:10px;">
+                                    <td
+                                        style="text-align:right; font-weight:800; font-size:15px; color:#e53e3e; padding-top:10px;">
                                         Rs. {{ number_format($this->total, 0) }}
                                     </td>
                                     <td></td>
@@ -125,7 +125,8 @@
 
             {{-- Return Info --}}
             <div class="table-card mb-3" style="padding:20px;">
-                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
+                <div
+                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
                     <i class="bi bi-calendar me-1"></i> Return Details
                 </div>
                 <div class="row g-3">
@@ -133,7 +134,9 @@
                         <label class="form-label">Return Date <span class="text-danger">*</span></label>
                         <input type="date" wire:model="returnDate"
                             class="form-control @error('returnDate') is-invalid @enderror">
-                        @error('returnDate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        @error('returnDate')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="col-12">
                         <label class="form-label">Resolution <span class="text-danger">*</span></label>
@@ -143,7 +146,9 @@
                             <option value="refund">Refund (vendor sends money back)</option>
                             <option value="replacement">Replacement (vendor sends new items)</option>
                         </select>
-                        @error('resolution') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        @error('resolution')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -151,16 +156,19 @@
             {{-- Refund Details (only when resolution = refund) --}}
             @if ($resolution === 'refund')
                 <div class="table-card mb-3" style="padding:20px; border:1.5px solid #fed7d7;">
-                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#c53030; margin-bottom:14px;">
+                    <div
+                        style="font-size:11px; font-weight:700; text-transform:uppercase; color:#c53030; margin-bottom:14px;">
                         <i class="bi bi-cash me-1"></i> Refund from Vendor
                     </div>
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Refund Amount (Rs.)</label>
                             <input type="number" wire:model.lazy="refundAmount"
-                                class="form-control @error('refundAmount') is-invalid @enderror"
-                                min="0" placeholder="{{ $this->total }}">
-                            @error('refundAmount') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                class="form-control @error('refundAmount') is-invalid @enderror" min="0"
+                                placeholder="{{ $this->total }}">
+                            @error('refundAmount')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-12">
                             <label class="form-label">Receive Into Account <span class="text-danger">*</span></label>
@@ -171,7 +179,9 @@
                                     <option value="{{ $acc->id }}">{{ $acc->name }}</option>
                                 @endforeach
                             </select>
-                            @error('refundAccountId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            @error('refundAccountId')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-12">
                             <label class="form-label">Refund Date</label>
@@ -182,9 +192,29 @@
             @endif
 
             @if ($resolution === 'replacement')
-                <div class="alert alert-info py-2 mb-3" style="font-size:12px;">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Vendor will send replacement items. When received, create a new PO or manually update stock.
+                <div
+                    style="background:#ebf8ff; border:1.5px solid #bee3f8; border-radius:8px; padding:12px; margin-bottom:12px;">
+                    <div style="font-size:11px; font-weight:700; color:#2c5282; margin-bottom:8px;">
+                        <i class="bi bi-arrow-repeat me-1"></i> Replacement Details
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" wire:model="replacementReceived"
+                            id="replacementReceived">
+                        <label class="form-check-label" for="replacementReceived"
+                            style="font-size:13px; font-weight:600;">
+                            Replacement already received from vendor
+                        </label>
+                    </div>
+                    <div style="font-size:11px; color:#4a5568; margin-top:6px;">
+                        @if ($replacementReceived)
+                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                            Stock will be restored automatically — items sent back and replacement received = no change.
+                        @else
+                            <i class="bi bi-clock me-1"></i>
+                            Stock will be decremented now. When replacement arrives, use
+                            <strong>Resolve Return → Mark Received</strong> to restore stock.
+                        @endif
+                    </div>
                 </div>
             @endif
 
@@ -219,8 +249,7 @@
             </div>
 
             <button class="btn btn-danger w-100" style="height:44px; font-size:14px; font-weight:700;"
-                wire:click="save" wire:loading.attr="disabled"
-                @if (count($this->selectedItems) === 0) disabled @endif>
+                wire:click="save" wire:loading.attr="disabled" @if (count($this->selectedItems) === 0) disabled @endif>
                 <span wire:loading wire:target="save">
                     <span class="spinner-border spinner-border-sm me-2"></span>
                 </span>

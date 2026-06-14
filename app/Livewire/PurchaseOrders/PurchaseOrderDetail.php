@@ -78,29 +78,30 @@ class PurchaseOrderDetail extends Component
     {
         $this->validate([
             'resolveResolution' => 'required|in:refund,replacement',
-            'resolveStatus'     => 'required|in:sent,resolved',
+            'resolveStatus' => 'required|in:sent,resolved',
         ]);
 
         if ($this->resolveResolution === 'refund') {
             $this->validate([
-                'resolveRefundAmount'    => 'required|numeric|min:0',
-                'resolveRefundDate'      => 'required|date',
+                'resolveRefundAmount' => 'required|numeric|min:0',
+                'resolveRefundDate' => 'required|date',
                 'resolveRefundAccountId' => 'required|exists:accounts,id',
             ]);
         }
 
-        $return = PurchaseReturn::findOrFail($this->resolvingReturnId);
+        $return = PurchaseReturn::with('items')->findOrFail($this->resolvingReturnId);
+        $wasResolved = $return->status === 'resolved';
 
         $return->update([
-            'resolution'       => $this->resolveResolution,
-            'status'           => $this->resolveStatus,
-            'refund_amount'    => $this->resolveResolution === 'refund' ? (float) $this->resolveRefundAmount : null,
-            'refund_date'      => $this->resolveResolution === 'refund' ? Carbon::parse($this->resolveRefundDate)->toDateString() : null,
+            'resolution' => $this->resolveResolution,
+            'status' => $this->resolveStatus,
+            'refund_amount' => $this->resolveResolution === 'refund' ? (float) $this->resolveRefundAmount : null,
+            'refund_date' => $this->resolveResolution === 'refund' ? Carbon::parse($this->resolveRefundDate)->toDateString() : null,
             'refund_account_id' => $this->resolveResolution === 'refund' ? (int) $this->resolveRefundAccountId : null,
-            'updated_by'       => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
-        // Credit account if refund — vendor is sending us money back
+        // Credit account if refund
         if ($this->resolveResolution === 'refund' && (float) $this->resolveRefundAmount > 0) {
             AccountService::credit(
                 (int) $this->resolveRefundAccountId,
@@ -112,9 +113,23 @@ class PurchaseOrderDetail extends Component
             );
         }
 
+        // If replacement just marked resolved → restore stock
+        if ($this->resolveResolution === 'replacement'
+            && $this->resolveStatus === 'resolved'
+            && ! $wasResolved) {
+            foreach ($return->items as $ri) {
+                if ($ri->product_id) {
+                    Product::where('id', $ri->product_id)
+                        ->increment('stock_qty', $ri->qty_returned);
+                }
+            }
+            session()->flash('success', "Return {$return->return_number} resolved. Stock restored for replacement items.");
+        } else {
+            session()->flash('success', "Return {$return->return_number} updated.");
+        }
+
         $this->resolvingReturnId = null;
         $this->po->refresh();
-        session()->flash('success', "Return {$return->return_number} updated.");
     }
 
     public function addPayment(): void

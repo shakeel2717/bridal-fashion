@@ -284,7 +284,8 @@
     {{-- Returns History --}}
     @if ($po->returns->count() > 0)
         <div class="table-card mt-3" style="padding:16px 20px;">
-            <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px;">
+            <div
+                style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px;">
                 <i class="bi bi-box-arrow-left me-1"></i> Returns History
             </div>
             <table class="table mb-0" style="font-size:12px;">
@@ -310,7 +311,8 @@
                             <td>
                                 @foreach ($ret->items as $ri)
                                     <div style="font-size:11px; line-height:1.6;">
-                                        <span class="tbl-code-badge" style="font-size:9px;">{{ $ri->item_code }}</span>
+                                        <span class="tbl-code-badge"
+                                            style="font-size:9px;">{{ $ri->item_code }}</span>
                                         <span style="color:var(--text-primary);">{{ $ri->item_name }}</span>
                                         <span style="color:var(--text-muted);">× {{ $ri->qty_returned }}</span>
                                     </div>
@@ -321,30 +323,32 @@
                             </td>
                             <td>
                                 @php
-                                    $resColor = match($ret->resolution) {
-                                        'refund'      => ['bg' => '#fff5f5', 'text' => '#c53030'],
+                                    $resColor = match ($ret->resolution) {
+                                        'refund' => ['bg' => '#fff5f5', 'text' => '#c53030'],
                                         'replacement' => ['bg' => '#ebf8ff', 'text' => '#2c5282'],
-                                        default       => ['bg' => '#fffbeb', 'text' => '#b7791f'],
+                                        default => ['bg' => '#fffbeb', 'text' => '#b7791f'],
                                     };
                                 @endphp
-                                <span style="font-size:11px; background:{{ $resColor['bg'] }}; color:{{ $resColor['text'] }}; padding:2px 8px; border-radius:4px; font-weight:600;">
+                                <span
+                                    style="font-size:11px; background:{{ $resColor['bg'] }}; color:{{ $resColor['text'] }}; padding:2px 8px; border-radius:4px; font-weight:600;">
                                     {{ ucfirst($ret->resolution) }}
                                 </span>
                             </td>
                             <td>
                                 @php
-                                    $stColor = match($ret->status) {
+                                    $stColor = match ($ret->status) {
                                         'resolved' => ['bg' => '#f0fff4', 'text' => '#276749'],
-                                        'sent'     => ['bg' => '#ebf8ff', 'text' => '#2c5282'],
-                                        default    => ['bg' => '#fffbeb', 'text' => '#b7791f'],
+                                        'sent' => ['bg' => '#ebf8ff', 'text' => '#2c5282'],
+                                        default => ['bg' => '#fffbeb', 'text' => '#b7791f'],
                                     };
                                 @endphp
-                                <span style="font-size:11px; background:{{ $stColor['bg'] }}; color:{{ $stColor['text'] }}; padding:2px 8px; border-radius:4px; font-weight:600;">
+                                <span
+                                    style="font-size:11px; background:{{ $stColor['bg'] }}; color:{{ $stColor['text'] }}; padding:2px 8px; border-radius:4px; font-weight:600;">
                                     {{ ucfirst($ret->status) }}
                                 </span>
                             </td>
                             <td style="text-align:right; color:#276749; font-weight:700;">
-                                {{ $ret->refund_amount ? 'Rs. '.number_format($ret->refund_amount, 0) : '—' }}
+                                {{ $ret->refund_amount ? 'Rs. ' . number_format($ret->refund_amount, 0) : '—' }}
                             </td>
                             <td style="text-align:center;">
                                 @if ($ret->resolution === 'pending' || $ret->status !== 'resolved')
@@ -365,25 +369,33 @@
                         @if ($resolvingReturnId === $ret->id)
                             <tr>
                                 <td colspan="8" style="padding:0;">
-                                    <div style="background:#fffbeb; border:1.5px solid #f6e05e; border-radius:8px; padding:16px; margin:4px 8px 8px;">
-                                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#b7791f; margin-bottom:12px;">
-                                            <i class="bi bi-patch-check me-1"></i> Resolve Return {{ $ret->return_number }}
-                                            <span style="font-size:10px; font-weight:400; color:#718096; margin-left:8px;">
+                                    <div
+                                        style="background:#fffbeb; border:1.5px solid #f6e05e; border-radius:8px; padding:16px; margin:4px 8px 8px;">
+                                        <div
+                                            style="font-size:11px; font-weight:700; text-transform:uppercase; color:#b7791f; margin-bottom:12px;">
+                                            <i class="bi bi-patch-check me-1"></i> Resolve Return
+                                            {{ $ret->return_number }}
+                                            <span
+                                                style="font-size:10px; font-weight:400; color:#718096; margin-left:8px;">
                                                 Returned items value: Rs. {{ number_format($ret->total_amount, 0) }}
                                             </span>
                                         </div>
 
                                         <div class="row g-3 align-items-end">
                                             <div class="col-auto">
-                                                <label class="form-label">Resolution <span class="text-danger">*</span></label>
-                                                <select wire:model.live="resolveResolution" class="form-select form-select-sm" style="width:220px;">
+                                                <label class="form-label">Resolution <span
+                                                        class="text-danger">*</span></label>
+                                                <select wire:model.live="resolveResolution"
+                                                    class="form-select form-select-sm" style="width:220px;">
                                                     <option value="refund">Refund — vendor sends money back</option>
-                                                    <option value="replacement">Replacement — vendor sends new items</option>
+                                                    <option value="replacement">Replacement — vendor sends new items
+                                                    </option>
                                                 </select>
                                             </div>
                                             <div class="col-auto">
                                                 <label class="form-label">Update Status</label>
-                                                <select wire:model="resolveStatus" class="form-select form-select-sm" style="width:150px;">
+                                                <select wire:model="resolveStatus" class="form-select form-select-sm"
+                                                    style="width:150px;">
                                                     <option value="sent">Sent (items dispatched)</option>
                                                     <option value="resolved">Resolved (fully done)</option>
                                                 </select>
@@ -395,19 +407,25 @@
                                                     <input type="number" wire:model="resolveRefundAmount"
                                                         class="form-control form-control-sm @error('resolveRefundAmount') is-invalid @enderror"
                                                         style="width:130px;" min="0">
-                                                    @error('resolveRefundAmount') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                    @error('resolveRefundAmount')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
                                                 </div>
                                                 <div class="col-auto">
-                                                    <label class="form-label">Receive Into Account <span class="text-danger">*</span></label>
+                                                    <label class="form-label">Receive Into Account <span
+                                                            class="text-danger">*</span></label>
                                                     <select wire:model="resolveRefundAccountId"
                                                         class="form-select form-select-sm @error('resolveRefundAccountId') is-invalid @enderror"
                                                         style="width:180px;">
                                                         <option value="">Select account...</option>
                                                         @foreach ($accounts as $acc)
-                                                            <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                                                            <option value="{{ $acc->id }}">{{ $acc->name }}
+                                                            </option>
                                                         @endforeach
                                                     </select>
-                                                    @error('resolveRefundAccountId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                    @error('resolveRefundAccountId')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
                                                 </div>
                                                 <div class="col-auto">
                                                     <label class="form-label">Refund Date</label>
@@ -420,7 +438,13 @@
                                                 <div class="col-auto">
                                                     <div class="alert alert-info py-1 mb-0" style="font-size:11px;">
                                                         <i class="bi bi-info-circle me-1"></i>
-                                                        When replacement items arrive, receive them via a new PO or manually update stock.
+                                                        @if ($resolveStatus === 'resolved')
+                                                            <strong>Stock will be restored</strong> when you save —
+                                                            replacement items marked as received.
+                                                        @else
+                                                            Mark as <strong>Resolved</strong> when replacement items
+                                                            physically arrive to restore stock.
+                                                        @endif
                                                     </div>
                                                 </div>
                                             @endif
@@ -429,8 +453,7 @@
                                                 <button class="btn btn-sm btn-outline-secondary"
                                                     wire:click="cancelResolve">Cancel</button>
                                                 <button class="btn btn-sm btn-warning fw-700"
-                                                    wire:click="saveReturnResolution"
-                                                    wire:loading.attr="disabled">
+                                                    wire:click="saveReturnResolution" wire:loading.attr="disabled">
                                                     <span wire:loading wire:target="saveReturnResolution">
                                                         <span class="spinner-border spinner-border-sm me-1"></span>
                                                     </span>

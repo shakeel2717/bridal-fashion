@@ -24,6 +24,8 @@ class PurchaseReturnCreate extends Component
 
     public string $refundAccountId = '';
 
+    public bool $replacementReceived = false;
+
     public string $refundDate = '';
 
     public string $notes = '';
@@ -48,16 +50,16 @@ class PurchaseReturnCreate extends Component
         $this->returnItems = $po->items
             ->filter(fn ($i) => $i->received_qty > 0) // can only return what was received
             ->map(fn ($i) => [
-                'selected'               => false,
+                'selected' => false,
                 'purchase_order_item_id' => $i->id,
-                'product_id'             => $i->product_id,
-                'item_name'              => $i->item_name,
-                'item_code'              => $i->item_code ?? '',
-                'max_qty'                => $i->received_qty - ($i->returned_qty ?? 0), // remaining returnable
-                'qty_returned'           => '1',
-                'unit_price'             => (string) $i->unit_price,
-                'total_price'            => (string) $i->unit_price,
-                'reason'                 => 'damage',
+                'product_id' => $i->product_id,
+                'item_name' => $i->item_name,
+                'item_code' => $i->item_code ?? '',
+                'max_qty' => $i->received_qty - ($i->returned_qty ?? 0), // remaining returnable
+                'qty_returned' => '1',
+                'unit_price' => (string) $i->unit_price,
+                'total_price' => (string) $i->unit_price,
+                'reason' => 'damage',
             ])
             ->filter(fn ($i) => $i['max_qty'] > 0) // skip already fully returned
             ->values()
@@ -111,6 +113,7 @@ class PurchaseReturnCreate extends Component
 
         if (empty($selected)) {
             $this->addError('returnItems', 'Select at least one item to return.');
+
             return;
         }
 
@@ -121,8 +124,8 @@ class PurchaseReturnCreate extends Component
 
         if ($this->resolution === 'refund') {
             $this->validate([
-                'refundAmount'    => 'required|numeric|min:0',
-                'refundDate'      => 'required|date',
+                'refundAmount' => 'required|numeric|min:0',
+                'refundDate' => 'required|date',
                 'refundAccountId' => 'required|exists:accounts,id',
             ]);
         }
@@ -134,43 +137,50 @@ class PurchaseReturnCreate extends Component
         $total = collect($selected)->sum(fn ($i) => (float) $i['total_price']);
 
         $return = PurchaseReturn::create([
-            'return_number'    => $returnNumber,
+            'return_number' => $returnNumber,
             'purchase_order_id' => $this->po->id,
-            'vendor_id'        => $this->po->vendor_id,
-            'return_date'      => Carbon::parse($this->returnDate)->toDateString(),
-            'total_amount'     => $total,
-            'resolution'       => $this->resolution,
-            'refund_amount'    => $this->resolution === 'refund' ? (float) $this->refundAmount : null,
-            'refund_date'      => $this->resolution === 'refund' ? Carbon::parse($this->refundDate)->toDateString() : null,
+            'vendor_id' => $this->po->vendor_id,
+            'return_date' => Carbon::parse($this->returnDate)->toDateString(),
+            'total_amount' => $total,
+            'resolution' => $this->resolution,
+            'refund_amount' => $this->resolution === 'refund' ? (float) $this->refundAmount : null,
+            'refund_date' => $this->resolution === 'refund' ? Carbon::parse($this->refundDate)->toDateString() : null,
             'refund_account_id' => $this->resolution === 'refund' ? $this->refundAccountId : null,
-            'status'           => $this->resolution === 'pending' ? 'pending' : 'resolved',
-            'notes'            => $this->notes ?: null,
-            'created_by'       => auth()->id(),
-            'updated_by'       => auth()->id(),
+            'status' => $this->resolution === 'pending' ? 'pending' : 'resolved',
+            'notes' => $this->notes ?: null,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
         foreach ($selected as $item) {
             $qty = (int) $item['qty_returned'];
 
             PurchaseReturnItem::create([
-                'purchase_return_id'     => $return->id,
+                'purchase_return_id' => $return->id,
                 'purchase_order_item_id' => $item['purchase_order_item_id'],
-                'product_id'             => $item['product_id'],
-                'item_name'              => $item['item_name'],
-                'item_code'              => $item['item_code'] ?: null,
-                'qty_returned'           => $qty,
-                'unit_price'             => (float) $item['unit_price'],
-                'total_price'            => (float) $item['total_price'],
-                'reason'                 => $item['reason'] ?: null,
+                'product_id' => $item['product_id'],
+                'item_name' => $item['item_name'],
+                'item_code' => $item['item_code'] ?: null,
+                'qty_returned' => $qty,
+                'unit_price' => (float) $item['unit_price'],
+                'total_price' => (float) $item['total_price'],
+                'reason' => $item['reason'] ?: null,
             ]);
 
-            // Decrement stock — we're sending items back to vendor
+            // Always decrement — we sent items back to vendor
             if ($item['product_id']) {
                 Product::where('id', $item['product_id'])
                     ->decrement('stock_qty', $qty);
             }
 
-            // Track returned_qty on the PO item
+            // Only increment back if replacement AND already received
+            if ($this->resolution === 'replacement'
+                && $this->replacementReceived
+                && $item['product_id']) {
+                Product::where('id', $item['product_id'])
+                    ->increment('stock_qty', $qty);
+            }
+
             $this->po->items()
                 ->where('id', $item['purchase_order_item_id'])
                 ->increment('returned_qty', $qty);
