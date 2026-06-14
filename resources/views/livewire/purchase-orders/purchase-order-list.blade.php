@@ -170,10 +170,10 @@
                 <tfoot>
                     <tr style="background:#1a2340;">
                         <td colspan="6"
-                            style="text-align:right; font-weight:700; font-size:12px; color:#fff; padding:10px 12px;">
+                            style="text-align:right; font-weight:700; font-size:12px; padding:10px 12px;">
                             Page Total ({{ $orders->count() }} records)
                         </td>
-                        <td style="text-align:right; font-weight:800; color:#fff; padding:10px 12px; font-size:13px;">
+                        <td style="text-align:right; font-weight:800; padding:10px 12px; font-size:13px;">
                             Rs. {{ number_format($orders->sum('total_amount'), 0) }}
                         </td>
                         <td
