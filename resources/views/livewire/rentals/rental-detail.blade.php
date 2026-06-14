@@ -219,141 +219,204 @@
                     <i class="bi bi-box-seam me-1"></i> Rented Items
                 </div>
 
-                @foreach ($rental->items as $item)
-                    @php
-                        $itemPendingTasks = $item->tasks->where('status', 'pending')->count();
-                        $canPickup = $itemPendingTasks === 0 && $pendingTasksCount === 0;
-                    @endphp
-
-                    <div
-                        class="rental-item-row {{ $item->pickup_status === 'picked_up' ? 'picked' : ($item->pickup_status === 'returned' ? 'returned-item' : '') }} mb-3">
-
-                        {{-- Item Header Row --}}
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="item-code">{{ $item->product_code }}</span>
-                                <div>
-                                    <div class="item-name">{{ $item->product_name }}</div>
-                                    <div style="font-size:11px; color:var(--text-muted);">
-                                        Rental: <strong>Rs. {{ number_format($item->rental_price, 0) }}</strong>
-                                        @if ($item->custom_option_price > 0)
-                                            + Addons: <strong>Rs.
-                                                {{ number_format($item->custom_option_price, 0) }}</strong>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Pickup / Return actions --}}
-                            <div class="d-flex gap-2 align-items-center">
-                                @if ($item->pickup_status === 'pending')
-                                    @if ($canPickup && !in_array($rental->status, ['cancelled', 'abandoned']))
-                                        <button class="btn btn-sm btn-outline-success action-btn"
-                                            wire:click="markItemPickedUp({{ $item->id }})">
-                                            <i class="bi bi-box-arrow-up me-1"></i> Picked Up
-                                        </button>
-                                    @elseif(!$canPickup)
-                                        <span style="font-size:11px; color:#e53e3e; font-weight:600;">
-                                            <i class="bi bi-lock me-1"></i> Tasks pending
-                                        </span>
+                <table class="table mb-0" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;"></th>
+                            <th>Item</th>
+                            <th style="text-align:right;">Rental Price</th>
+                            <th style="text-align:right;">Add-ons</th>
+                            <th style="text-align:right;">Total</th>
+                            <th style="text-align:center; width:160px;">Status / Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($rental->items as $item)
+                            @php
+                                $itemPendingTasks = $item->tasks->where('status', 'pending')->count();
+                                $canPickup = $itemPendingTasks === 0 && $pendingTasksCount === 0;
+                            @endphp
+                            <tr style="{{ $item->pickup_status === 'returned' ? 'opacity:0.6;' : '' }}">
+                                {{-- Photo --}}
+                                <td style="vertical-align:middle;">
+                                    @if ($item->product?->photo)
+                                        <img src="{{ Storage::url($item->product->photo) }}"
+                                            style="width:36px; height:36px; object-fit:cover; border-radius:6px; border:1px solid var(--border);">
+                                    @else
+                                        <div
+                                            style="width:36px; height:36px; background:var(--gold-light); border-radius:6px; display:flex; align-items:center; justify-content:center;">
+                                            <i class="bi bi-image" style="font-size:13px; color:var(--gold);"></i>
+                                        </div>
                                     @endif
-                                @elseif($item->pickup_status === 'picked_up')
-                                    <div style="font-size:11px; color:var(--text-muted);">
-                                        Picked: {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y h:i A') }}
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary action-btn"
-                                        wire:click="markItemReturned({{ $item->id }})">
-                                        <i class="bi bi-box-arrow-in-down me-1"></i> Returned
-                                    </button>
-                                @elseif($item->pickup_status === 'returned')
-                                    <div style="font-size:11px; color:#276749;">
-                                        <i class="bi bi-check-circle me-1"></i>
-                                        Returned:
-                                        {{ \Carbon\Carbon::parse($item->returned_at)->format('d/m/Y h:i A') }}
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
+                                </td>
 
-                        {{-- Addon Tasks --}}
-                        @if ($item->tasks->count() > 0)
-                            <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:4px;">
-                                <div
-                                    style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">
-                                    Custom Tasks
-                                </div>
-                                @foreach ($item->tasks as $task)
-                                    <div
-                                        style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:6px; margin-bottom:4px; background:{{ $task->status === 'done' ? '#f0fff4' : ($task->status === 'denied' ? '#fff5f5' : '#fffff0') }}; border:1px solid {{ $task->status === 'done' ? '#68d391' : ($task->status === 'denied' ? '#fc8181' : '#f6e05e') }};">
-                                        <div>
-                                            <div style="font-size:12px; font-weight:600; color:var(--text-primary);">
-                                                @if ($task->status === 'done')
-                                                    <i class="bi bi-check-circle-fill text-success me-1"></i>
-                                                @elseif($task->status === 'denied')
-                                                    <i class="bi bi-x-circle-fill text-danger me-1"></i>
-                                                @else
-                                                    <i class="bi bi-circle me-1" style="color:#b7791f;"></i>
-                                                @endif
-                                                {{ $task->title }}
-                                                @if ($task->cost > 0)
-                                                    <span
-                                                        style="font-size:10px; color:var(--gold-hover); margin-left:6px;">
-                                                        Rs. {{ number_format($task->cost, 0) }}
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            @if ($task->status !== 'pending')
-                                                <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">
-                                                    {{ ucfirst($task->status) }} by
-                                                    <strong>{{ $task->actionedBy?->name ?? 'Unknown' }}</strong>
-                                                    · {{ $task->actioned_at?->format('d/m/Y h:i A') }}
-                                                    @if ($task->note)
-                                                        · "{{ $task->note }}"
-                                                    @endif
+                                {{-- Name + tasks --}}
+                                <td style="vertical-align:middle;">
+                                    <span class="tbl-code-badge">{{ $item->product_code }}</span>
+                                    <div style="font-weight:600; margin-top:2px;">{{ $item->product_name }}</div>
+
+                                    {{-- Double-booked warning --}}
+                                    @if ($item->double_booked ?? false)
+                                        <div style="font-size:10px; color:#c53030; margin-top:2px;">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Double booked
+                                        </div>
+                                    @endif
+
+                                    {{-- Addon tasks inline --}}
+                                    @if ($item->tasks->count() > 0)
+                                        <div style="margin-top:6px; display:flex; flex-direction:column; gap:3px;">
+                                            @foreach ($item->tasks as $task)
+                                                <div
+                                                    style="display:flex; align-items:center; justify-content:space-between; padding:4px 8px; border-radius:5px; font-size:11px;
+                                        background:{{ $task->status === 'done' ? '#f0fff4' : ($task->status === 'denied' ? '#fff5f5' : '#fffff0') }};
+                                        border:1px solid {{ $task->status === 'done' ? '#9ae6b4' : ($task->status === 'denied' ? '#fc8181' : '#f6e05e') }};">
+                                                    <div>
+                                                        @if ($task->status === 'done')
+                                                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                                        @elseif($task->status === 'denied')
+                                                            <i class="bi bi-x-circle-fill text-danger me-1"></i>
+                                                        @else
+                                                            <i class="bi bi-circle me-1" style="color:#b7791f;"></i>
+                                                        @endif
+                                                        <span style="font-weight:600;">{{ $task->title }}</span>
+                                                        @if ($task->cost > 0)
+                                                            <span style="color:var(--gold-hover); margin-left:4px;">
+                                                                Rs. {{ number_format($task->cost, 0) }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="d-flex gap-1 align-items-center ms-2">
+                                                        @if ($task->status === 'pending')
+                                                            @if ($taskActionId === $task->id)
+                                                                <input type="text" wire:model="taskNote"
+                                                                    class="form-control form-control-sm"
+                                                                    style="width:130px; font-size:11px;"
+                                                                    placeholder="Note (optional)">
+                                                                <button class="btn btn-sm btn-success action-btn"
+                                                                    wire:click="applyTaskAction">OK</button>
+                                                                <button
+                                                                    class="btn btn-sm btn-outline-secondary action-btn"
+                                                                    wire:click="$set('taskActionId', null)">
+                                                                    <i class="bi bi-x"></i>
+                                                                </button>
+                                                            @else
+                                                                <button
+                                                                    class="btn btn-sm btn-outline-success action-btn"
+                                                                    wire:click="openTaskAction({{ $task->id }}, 'done')"
+                                                                    title="Mark Done">
+                                                                    <i class="bi bi-check"
+                                                                        style="font-size:11px;"></i>
+                                                                </button>
+                                                                <button
+                                                                    class="btn btn-sm btn-outline-danger action-btn"
+                                                                    wire:click="openTaskAction({{ $task->id }}, 'denied')"
+                                                                    title="Mark Denied">
+                                                                    <i class="bi bi-x" style="font-size:11px;"></i>
+                                                                </button>
+                                                            @endif
+                                                        @else
+                                                            <button class="btn btn-sm btn-outline-secondary action-btn"
+                                                                wire:click="undoTask({{ $task->id }})"
+                                                                title="Reset to pending">
+                                                                <i class="bi bi-arrow-counterclockwise"
+                                                                    style="font-size:10px;"></i>
+                                                            </button>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                            @endif
+                                            @endforeach
                                         </div>
+                                    @endif
+                                </td>
 
-                                        <div class="d-flex gap-1 align-items-center">
-                                            @if ($task->status === 'pending')
-                                                @if ($taskActionId === $task->id)
-                                                    <input type="text" wire:model="taskNote"
-                                                        class="form-control form-control-sm" style="width:160px;"
-                                                        placeholder="Note (optional)">
-                                                    <button class="btn btn-sm btn-success action-btn"
-                                                        wire:click="applyTaskAction">OK</button>
-                                                    <button class="btn btn-sm btn-outline-secondary action-btn"
-                                                        wire:click="$set('taskActionId', null)">
-                                                        <i class="bi bi-x"></i>
-                                                    </button>
-                                                @else
-                                                    <button class="btn btn-sm btn-outline-success action-btn"
-                                                        wire:click="openTaskAction({{ $task->id }}, 'done')"
-                                                        title="Mark Done">
-                                                        <i class="bi bi-check" style="font-size:12px;"></i>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-danger action-btn"
-                                                        wire:click="openTaskAction({{ $task->id }}, 'denied')"
-                                                        title="Mark Denied">
-                                                        <i class="bi bi-x" style="font-size:12px;"></i>
-                                                    </button>
-                                                @endif
-                                            @else
-                                                <button class="btn btn-sm btn-outline-secondary action-btn"
-                                                    wire:click="undoTask({{ $task->id }})"
-                                                    title="Reset to pending">
-                                                    <i class="bi bi-arrow-counterclockwise"
-                                                        style="font-size:11px;"></i>
-                                                </button>
-                                            @endif
+                                {{-- Rental price --}}
+                                <td style="text-align:right; vertical-align:middle; font-weight:600;">
+                                    Rs. {{ number_format($item->rental_price, 0) }}
+                                </td>
+
+                                {{-- Add-ons price --}}
+                                <td style="text-align:right; vertical-align:middle;">
+                                    @if ($item->custom_option_price > 0)
+                                        <span style="color:var(--gold-hover); font-weight:600;">
+                                            Rs. {{ number_format($item->custom_option_price, 0) }}
+                                        </span>
+                                        @if ($item->custom_option_label)
+                                            <div style="font-size:10px; color:var(--text-muted);">
+                                                {{ $item->custom_option_label }}</div>
+                                        @endif
+                                    @else
+                                        <span style="color:var(--text-muted);">—</span>
+                                    @endif
+                                </td>
+
+                                {{-- Row total --}}
+                                <td
+                                    style="text-align:right; vertical-align:middle; font-weight:700; color:var(--navy);">
+                                    Rs. {{ number_format($item->rental_price + $item->custom_option_price, 0) }}
+                                </td>
+
+                                {{-- Pickup / Return action --}}
+                                <td style="text-align:center; vertical-align:middle;">
+                                    @if ($item->pickup_status === 'pending')
+                                        @if ($canPickup && !in_array($rental->status, ['cancelled', 'abandoned']))
+                                            <button class="btn btn-sm btn-outline-success action-btn"
+                                                wire:click="markItemPickedUp({{ $item->id }})">
+                                                <i class="bi bi-box-arrow-up me-1"></i> Picked Up
+                                            </button>
+                                        @elseif(!$canPickup)
+                                            <span style="font-size:10px; color:#e53e3e; font-weight:600;">
+                                                <i class="bi bi-lock me-1"></i> Tasks pending
+                                            </span>
+                                        @else
+                                            <span class="badge-status pending">Pending</span>
+                                        @endif
+                                    @elseif($item->pickup_status === 'picked_up')
+                                        <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+                                            {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y') }}
                                         </div>
-                                    </div>
-                                @endforeach
-                            </div>
+                                        <button class="btn btn-sm btn-outline-primary action-btn"
+                                            wire:click="markItemReturned({{ $item->id }})">
+                                            <i class="bi bi-box-arrow-in-down me-1"></i> Returned
+                                        </button>
+                                    @elseif($item->pickup_status === 'returned')
+                                        <div style="font-size:10px; color:#276749; font-weight:600;">
+                                            <i class="bi bi-check-circle me-1"></i> Returned
+                                        </div>
+                                        <div style="font-size:10px; color:var(--text-muted);">
+                                            {{ \Carbon\Carbon::parse($item->returned_at)->format('d/m/Y') }}
+                                        </div>
+                                        @if ($item->receivedBy)
+                                            <div style="font-size:10px; color:var(--text-muted);">
+                                                by <strong>{{ $item->receivedBy->name }}</strong>
+                                            </div>
+                                        @endif
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        @if (($rental->discount_amount ?? 0) > 0)
+                            <tr>
+                                <td colspan="4" style="text-align:right; font-size:12px; color:var(--text-muted);">
+                                    Discount</td>
+                                <td style="text-align:right; color:#e53e3e; font-weight:600;">
+                                    − Rs. {{ number_format($rental->discount_amount, 0) }}
+                                </td>
+                                <td></td>
+                            </tr>
                         @endif
-
-                    </div>
-                @endforeach
+                        <tr style="border-top:2px solid var(--navy);">
+                            <td colspan="4"
+                                style="text-align:right; font-weight:700; font-size:14px; padding-top:10px;">Total</td>
+                            <td
+                                style="text-align:right; font-weight:800; font-size:16px; color:var(--navy); padding-top:10px;">
+                                Rs. {{ number_format($rental->total_amount, 0) }}
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
 
             {{-- Security Deposits --}}
