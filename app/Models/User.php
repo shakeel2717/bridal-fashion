@@ -21,6 +21,7 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'resign_date',
         'cnic',
         'address',
         'photo',
@@ -44,6 +45,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'joining_date' => 'date',
+            'resign_date' => 'date',
             'salary_amount' => 'decimal:2',
             'is_active' => 'boolean',
         ];
