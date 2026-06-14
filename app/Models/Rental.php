@@ -18,7 +18,7 @@ class Rental extends Model
         'customer_phone2', 'customer_whatsapp', 'customer_cnic', 'delivery_address',
         'booking_date', 'pickup_date', 'return_date', 'stitching_date', 'advance_payment_method',
         'stitching_instructions', 'status', 'total_amount', 'advance_paid', 'phone1_gender', 'phone2_gender', 'whatsapp_gender',
-        'remaining_balance', 'refund_amount', 'refund_type', 'refund_date',
+        'remaining_balance', 'refund_amount', 'refund_type', 'refund_date','discount_type','discount_value','discount_amount',
         'refund_note', 'employee_id', 'notes', 'created_by', 'updated_by',
     ];
 

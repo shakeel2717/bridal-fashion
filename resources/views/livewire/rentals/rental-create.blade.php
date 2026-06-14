@@ -303,14 +303,29 @@
                             @enderror
                         </div>
 
-                        <div class="col-4">
-                            <label class="form-label">Stitching Date</label>
-                            <input type="date" wire:model="stitchingDate" class="form-control">
-                        </div>
-                        <div class="col-8">
-                            <label class="form-label">Stitching Instructions</label>
-                            <input type="text" wire:model="stitchingInstructions" class="form-control"
-                                placeholder="e.g. Waist 28, shorten sleeves 2 inches">
+                        {{-- Replace the stitching date + instructions inputs (col-4 and col-8) with: --}}
+                        <div class="col-12">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="stitchingToggle"
+                                    wire:model.live="showStitching">
+                                <label class="form-check-label" for="stitchingToggle"
+                                    style="font-size:12px; font-weight:600; color:var(--text-muted);">
+                                    <i class="bi bi-scissors me-1"></i> Stitching Required
+                                </label>
+                            </div>
+                            @if ($showStitching)
+                                <div class="row g-3">
+                                    <div class="col-4">
+                                        <label class="form-label">Stitching Date</label>
+                                        <input type="date" wire:model="stitchingDate" class="form-control">
+                                    </div>
+                                    <div class="col-8">
+                                        <label class="form-label">Stitching Instructions</label>
+                                        <input type="text" wire:model="stitchingInstructions" class="form-control"
+                                            placeholder="e.g. Waist 28, shorten sleeves 2 inches">
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         <div class="col-6">
@@ -326,11 +341,6 @@
                                     <option value="{{ $emp->id }}">{{ $emp->name }}</option>
                                 @endforeach
                             </select>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label">Notes</label>
-                            <textarea wire:model="notes" class="form-control" rows="2" placeholder="Any additional notes..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -491,7 +501,7 @@
                             <div class="rental-item-row"
                                 style="{{ $item['double_booked'] ?? false ? 'border-left: 3px solid #e53e3e;' : '' }}">
 
-                                @if(isset($item['double_booked']) && $item['double_booked'] === true)
+                                @if (isset($item['double_booked']) && $item['double_booked'] === true)
                                     <div
                                         style="background:#fff5f5; border:1px solid #fed7d7; border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:11px; color:#c53030; font-weight:600;">
                                         <i class="bi bi-exclamation-triangle-fill me-1"></i>
@@ -718,12 +728,8 @@
                         style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px;">
                         <i class="bi bi-cash me-1"></i> Payment Details
                     </div>
+                    {{-- Replace the row g-3 inside the payment card with: --}}
                     <div class="row g-3">
-                        <div class="col-4">
-                            <label class="form-label">Total Amount (Rs.)</label>
-                            <input type="number" wire:model.lazy="totalAmount" wire:change="recalcTotal"
-                                class="form-control" style="font-weight:700; color:var(--navy);">
-                        </div>
                         <div class="col-4">
                             <label class="form-label">Advance Paid (Rs.)</label>
                             <input type="number" wire:model.lazy="advancePaid"
@@ -731,6 +737,24 @@
                             @error('advancePaid')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Discount</label>
+                            <div class="input-group">
+                                <select wire:model.live="discountType" wire:change="recalcTotal" class="form-select"
+                                    style="max-width:80px;">
+                                    <option value="fixed">Rs.</option>
+                                    <option value="percent">%</option>
+                                </select>
+                                <input type="number" wire:model.lazy="discountValue" wire:change="recalcTotal"
+                                    class="form-control" placeholder="0" min="0"
+                                    max="{{ $discountType === 'percent' ? 100 : '' }}">
+                            </div>
+                            @if ((float) $discountAmount > 0)
+                                <div style="font-size:11px; color:#38a169; margin-top:4px;">
+                                    − Rs. {{ number_format((float) $discountAmount, 0) }} discount applied
+                                </div>
+                            @endif
                         </div>
                         <div class="col-4">
                             <label class="form-label">Receive Into Account</label>
@@ -744,11 +768,33 @@
                         <div class="col-12">
                             <div
                                 style="background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:14px;">
-                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Remaining
-                                    Balance</div>
-                                <div
-                                    style="font-size:24px; font-weight:800; color:{{ (float) $advancePaid >= (float) $totalAmount ? '#38a169' : '#e53e3e' }};">
-                                    Rs. {{ number_format(max(0, (float) $totalAmount - (float) $advancePaid), 0) }}
+                                <div class="row g-2 text-center">
+                                    <div class="col-4" style="border-right:1px solid var(--border);">
+                                        <div
+                                            style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
+                                            Subtotal</div>
+                                        <div style="font-size:16px; font-weight:700; color:var(--navy);">
+                                            Rs. {{ number_format((float) $totalAmount + (float) $discountAmount, 0) }}
+                                        </div>
+                                    </div>
+                                    <div class="col-4" style="border-right:1px solid var(--border);">
+                                        <div
+                                            style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
+                                            Discount</div>
+                                        <div style="font-size:16px; font-weight:700; color:#e53e3e;">
+                                            − Rs. {{ number_format((float) $discountAmount, 0) }}
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div
+                                            style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
+                                            Remaining</div>
+                                        <div
+                                            style="font-size:16px; font-weight:800; color:{{ (float) $advancePaid >= (float) $totalAmount ? '#38a169' : '#e53e3e' }};">
+                                            Rs.
+                                            {{ number_format(max(0, (float) $totalAmount - (float) $advancePaid), 0) }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -788,6 +834,11 @@
                     <div class="summary-row">
                         <span class="s-label">Total</span>
                         <span class="s-value">Rs. {{ number_format((float) $totalAmount, 0) }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="s-label">Discount</span>
+                        <span class="s-value" style="color:#e53e3e;">− Rs.
+                            {{ number_format((float) $discountAmount, 0) }}</span>
                     </div>
                     <div class="summary-row">
                         <span class="s-label">Advance</span>

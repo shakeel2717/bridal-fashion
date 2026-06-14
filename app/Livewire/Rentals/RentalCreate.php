@@ -23,11 +23,19 @@ class RentalCreate extends Component
     public int $step = 1;
 
     // ── Step 1: Customer ──────────────────────────────────
-    public string $customerType = 'existing';
+    public string $customerType = 'walkin';
+
+    public bool $showStitching = false;
 
     public $walkinPhoto = null;
 
     public string $advanceAccountId = '';
+
+    public string $discountType = 'fixed'; // 'fixed' or 'percent'
+
+    public string $discountValue = '0';
+
+    public string $discountAmount = '0';
 
     public $walkinCnicFront = null;
 
@@ -96,6 +104,7 @@ class RentalCreate extends Component
         $defaultAccount = Account::where('is_default', true)->first()
             ?? Account::where('is_active', true)->first();
         $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
+        $this->employeeId = (string) auth()->id(); // ← add this
     }
 
     // ── Navigation ────────────────────────────────────────
@@ -315,14 +324,23 @@ class RentalCreate extends Component
 
     public function recalcTotal(): void
     {
-        $total = 0;
+        $subtotal = 0;
         foreach ($this->items as $item) {
-            $total += (float) ($item['rental_price'] ?? 0);
+            $subtotal += (float) ($item['rental_price'] ?? 0);
             foreach ($item['addons'] ?? [] as $addon) {
-                $total += (float) ($addon['price'] ?? 0);
+                $subtotal += (float) ($addon['price'] ?? 0);
             }
         }
-        $this->totalAmount = (string) $total;
+
+        $discount = 0;
+        if ($this->discountType === 'percent') {
+            $discount = $subtotal * ((float) $this->discountValue / 100);
+        } else {
+            $discount = (float) $this->discountValue;
+        }
+        $discount = min($discount, $subtotal);
+        $this->discountAmount = (string) round($discount, 2);
+        $this->totalAmount = (string) max(0, $subtotal - $discount);
     }
 
     // ── Save ──────────────────────────────────────────────
@@ -375,6 +393,9 @@ class RentalCreate extends Component
             'delivery_address' => $this->deliveryAddress ?: null,
             'phone1_gender' => $this->phone1Gender,
             'phone2_gender' => $this->phone2Gender,
+            'discount_type' => $this->discountType,
+            'discount_value' => (float) $this->discountValue,
+            'discount_amount' => (float) $this->discountAmount,
             'whatsapp_gender' => $this->whatsappGender,
             'booking_date' => Carbon::parse($this->bookingDate)->toDateString(),
             'pickup_date' => Carbon::parse($this->pickupDate)->toDateString(),
