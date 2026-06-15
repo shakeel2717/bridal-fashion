@@ -384,6 +384,14 @@
                                             <i class="bi bi-box-arrow-in-down me-1"></i> Returned
                                         </button>
                                     @elseif($item->pickup_status === 'returned')
+                                        <div
+                                            style="font-size:10px; color:var(--text-muted); margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid var(--border);">
+                                            <i class="bi bi-box-arrow-up me-1" style="color:#276749;"></i>
+                                            Picked: {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y') }}
+                                            @if ($item->pickedUpBy)
+                                                · <strong>{{ $item->pickedUpBy->name }}</strong>
+                                            @endif
+                                        </div>
                                         <div style="font-size:10px; color:#276749; font-weight:600;">
                                             <i class="bi bi-check-circle me-1"></i> Returned
                                         </div>

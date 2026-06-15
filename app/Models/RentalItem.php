@@ -13,7 +13,7 @@ class RentalItem extends Model
     protected $fillable = [
         'rental_id', 'product_id', 'product_name', 'product_code',
         'rental_price', 'custom_option_label', 'custom_option_price',
-        'pickup_status', 'picked_up_at', 'returned_at',
+        'pickup_status', 'picked_up_at', 'returned_at', 'picked_up_by',
         'returned_received_by', 'notes',
     ];
 
