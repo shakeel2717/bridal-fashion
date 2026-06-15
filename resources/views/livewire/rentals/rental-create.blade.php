@@ -99,6 +99,12 @@
                             </div>
 
                             <div class="col-6">
+                                <label class="form-label">Delivery Address</label>
+                                <input type="text" wire:model="deliveryAddress" class="form-control"
+                                    placeholder="Customer address">
+                            </div>
+
+                            <div class="col-6">
                                 <label class="form-label">Phone 1 <span class="text-danger">*</span></label>
                                 <div class="d-flex gap-2">
                                     <input type="text" wire:model.live="customerPhone1"
@@ -162,12 +168,6 @@
                                     @enderror
                                 </div>
                             @endif
-
-                            <div class="col-{{ $customerType === 'existing' ? '6' : '12' }}">
-                                <label class="form-label">Delivery Address</label>
-                                <input type="text" wire:model="deliveryAddress" class="form-control"
-                                    placeholder="Customer address">
-                            </div>
 
                             @if ($customerType === 'walkin')
                                 @if ($isEditMode)
