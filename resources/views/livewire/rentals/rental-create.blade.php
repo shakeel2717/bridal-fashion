@@ -165,69 +165,6 @@
                                 <input type="text" wire:model="deliveryAddress" class="form-control"
                                     placeholder="Customer address">
                             </div>
-
-                            @if ($customerType === 'walkin')
-                                <div class="col-12">
-                                    <div
-                                        style="background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:16px;">
-                                        <div
-                                            style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
-                                            <i class="bi bi-camera me-1"></i>
-                                            Walk-in Customer Documents
-                                            <span style="font-weight:400; font-size:10px; margin-left:4px;">(all
-                                                optional)</span>
-                                        </div>
-                                        <div class="row g-3">
-                                            <div class="col-4">
-                                                <label class="form-label" style="font-size:12px;">Profile
-                                                    Photo</label>
-                                                <input type="file" wire:model="walkinPhoto"
-                                                    class="form-control form-control-sm @error('walkinPhoto') is-invalid @enderror"
-                                                    accept="image/*">
-                                                @error('walkinPhoto')
-                                                    <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                                @if ($walkinPhoto)
-                                                    <div class="mt-2">
-                                                        <img src="{{ $walkinPhoto->temporaryUrl() }}"
-                                                            style="width:60px; height:60px; object-fit:cover; border-radius:50%; border:2px solid var(--gold);">
-                                                    </div>
-                                                @endif
-                                            </div>
-                                            <div class="col-4">
-                                                <label class="form-label" style="font-size:12px;">CNIC Front</label>
-                                                <input type="file" wire:model="walkinCnicFront"
-                                                    class="form-control form-control-sm @error('walkinCnicFront') is-invalid @enderror"
-                                                    accept="image/*">
-                                                @error('walkinCnicFront')
-                                                    <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                                @if ($walkinCnicFront)
-                                                    <div class="mt-2">
-                                                        <img src="{{ $walkinCnicFront->temporaryUrl() }}"
-                                                            style="width:100%; height:55px; object-fit:cover; border-radius:6px; border:2px solid var(--gold);">
-                                                    </div>
-                                                @endif
-                                            </div>
-                                            <div class="col-4">
-                                                <label class="form-label" style="font-size:12px;">CNIC Back</label>
-                                                <input type="file" wire:model="walkinCnicBack"
-                                                    class="form-control form-control-sm @error('walkinCnicBack') is-invalid @enderror"
-                                                    accept="image/*">
-                                                @error('walkinCnicBack')
-                                                    <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                                @if ($walkinCnicBack)
-                                                    <div class="mt-2">
-                                                        <img src="{{ $walkinCnicBack->temporaryUrl() }}"
-                                                            style="width:100%; height:55px; object-fit:cover; border-radius:6px; border:2px solid var(--gold);">
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
                         </div>
                     @endif
                 </div>
@@ -416,44 +353,46 @@
                         </div>
                     @endif
 
-                    {{-- Search --}}
-                    <div style="position:relative; margin-bottom:16px;">
-                        <input type="text" wire:model.live.debounce.300ms="productSearch"
-                            wire:keyup="searchProducts" class="form-control"
-                            placeholder="Search by code or name (e.g. BL-001)...">
-                        <i class="bi bi-search"
-                            style="position:absolute; right:12px; top:10px; color:var(--text-muted);"></i>
+                    {{-- Search Row: Code + Price --}}
+                    <div style="margin-bottom:16px;">
+                        <div style="display:grid; grid-template-columns:1fr 140px; gap:8px; align-items:end;">
 
-                        @if (count($searchResults) > 0)
-                            <div class="product-search-dropdown">
-                                @foreach ($searchResults as $result)
-                                    <div class="search-item" wire:click="addItem({{ $result['id'] }})"
-                                        style="{{ !$result['available'] ? 'opacity:0.85;' : '' }} cursor:pointer;">
-                                        <div class="d-flex align-items-center gap-3">
-                                            @if ($result['photo'])
-                                                <img src="{{ Storage::url($result['photo']) }}"
-                                                    style="width:36px; height:36px; object-fit:cover; border-radius:6px; flex-shrink:0;">
-                                            @else
-                                                <div
-                                                    style="width:36px; height:36px; background:var(--gold-light); border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                                    <i class="bi bi-image"
-                                                        style="font-size:14px; color:var(--gold);"></i>
-                                                </div>
-                                            @endif
-                                            <div class="flex-fill">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div>
+                            {{-- Code Search --}}
+                            <div style="position:relative;">
+                                <label
+                                    style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px; display:block;">
+                                    Product Code
+                                </label>
+                                <input type="text" id="rental_product_search" data-rental-input="1"
+                                    class="form-control" placeholder="Type exact code e.g. 101..."
+                                    autocomplete="off">
+
+                                @if (count($searchResults) > 0)
+                                    <div class="product-search-dropdown">
+                                        @foreach ($searchResults as $result)
+                                            <div class="search-item po-search-item"
+                                                wire:click="selectProductForPrice({{ $result['id'] }})"
+                                                data-product-id="{{ $result['id'] }}"
+                                                style="{{ !$result['available'] ? 'opacity:0.8;' : '' }} cursor:pointer;">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    @if ($result['photo'])
+                                                        <img src="{{ Storage::url($result['photo']) }}"
+                                                            style="width:32px; height:32px; object-fit:cover; border-radius:5px; flex-shrink:0;">
+                                                    @else
+                                                        <div
+                                                            style="width:32px; height:32px; background:var(--gold-light); border-radius:5px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                                            <i class="bi bi-image"
+                                                                style="font-size:12px; color:var(--gold);"></i>
+                                                        </div>
+                                                    @endif
+                                                    <div class="flex-fill">
                                                         <span class="search-item-code">{{ $result['code'] }}</span>
                                                         @if (!$result['available'])
                                                             <span
-                                                                style="font-size:10px; background:#fff5f5; color:#c53030; padding:1px 6px; border-radius:3px; margin-left:4px; font-weight:700;">
-                                                                Booked
-                                                            </span>
+                                                                style="font-size:10px; background:#fff5f5; color:#c53030; padding:1px 5px; border-radius:3px; margin-left:4px; font-weight:700;">Booked</span>
                                                         @else
                                                             <span
-                                                                style="font-size:10px; background:#f0fff4; color:#276749; padding:1px 6px; border-radius:3px; margin-left:4px; font-weight:700;">
-                                                                Available
-                                                            </span>
+                                                                style="font-size:10px; background:#f0fff4; color:#276749; padding:1px 5px; border-radius:3px; margin-left:4px; font-weight:700;">Available</span>
                                                         @endif
                                                         <div class="search-item-name">{{ $result['name'] }}</div>
                                                         <div class="search-item-category">
@@ -466,22 +405,44 @@
                                                             @endif
                                                         </div>
                                                     </div>
-                                                    <div class="search-item-price">
-                                                        Rs. {{ number_format($result['rental_price'], 0) }}
-                                                    </div>
+                                                    <div class="search-item-price">Rs.
+                                                        {{ number_format($result['rental_price'], 0) }}</div>
                                                 </div>
                                             </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                @if (strlen($productSearch) >= 1 && count($searchResults) === 0 && !$showPriceInput)
+                                    <div class="product-search-dropdown">
+                                        <div
+                                            style="padding:12px; font-size:12px; color:var(--text-muted); text-align:center;">
+                                            No product with code "{{ $productSearch }}"
                                         </div>
                                     </div>
-                                @endforeach
+                                @endif
                             </div>
-                        @endif
 
-                        @if (strlen($productSearch) >= 2 && count($searchResults) === 0)
-                            <div class="product-search-dropdown">
-                                <div style="padding:14px; font-size:12px; color:var(--text-muted); text-align:center;">
-                                    No products found
-                                </div>
+                            {{-- Price Input --}}
+                            <div>
+                                <label
+                                    style="font-size:10px; font-weight:700; text-transform:uppercase; color:{{ $showPriceInput ? '#276749' : 'var(--text-muted)' }}; margin-bottom:4px; display:block;">
+                                    Price (Rs.)
+                                </label>
+                                <input type="number" id="rental_price_input" data-rental-input="1"
+                                    wire:model.lazy="pendingPrice" class="form-control" placeholder="0"
+                                    min="0"
+                                    style="text-align:right; {{ !$showPriceInput ? 'opacity:0.4; pointer-events:none;' : 'border-color:#9ae6b4; background:#f0fff4;' }}"
+                                    {{ !$showPriceInput ? 'disabled' : '' }}>
+                            </div>
+                        </div>
+
+                        {{-- Selected product hint --}}
+                        @if ($showPriceInput && $pendingProductCode)
+                            <div style="margin-top:6px; font-size:11px; color:#276749; font-weight:600;">
+                                <i class="bi bi-check-circle me-1"></i>
+                                {{ $pendingProductCode }} — {{ $pendingProductName }}
+                                · Enter price and press Enter to add
                             </div>
                         @endif
                     </div>
@@ -869,3 +830,139 @@
         </div>
     @endif
 </div>
+@push('scripts')
+    <script>
+        document.addEventListener('livewire:initialized', function() {
+            Livewire.on('step-changed-to-3', () => {
+                setTimeout(() => {
+                    setupRentalSearch();
+                    const el = document.getElementById('rental_product_search');
+                    if (el) el.focus();
+                }, 150);
+            });
+
+            Livewire.on('focus-rental-price', () => {
+                setTimeout(() => {
+                    const el = document.getElementById('rental_price_input');
+                    if (el) {
+                        el.removeAttribute('disabled');
+                        el.focus();
+                        el.select();
+                    }
+                }, 100);
+            });
+
+            Livewire.on('focus-rental-search', () => {
+                setTimeout(() => {
+                    const el = document.getElementById('rental_product_search');
+                    if (el) {
+                        el.focus();
+                        el.select();
+                    }
+                }, 100);
+            });
+        });
+
+        function rentalSearchKeydown(e) {
+            const dropdown = document.querySelector('.po-search-item')?.closest('.product-search-dropdown');
+            const dropItems = dropdown ? Array.from(dropdown.querySelectorAll('.po-search-item')) : [];
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                e.stopPropagation();
+
+                const searchEl = document.getElementById('rental_product_search');
+                const currentVal = searchEl?.value;
+                clearTimeout(rentalSearchTimer);
+
+                const trySelect = (attempts) => {
+                    const dd = document.querySelector('.po-search-item')?.closest('.product-search-dropdown');
+                    const items = dd ? Array.from(dd.querySelectorAll('.po-search-item')) : [];
+                    if (items.length > 0) {
+                        const idx = (window._rentalHighlight ?? -1) < 0 ? 0 : window._rentalHighlight;
+                        const target = items[idx] ?? items[0];
+                        const productId = target.dataset.productId;
+                        if (productId) {
+                            if (searchEl) searchEl.value = '';
+                            @this.call('selectProductForPrice', parseInt(productId));
+                        }
+                        window._rentalHighlight = -1;
+                    } else if (attempts > 0) {
+                        if (searchEl && document.activeElement !== searchEl) searchEl.focus();
+                        setTimeout(() => trySelect(attempts - 1), 80);
+                    }
+                };
+
+                @this.set('productSearch', currentVal).then(() => {
+                    @this.call('searchProducts').then(() => {
+                        trySelect(5);
+                    });
+                });
+                return;
+            }
+
+            if (!dropdown || !dropItems.length) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                window._rentalHighlight = Math.min((window._rentalHighlight ?? -1) + 1, dropItems.length - 1);
+                dropItems.forEach((el, i) => el.style.background = i === window._rentalHighlight ? '#ebf8ff' : '');
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                window._rentalHighlight = Math.max((window._rentalHighlight ?? 0) - 1, 0);
+                dropItems.forEach((el, i) => el.style.background = i === window._rentalHighlight ? '#ebf8ff' : '');
+            }
+            if (e.key === 'Escape') {
+                window._rentalHighlight = -1;
+                @this.set('productSearch', '');
+                @this.set('searchResults', []);
+            }
+        }
+
+        function rentalPriceKeydown(e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            e.stopPropagation();
+            @this.call('confirmAddItem');
+        }
+
+        let rentalSearchTimer = null;
+
+        function rentalSearchInput(e) {
+            clearTimeout(rentalSearchTimer);
+            const val = e.target.value;
+            rentalSearchTimer = setTimeout(() => {
+                @this.set('productSearch', val, false);
+                @this.call('searchProducts');
+            }, 200);
+        }
+
+        function setupRentalSearch() {
+            const searchInput = document.getElementById('rental_product_search');
+            const priceInput = document.getElementById('rental_price_input');
+
+            if (searchInput) {
+                searchInput.removeEventListener('keydown', rentalSearchKeydown, true);
+                searchInput.addEventListener('keydown', rentalSearchKeydown, true);
+                searchInput.removeEventListener('input', rentalSearchInput);
+                searchInput.addEventListener('input', rentalSearchInput);
+            }
+
+            if (priceInput) {
+                priceInput.removeEventListener('keydown', rentalPriceKeydown, true);
+                priceInput.addEventListener('keydown', rentalPriceKeydown, true);
+            }
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                @this.call('nextStep');
+            }
+        }, true); // ← capture phase
+    </script>
+@endpush

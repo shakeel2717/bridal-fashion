@@ -18,6 +18,12 @@ class RentalDetail extends Component
 
     public bool $showReturnModal = false;
 
+    public bool $showPickupModal = false;
+
+    public ?int $pickupItemId = null;
+
+    public string $pickupGivenBy = '';
+
     // Cancel with hold
     public bool $showCancelHoldForm = false;
 
@@ -78,6 +84,8 @@ class RentalDetail extends Component
 
         $this->returnReceivedBy = (string) auth()->id();
 
+        $this->pickupGivenBy = (string) auth()->id();
+
         $defaultAccount = Account::where('is_default', true)->first()
     ?? Account::where('is_active', true)->first();
         $this->paymentMethod = $defaultAccount ? (string) $defaultAccount->id : '';
@@ -129,10 +137,27 @@ class RentalDetail extends Component
     // ── Item Pickup/Return ────────────────────────────────
     public function markItemPickedUp(int $itemId): void
     {
-        RentalItem::findOrFail($itemId)->update([
+        $this->pickupItemId = $itemId;
+        $this->pickupGivenBy = (string) auth()->id();
+        $this->showPickupModal = true;
+    }
+
+    public function confirmItemPickedUp(): void
+    {
+        $this->validate([
+            'pickupGivenBy' => 'required|exists:users,id',
+        ], [
+            'pickupGivenBy.required' => 'Please select who gave this item to the customer.',
+        ]);
+
+        RentalItem::findOrFail($this->pickupItemId)->update([
             'pickup_status' => 'picked_up',
             'picked_up_at' => now(),
+            'picked_up_by' => $this->pickupGivenBy,
         ]);
+
+        $this->showPickupModal = false;
+        $this->pickupItemId = null;
         $this->updateRentalStatus();
         $this->rental->refresh();
     }
@@ -401,6 +426,8 @@ class RentalDetail extends Component
         $this->rental->load([
             'items.tasks.actionedBy',
             'items.tasks.createdBy',
+            'items.pickedUpBy',
+            'items.receivedBy',
             'customer',
             'employee',
             'payments.createdBy',

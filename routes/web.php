@@ -29,7 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/rentals', [RentalsController::class, 'index'])->name('rentals.index');
     Route::get('/rentals/create', [RentalsController::class, 'create'])->name('rentals.create');
     Route::get('/rentals/{rental}', [RentalsController::class, 'show'])->name('rentals.show');
-    Route::get('/rentals/{rental}/edit', [RentalsController::class, 'edit'])->name('rentals.edit');
+    Route::get('/rentals/{rental}/edit', \App\Livewire\Rentals\RentalEdit::class)->name('rentals.edit');
     Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
     Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create');
     Route::get('/sales/{sale}/return', [SalesController::class, 'return'])->name('sales.return');

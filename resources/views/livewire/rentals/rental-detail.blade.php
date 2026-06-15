@@ -371,9 +371,14 @@
                                             <span class="badge-status pending">Pending</span>
                                         @endif
                                     @elseif($item->pickup_status === 'picked_up')
-                                        <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+                                        <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">
                                             {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y') }}
                                         </div>
+                                        @if ($item->pickedUpBy)
+                                            <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+                                                by <strong>{{ $item->pickedUpBy->name }}</strong>
+                                            </div>
+                                        @endif
                                         <button class="btn btn-sm btn-outline-primary action-btn"
                                             wire:click="markItemReturned({{ $item->id }})">
                                             <i class="bi bi-box-arrow-in-down me-1"></i> Returned
@@ -786,6 +791,45 @@
 
         </div>
     </div>
+
+    {{-- Pickup Modal --}}
+    @if ($showPickupModal)
+        <div class="confirm-modal-overlay">
+            <div class="confirm-modal-box" style="max-width:420px;">
+                <div class="confirm-title">
+                    <i class="bi bi-box-arrow-up me-2" style="color:#276749;"></i>
+                    Mark Item as Picked Up
+                </div>
+                <div class="confirm-subtitle">
+                    Select the employee who gave this item to the customer.
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Given By <span class="text-danger">*</span></label>
+                    <select wire:model="pickupGivenBy"
+                        class="form-select @error('pickupGivenBy') is-invalid @enderror">
+                        <option value="">Select employee...</option>
+                        @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('pickupGivenBy')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="confirm-actions">
+                    <button class="btn btn-sm btn-outline-secondary"
+                        wire:click="$set('showPickupModal', false)">Cancel</button>
+                    <button class="btn btn-sm btn-success" wire:click="confirmItemPickedUp"
+                        wire:loading.attr="disabled">
+                        <span wire:loading wire:target="confirmItemPickedUp">
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        </span>
+                        Confirm Pickup
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- Cancel with Hold Form --}}
     @if ($showCancelHoldForm)

@@ -46,4 +46,9 @@ class RentalItem extends Model
     {
         return $this->hasMany(RentalTask::class);
     }
+
+    public function pickedUpBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'picked_up_by');
+    }
 }

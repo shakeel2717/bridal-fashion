@@ -9,9 +9,9 @@
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
             <div class="page-title">
-                Edit Rental — {{ $rental->bill_ref ?? '#' . $rental->id }}
+                <div class="page-title">Edit Rental — {{ $rental->bill_ref ?? '#' . $rental->id }}</div>
             </div>
-            <div class="page-subtitle">Update rental information</div>
+            <div class="page-subtitle">Update rental details</div>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('rentals.show', $rental->id) }}" class="btn btn-sm btn-outline-secondary">
@@ -371,7 +371,7 @@
                 <span wire:loading wire:target="save">
                     <span class="spinner-border spinner-border-sm me-2"></span>
                 </span>
-                <i class="bi bi-check-circle me-2"></i> Update Rental
+                <i class="bi bi-check-circle me-2"></i> Save Changes
             </button>
 
             <a href="{{ route('rentals.show', $rental->id) }}" class="btn btn-outline-secondary w-100 mt-2">

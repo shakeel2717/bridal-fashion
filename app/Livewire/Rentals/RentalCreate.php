@@ -89,6 +89,16 @@ class RentalCreate extends Component
 
     public array $searchResults = [];
 
+    public string $pendingPrice = '';
+
+    public ?int $pendingProductId = null;
+
+    public string $pendingProductCode = '';
+
+    public string $pendingProductName = '';
+
+    public bool $showPriceInput = false;
+
     public array $items = [];
 
     // ── Step 4: Payment ───────────────────────────────────
@@ -101,6 +111,8 @@ class RentalCreate extends Component
     public function mount(): void
     {
         $this->bookingDate = now()->format('Y-m-d');
+        $this->pickupDate = now()->addDays(2)->format('Y-m-d');
+        $this->returnDate = now()->addDays(5)->format('Y-m-d');
         $defaultAccount = Account::where('is_default', true)->first()
             ?? Account::where('is_active', true)->first();
         $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
@@ -123,7 +135,15 @@ class RentalCreate extends Component
                 return;
             }
         }
+        if ($this->step >= 4) {
+            return;
+        }
+
         $this->step++;
+
+        if ($this->step === 3) {
+            $this->dispatch('step-changed-to-3');
+        }
     }
 
     public function prevStep(): void
@@ -229,34 +249,78 @@ class RentalCreate extends Component
         ]);
     }
 
+    public function selectProductForPrice(int $productId): void
+    {
+        $product = Product::findOrFail($productId);
+        $this->pendingProductId = $product->id;
+        $this->pendingProductCode = $product->code;
+        $this->pendingProductName = $product->name;
+        $this->pendingPrice = (string) $product->rental_price;
+        $this->showPriceInput = true;
+        $this->productSearch = '';   // ← ensure this is here
+        $this->searchResults = [];
+        $this->dispatch('focus-rental-price');
+    }
+
+    public function confirmAddItem(): void
+    {
+        if (! $this->pendingProductId) {
+            return;
+        }
+
+        $isBooked = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
+            ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate])
+        )->where('product_id', $this->pendingProductId)->exists();
+
+        $product = Product::with('category')->findOrFail($this->pendingProductId);
+
+        $this->items[] = [
+            'product_id' => $product->id,
+            'code' => $product->code,
+            'name' => $product->name,
+            'category' => $product->category->name ?? '',
+            'size' => $product->size ?? '',
+            'color' => $product->color ?? '',
+            'photo' => $product->photo,
+            'rental_price' => $this->pendingPrice ?: (string) $product->rental_price,
+            'note' => '',
+            'addons' => [],
+            'double_booked' => $isBooked,
+        ];
+
+        $this->productSearch = '';
+        $this->pendingProductId = null;
+        $this->pendingPrice = '';
+        $this->showPriceInput = false;
+        $this->searchResults = [];
+        $this->recalcTotal();
+        $this->dispatch('focus-rental-search');
+    }
+
     // ── Step 3: Items with availability check ─────────────
     public function searchProducts(): void
     {
-        if (strlen($this->productSearch) < 2) {
+        $this->showPriceInput = false;
+        $this->pendingProductId = null;
+
+        if (strlen($this->productSearch) < 1) {
             $this->searchResults = [];
 
             return;
         }
 
         $alreadyAdded = collect($this->items)->pluck('product_id')->toArray();
+        $bookedProductIds = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
+            ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate])
+        )->pluck('product_id')->toArray();
 
-        // Still detect booked for display only — not blocking
-        $bookedProductIds = RentalItem::whereHas('rental', function ($q) {
-            $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->where(function ($q) {
-                    $q->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
-                        ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate]);
-                });
-        })->pluck('product_id')->toArray();
-
-        $this->searchResults = Product::with(['category'])
+        $this->searchResults = Product::with('category')
             ->where('is_active', true)
             ->where('is_abandoned', false)
             ->whereIn('type', ['rental', 'both'])
-            ->where(function ($q) {
-                $q->where('code', 'like', "%{$this->productSearch}%")
-                    ->orWhere('name', 'like', "%{$this->productSearch}%");
-            })
+            ->where('code', $this->productSearch)   // exact match only
             ->whereNotIn('id', $alreadyAdded)
             ->get()
             ->map(fn ($p) => [
@@ -272,38 +336,37 @@ class RentalCreate extends Component
             ])
             ->sortByDesc('available')
             ->values()
-            ->take(10)
             ->toArray();
     }
 
-    public function addItem(int $productId): void
-    {
-        $isBooked = RentalItem::whereHas('rental', function ($q) {
-            $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
-                ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate]);
-        })->where('product_id', $productId)->exists();
+    // public function addItem(int $productId): void
+    // {
+    //     $isBooked = RentalItem::whereHas('rental', function ($q) {
+    //         $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+    //             ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
+    //             ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate]);
+    //     })->where('product_id', $productId)->exists();
 
-        $product = Product::with('category')->findOrFail($productId);
+    //     $product = Product::with('category')->findOrFail($productId);
 
-        $this->items[] = [
-            'product_id' => $product->id,
-            'code' => $product->code,
-            'name' => $product->name,
-            'category' => $product->category->name ?? '',
-            'size' => $product->size ?? '',
-            'color' => $product->color ?? '',
-            'photo' => $product->photo,
-            'rental_price' => (string) $product->rental_price,
-            'note' => '',
-            'addons' => [],
-            'double_booked' => $isBooked, // flag for warning display
-        ];
+    //     $this->items[] = [
+    //         'product_id' => $product->id,
+    //         'code' => $product->code,
+    //         'name' => $product->name,
+    //         'category' => $product->category->name ?? '',
+    //         'size' => $product->size ?? '',
+    //         'color' => $product->color ?? '',
+    //         'photo' => $product->photo,
+    //         'rental_price' => (string) $product->rental_price,
+    //         'note' => '',
+    //         'addons' => [],
+    //         'double_booked' => $isBooked, // flag for warning display
+    //     ];
 
-        $this->productSearch = '';
-        $this->searchResults = [];
-        $this->recalcTotal();
-    }
+    //     $this->productSearch = '';
+    //     $this->searchResults = [];
+    //     $this->recalcTotal();
+    // }
 
     public function removeItem(int $index): void
     {
