@@ -22,6 +22,10 @@ class RentalCreate extends Component
 
     public int $step = 1;
 
+    public ?int $rentalId = null;
+
+    public bool $isEditMode = false;
+
     // ── Step 1: Customer ──────────────────────────────────
     public string $customerType = 'walkin';
 
@@ -108,15 +112,75 @@ class RentalCreate extends Component
 
     public string $advancePaymentMethod = 'cash';
 
-    public function mount(): void
+    public function mount(?Rental $rental = null): void
     {
         $this->bookingDate = now()->format('Y-m-d');
-        $this->pickupDate = now()->addDays(2)->format('Y-m-d');
-        $this->returnDate = now()->addDays(5)->format('Y-m-d');
         $defaultAccount = Account::where('is_default', true)->first()
             ?? Account::where('is_active', true)->first();
         $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
-        $this->employeeId = (string) auth()->id(); // ← add this
+        $this->employeeId = (string) auth()->id();
+
+        if ($rental && $rental->exists) {
+            $this->isEditMode = true;
+            $this->rentalId = $rental->id;
+
+            $this->customerType = $rental->customer?->is_walkin ? 'walkin' : 'existing';
+            $this->customerId = $rental->customer_id;
+            $this->customerName = $rental->customer_name;
+            $this->customerPhone1 = $rental->customer_phone1;
+            $this->customerPhone2 = $rental->customer_phone2 ?? '';
+            $this->customerWhatsapp = $rental->customer_whatsapp ?? '';
+            $this->customerCnic = $rental->customer_cnic ?? '';
+            $this->deliveryAddress = $rental->delivery_address ?? '';
+            $this->phone1Gender = $rental->phone1_gender ?? 'male';
+            $this->phone2Gender = $rental->phone2_gender ?? 'male';
+            $this->whatsappGender = $rental->whatsapp_gender ?? 'male';
+
+            $this->billRef = $rental->bill_ref ?? '';
+            $this->bookingDate = Carbon::parse($rental->booking_date)->format('Y-m-d');
+            $this->pickupDate = Carbon::parse($rental->pickup_date)->format('Y-m-d');
+            $this->returnDate = Carbon::parse($rental->return_date)->format('Y-m-d');
+            $this->employeeId = (string) ($rental->employee_id ?? auth()->id());
+            $this->notes = $rental->notes ?? '';
+
+            if ($rental->stitching_date || $rental->stitching_instructions) {
+                $this->showStitching = true;
+                $this->stitchingDate = $rental->stitching_date
+                    ? Carbon::parse($rental->stitching_date)->format('Y-m-d') : '';
+                $this->stitchingInstructions = $rental->stitching_instructions ?? '';
+            }
+
+            $this->items = $rental->items->map(fn ($item) => [
+                'rental_item_id' => $item->id,
+                'product_id' => $item->product_id,
+                'code' => $item->product_code,
+                'name' => $item->product_name,
+                'photo' => $item->product?->photo,
+                'category' => $item->product?->category?->name ?? '',
+                'size' => $item->product?->size ?? '',
+                'color' => $item->product?->color ?? '',
+                'rental_price' => (string) $item->rental_price,
+                'note' => $item->note ?? '',
+                'double_booked' => false,
+                'addons' => $item->tasks->where('type', 'addon')->map(fn ($t) => [
+                    'label' => $t->title,
+                    'price' => (string) $t->cost,
+                ])->values()->toArray(),
+            ])->toArray();
+
+            $this->securityDeposits = $rental->securityDeposits->map(fn ($d) => [
+                'deposit_id' => $d->id,
+                'item_name' => $d->item_name,
+                'amount' => (string) $d->amount,
+                'is_paid' => $d->is_paid,
+            ])->toArray();
+
+            $this->totalAmount = (string) $rental->total_amount;
+            $this->advancePaid = (string) $rental->advance_paid;
+            $this->discountType = $rental->discount_type ?? 'fixed';
+            $this->discountValue = (string) ($rental->discount_value ?? 0);
+            $this->discountAmount = (string) ($rental->discount_amount ?? 0);
+        }
     }
 
     // ── Navigation ────────────────────────────────────────
@@ -422,6 +486,140 @@ class RentalCreate extends Component
         $total = (float) $this->totalAmount;
         $advance = (float) $this->advancePaid;
         $remaining = max(0, $total - $advance);
+
+        // ── EDIT MODE ─────────────────────────────────────────
+        if ($this->isEditMode) {
+            $rental = Rental::findOrFail($this->rentalId);
+
+            $walkinPhotoPath = $rental->walkin_photo;
+            $walkinCnicFrontPath = $rental->walkin_cnic_front;
+            $walkinCnicBackPath = $rental->walkin_cnic_back;
+
+            if ($this->walkinPhoto) {
+                $walkinPhotoPath = $this->walkinPhoto->store('walkin/photos', 'public');
+            }
+            if ($this->walkinCnicFront) {
+                $walkinCnicFrontPath = $this->walkinCnicFront->store('walkin/cnic', 'public');
+            }
+            if ($this->walkinCnicBack) {
+                $walkinCnicBackPath = $this->walkinCnicBack->store('walkin/cnic', 'public');
+            }
+
+            $rental->update([
+                'bill_ref' => $this->billRef ?: null,
+                'customer_name' => $this->customerName,
+                'customer_phone1' => $this->customerPhone1,
+                'customer_phone2' => $this->customerPhone2 ?: null,
+                'customer_whatsapp' => $this->customerWhatsapp ?: null,
+                'customer_cnic' => $this->customerCnic ?: null,
+                'delivery_address' => $this->deliveryAddress ?: null,
+                'phone1_gender' => $this->phone1Gender,
+                'phone2_gender' => $this->phone2Gender,
+                'whatsapp_gender' => $this->whatsappGender,
+                'booking_date' => Carbon::parse($this->bookingDate)->toDateString(),
+                'pickup_date' => Carbon::parse($this->pickupDate)->toDateString(),
+                'return_date' => Carbon::parse($this->returnDate)->toDateString(),
+                'stitching_date' => $this->stitchingDate ? Carbon::parse($this->stitchingDate)->toDateString() : null,
+                'stitching_instructions' => $this->stitchingInstructions ?: null,
+                'total_amount' => $total,
+                'advance_paid' => $advance,
+                'remaining_balance' => $remaining,
+                'discount_type' => $this->discountType,
+                'discount_value' => (float) $this->discountValue,
+                'discount_amount' => (float) $this->discountAmount,
+                'employee_id' => $this->employeeId ?: null,
+                'notes' => $this->notes ?: null,
+                'walkin_photo' => $walkinPhotoPath,
+                'walkin_cnic_front' => $walkinCnicFrontPath,
+                'walkin_cnic_back' => $walkinCnicBackPath,
+                'updated_by' => auth()->id(),
+            ]);
+
+            // Sync items
+            $keptIds = collect($this->items)->pluck('rental_item_id')->filter()->toArray();
+            $rental->items()->whereNotIn('id', $keptIds)->delete();
+
+            foreach ($this->items as $item) {
+                $addonLabels = collect($item['addons'] ?? [])->filter(fn ($a) => ! empty($a['label']))->map(fn ($a) => $a['label'])->join(', ');
+                $addonTotal = collect($item['addons'] ?? [])->sum(fn ($a) => (float) ($a['price'] ?? 0));
+
+                if (! empty($item['rental_item_id'])) {
+                    $ri = RentalItem::findOrFail($item['rental_item_id']);
+                    $ri->update([
+                        'rental_price' => (float) $item['rental_price'],
+                        'custom_option_label' => $addonLabels ?: null,
+                        'custom_option_price' => $addonTotal,
+                    ]);
+                    $ri->tasks()->where('type', 'addon')->delete();
+                } else {
+                    $ri = RentalItem::create([
+                        'rental_id' => $rental->id,
+                        'product_id' => $item['product_id'],
+                        'product_name' => $item['name'],
+                        'product_code' => $item['code'],
+                        'rental_price' => (float) $item['rental_price'],
+                        'custom_option_label' => $addonLabels ?: null,
+                        'custom_option_price' => $addonTotal,
+                        'pickup_status' => 'pending',
+                    ]);
+                }
+
+                foreach ($item['addons'] ?? [] as $addon) {
+                    if (! empty($addon['label'])) {
+                        RentalTask::create([
+                            'rental_id' => $rental->id,
+                            'rental_item_id' => $ri->id,
+                            'type' => 'addon',
+                            'title' => $addon['label'],
+                            'cost' => (float) ($addon['price'] ?? 0),
+                            'status' => 'pending',
+                            'created_by' => auth()->id(),
+                        ]);
+                    }
+                }
+            }
+
+            // Sync security deposits
+            $keptDepositIds = collect($this->securityDeposits)->pluck('deposit_id')->filter()->toArray();
+            $rental->securityDeposits()->whereNotIn('id', $keptDepositIds)->delete();
+            foreach ($this->securityDeposits as $deposit) {
+                if (empty($deposit['item_name'])) {
+                    continue;
+                }
+                if (! empty($deposit['deposit_id'])) {
+                    $rental->securityDeposits()->find($deposit['deposit_id'])?->update([
+                        'item_name' => $deposit['item_name'],
+                        'amount' => (float) $deposit['amount'],
+                        'is_paid' => (bool) $deposit['is_paid'],
+                    ]);
+                } else {
+                    $rental->securityDeposits()->create([
+                        'item_name' => $deposit['item_name'],
+                        'amount' => (float) $deposit['amount'],
+                        'is_paid' => (bool) $deposit['is_paid'],
+                        'is_refunded' => false,
+                        'created_by' => auth()->id(),
+                    ]);
+                }
+            }
+
+            $rental->tasks()->where('type', 'stitching')->delete();
+            if (! empty($this->stitchingInstructions)) {
+                RentalTask::create([
+                    'rental_id' => $rental->id,
+                    'type' => 'stitching',
+                    'title' => $this->stitchingInstructions,
+                    'cost' => 0,
+                    'status' => 'pending',
+                    'created_by' => auth()->id(),
+                ]);
+            }
+
+            session()->flash('success', 'Rental updated successfully.');
+            $this->redirect(route('rentals.show', $rental->id));
+
+            return;
+        }
 
         $customerId = $this->customerId;
         if ($this->customerType === 'walkin' || ! $customerId) {

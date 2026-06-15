@@ -2,10 +2,13 @@
     {{-- Header --}}
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <div class="page-title">New Rental Booking</div>
-            <div class="page-subtitle">Fill in details step by step</div>
+            <div class="page-title">{{ $isEditMode ? 'Edit Rental — #' . $rentalId : 'New Rental Booking' }}</div>
+            <div class="page-subtitle">
+                {{ $isEditMode ? 'Update rental details step by step' : 'Fill in details step by step' }}</div>
         </div>
-        <a href="{{ route('rentals.index') }}" class="btn btn-sm btn-outline-secondary">
+        {{-- Back button --}}
+        <a href="{{ $isEditMode ? route('rentals.show', $rentalId) : route('rentals.index') }}"
+            class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> Back
         </a>
     </div>
@@ -818,7 +821,7 @@
                     <span wire:loading wire:target="save">
                         <span class="spinner-border spinner-border-sm me-2"></span>
                     </span>
-                    <i class="bi bi-check-circle me-2"></i> Confirm Booking
+                    <i class="bi bi-check-circle me-2"></i> {{ $isEditMode ? 'Save Changes' : 'Confirm Booking' }}
                 </button>
             </div>
         </div>
