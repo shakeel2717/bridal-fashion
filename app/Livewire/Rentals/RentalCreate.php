@@ -124,8 +124,11 @@ class RentalCreate extends Component
             $this->isEditMode = true;
             $this->rentalId = $rental->id;
 
-            $this->customerType = $rental->customer?->is_walkin ? 'walkin' : 'existing';
-            $this->customerId = $rental->customer_id;
+            $walkinCustomer = Customer::where('is_walkin', true)->first();
+            $isWalkinRental = ($rental->customer_id === $walkinCustomer?->id);
+            $this->customerType = $isWalkinRental ? 'walkin' : 'existing';
+            $this->customerId = $isWalkinRental ? null : $rental->customer_id;
+
             $this->customerName = $rental->customer_name;
             $this->customerPhone1 = $rental->customer_phone1;
             $this->customerPhone2 = $rental->customer_phone2 ?? '';
@@ -181,6 +184,31 @@ class RentalCreate extends Component
             $this->discountValue = (string) ($rental->discount_value ?? 0);
             $this->discountAmount = (string) ($rental->discount_amount ?? 0);
         }
+    }
+
+    public function saveWalkinAsCustomer(): void
+    {
+        $this->validate([
+            'customerName' => 'required|string|max:150',
+            'customerPhone1' => 'required|string|max:20',
+        ]);
+
+        $customer = Customer::create([
+            'name' => $this->customerName,
+            'phone1' => $this->customerPhone1,
+            'phone2' => $this->customerPhone2 ?: null,
+            'whatsapp' => $this->customerWhatsapp ?: null,
+            'cnic' => $this->customerCnic ?: null,
+            'address' => $this->deliveryAddress ?: null,
+            'is_walkin' => false,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        // Switch to registered and select this customer
+        $this->customerType = 'existing';
+        $this->customerId = $customer->id;
+        $this->customerSearch = $customer->name;
     }
 
     // ── Navigation ────────────────────────────────────────
@@ -289,13 +317,13 @@ class RentalCreate extends Component
         ];
 
         if ($this->customerType === 'existing') {
-            $rules['customerCnic'] = 'required|string|max:20';
+            $rules['customerCnic'] = 'nullable|string|max:20';
         }
 
         $this->validate($rules, [
             'customerName.required' => 'Customer name is required.',
             'customerPhone1.required' => 'Phone number is required.',
-            'customerCnic.required' => 'CNIC is required for rental customers.',
+            'customerCnic.nullable' => 'CNIC is required for rental customers.',
         ]);
     }
 

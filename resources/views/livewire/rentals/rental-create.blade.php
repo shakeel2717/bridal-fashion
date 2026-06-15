@@ -89,7 +89,7 @@
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                                <input type="text" wire:model="customerName"
+                                <input type="text" wire:model.live="customerName"
                                     class="form-control @error('customerName') is-invalid @enderror"
                                     placeholder="Customer name"
                                     {{ $customerType === 'existing' && $customerId ? 'readonly' : '' }}>
@@ -101,7 +101,7 @@
                             <div class="col-6">
                                 <label class="form-label">Phone 1 <span class="text-danger">*</span></label>
                                 <div class="d-flex gap-2">
-                                    <input type="text" wire:model="customerPhone1"
+                                    <input type="text" wire:model.live="customerPhone1"
                                         class="form-control @error('customerPhone1') is-invalid @enderror"
                                         placeholder="03XX-XXXXXXX"
                                         {{ $customerType === 'existing' && $customerId ? 'readonly' : '' }}>
@@ -153,7 +153,7 @@
 
                             @if ($customerType === 'existing')
                                 <div class="col-6">
-                                    <label class="form-label">CNIC <span class="text-danger">*</span></label>
+                                    <label class="form-label">CNIC </label>
                                     <input type="text" wire:model="customerCnic"
                                         class="form-control @error('customerCnic') is-invalid @enderror"
                                         placeholder="00000-0000000-0">
@@ -168,6 +168,90 @@
                                 <input type="text" wire:model="deliveryAddress" class="form-control"
                                     placeholder="Customer address">
                             </div>
+
+                            @if ($customerType === 'walkin')
+                                @if ($isEditMode)
+                                    <div class="col-12">
+                                        <div
+                                            style="background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:16px;">
+                                            <div
+                                                style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
+                                                <i class="bi bi-camera me-1"></i>
+                                                Walk-in Customer Documents
+                                                <span style="font-weight:400; font-size:10px; margin-left:4px;">(all
+                                                    optional)</span>
+                                            </div>
+                                            <div class="row g-3">
+                                                <div class="col-4">
+                                                    <label class="form-label" style="font-size:12px;">Profile
+                                                        Photo</label>
+                                                    <input type="file" wire:model="walkinPhoto"
+                                                        class="form-control form-control-sm @error('walkinPhoto') is-invalid @enderror"
+                                                        accept="image/*">
+                                                    @error('walkinPhoto')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                    @if ($walkinPhoto)
+                                                        <div class="mt-2">
+                                                            <img src="{{ $walkinPhoto->temporaryUrl() }}"
+                                                                style="width:60px; height:60px; object-fit:cover; border-radius:50%; border:2px solid var(--gold);">
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label" style="font-size:12px;">CNIC
+                                                        Front</label>
+                                                    <input type="file" wire:model="walkinCnicFront"
+                                                        class="form-control form-control-sm @error('walkinCnicFront') is-invalid @enderror"
+                                                        accept="image/*">
+                                                    @error('walkinCnicFront')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                    @if ($walkinCnicFront)
+                                                        <div class="mt-2">
+                                                            <img src="{{ $walkinCnicFront->temporaryUrl() }}"
+                                                                style="width:100%; height:55px; object-fit:cover; border-radius:6px; border:2px solid var(--gold);">
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label" style="font-size:12px;">CNIC
+                                                        Back</label>
+                                                    <input type="file" wire:model="walkinCnicBack"
+                                                        class="form-control form-control-sm @error('walkinCnicBack') is-invalid @enderror"
+                                                        accept="image/*">
+                                                    @error('walkinCnicBack')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                    @if ($walkinCnicBack)
+                                                        <div class="mt-2">
+                                                            <img src="{{ $walkinCnicBack->temporaryUrl() }}"
+                                                                style="width:100%; height:55px; object-fit:cover; border-radius:6px; border:2px solid var(--gold);">
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endif
+
+                            @if ($customerType === 'walkin' && strlen($customerName) > 0 && strlen($customerPhone1) > 0 && !$customerId)
+                                <div class="col-12">
+                                    <div
+                                        style="background:#f0fff4; border:1px solid #9ae6b4; border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
+                                        <div style="font-size:12px; color:#276749;">
+                                            <i class="bi bi-person-plus me-1"></i>
+                                            Save <strong>{{ $customerName }}</strong> as a registered customer for
+                                            future use?
+                                        </div>
+                                        <button type="button" wire:click="saveWalkinAsCustomer"
+                                            class="btn btn-sm btn-success">
+                                            <i class="bi bi-person-check me-1"></i> Save Customer
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     @endif
                 </div>
