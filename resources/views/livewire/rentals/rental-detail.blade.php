@@ -94,7 +94,8 @@
                     @if ($rental->delivery_address)
                         <div class="col-6">
                             <div style="font-size:10px; color:var(--text-muted);">Address</div>
-                            <div style="font-weight:600;">{{ $rental->delivery_address }} | {{$rental->customer_city}}</div>
+                            <div style="font-weight:600;">{{ $rental->delivery_address }} |
+                                {{ $rental->customer_city }}</div>
                         </div>
                     @endif
 
@@ -444,8 +445,8 @@
                     @foreach ($rental->securityDeposits as $deposit)
                         <div
                             style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:8px; margin-bottom:6px;
-         background:{{ $deposit->is_refunded ? '#f0fff4' : ($deposit->is_paid ? '#fffff0' : '#fff5f5') }};
-         border:1px solid {{ $deposit->is_refunded ? '#9ae6b4' : ($deposit->is_paid ? '#f6e05e' : '#fed7d7') }};">
+                background:{{ $deposit->is_refunded ? '#f0fff4' : ($deposit->is_paid ? '#fffff0' : '#fff5f5') }};
+                border:1px solid {{ $deposit->is_refunded ? '#9ae6b4' : ($deposit->is_paid ? '#f6e05e' : '#fed7d7') }};">
 
                             <div>
                                 <div style="font-size:13px; font-weight:600; color:var(--text-primary);">
@@ -508,6 +509,100 @@
                             · Refunded: <strong style="color:#276749;">Rs.
                                 {{ number_format($refundedDeposits, 0) }}</strong>
                         </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Linked Sale --}}
+            @if ($rental->linkedSale)
+                @php $linkedSale = $rental->linkedSale; @endphp
+                <div class="table-card mb-3" style="padding:16px 20px; border-left:3px solid var(--gold);">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div
+                            style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">
+                            <i class="bi bi-cart me-1"></i> Linked Sale
+                            <span class="sale-status-badge {{ $linkedSale->status }} ms-2" style="font-size:10px;">
+                                {{ ucfirst($linkedSale->status) }}
+                            </span>
+                        </div>
+                        <a href="{{ route('sales.show', $linkedSale->id) }}"
+                            class="btn btn-sm btn-outline-secondary action-btn">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> View Sale
+                        </a>
+                    </div>
+
+                    <table class="table mb-0" style="font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th style="font-size:10px;">Code</th>
+                                <th style="font-size:10px;">Product</th>
+                                <th style="font-size:10px; text-align:center;">Qty</th>
+                                <th style="font-size:10px; text-align:center; width:130px;">Pickup</th>
+                                <th style="font-size:10px; text-align:right;">Price</th>
+                                <th style="font-size:10px; text-align:right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($linkedSale->items as $saleItem)
+                                <tr>
+                                    <td>
+                                        <span class="tbl-code-badge" style="font-size:10px;">
+                                            {{ $saleItem->product_code }}
+                                        </span>
+                                    </td>
+                                    <td style="font-weight:600;">{{ $saleItem->product_name }}</td>
+                                    <td style="text-align:center; font-weight:600;">{{ $saleItem->qty }}</td>
+                                    <td style="text-align:center;">
+                                        @if ($saleItem->pickup_status === 'taken')
+                                            <div>
+                                                <span
+                                                    style="font-size:11px; background:#f0fff4; color:#276749; padding:2px 7px; border-radius:4px; font-weight:700; display:block; margin-bottom:2px;">
+                                                    <i class="bi bi-check-circle-fill me-1"></i> Taken
+                                                </span>
+                                                <div style="font-size:10px; color:var(--text-muted);">
+                                                    {{ \Carbon\Carbon::parse($saleItem->taken_at)->format('d/m/Y') }}
+                                                </div>
+                                            </div>
+                                        @else
+                                            <span
+                                                style="font-size:11px; background:#fff5f5; color:#c53030; padding:2px 7px; border-radius:4px; font-weight:600;">
+                                                Pending
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td style="text-align:right;">Rs. {{ number_format($saleItem->sale_price, 0) }}
+                                    </td>
+                                    <td style="text-align:right; font-weight:700; color:var(--navy);">
+                                        Rs. {{ number_format($saleItem->sale_price * $saleItem->qty, 0) }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            @if ($linkedSale->discount > 0)
+                                <tr>
+                                    <td colspan="5"
+                                        style="text-align:right; font-size:12px; color:var(--text-muted);">Discount
+                                    </td>
+                                    <td style="text-align:right; color:#e53e3e; font-weight:600;">
+                                        − Rs. {{ number_format($linkedSale->discount, 0) }}
+                                    </td>
+                                </tr>
+                            @endif
+                            <tr style="border-top:2px solid var(--navy);">
+                                <td colspan="5" style="text-align:right; font-weight:700; padding-top:8px;">Sale
+                                    Total</td>
+                                <td style="text-align:right; font-weight:800; color:var(--navy); padding-top:8px;">
+                                    Rs. {{ number_format($linkedSale->total_amount, 0) }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div style="margin-top:10px; font-size:12px; color:var(--text-muted);">
+                        <i class="bi bi-info-circle me-1"></i>
+                        To mark items as taken or manage payments, use the
+                        <a href="{{ route('sales.show', $linkedSale->id) }}">Sale detail page</a>.
                     </div>
                 </div>
             @endif

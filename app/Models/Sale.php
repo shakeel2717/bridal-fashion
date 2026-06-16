@@ -16,7 +16,7 @@ class Sale extends Model
         'bill_ref', 'customer_id', 'customer_name', 'customer_phone1',
         'customer_phone2', 'customer_cnic', 'delivery_address', 'phone1_gender', 'phone2_gender',
         'sale_date', 'status', 'total_amount', 'discount', 'advance_paid', 'advance_payment_method',
-        'remaining_balance', 'refund_amount', 'refund_date', 'refund_note',
+        'remaining_balance', 'refund_amount', 'refund_date', 'refund_note', 'rental_id',
         'employee_id', 'notes', 'created_by', 'updated_by',
     ];
 

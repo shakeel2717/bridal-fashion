@@ -55,11 +55,12 @@ window.setupEnterNav = function (container) {
             const tag = e.target.tagName.toLowerCase();
             if (tag === 'textarea' || tag === 'button') return;
 
-            const poIds = ['po_product_search', 'po_new_qty', 'po_new_price'];
-            if (poIds.includes(e.target.id)) return;
-
-            const rentalIds = ['rental_product_search', 'rental_price_input'];
-            if (rentalIds.includes(e.target.id)) return;
+            const excludedIds = [
+                'po_product_search', 'po_new_qty', 'po_new_price',
+                'rental_product_search', 'rental_price_input',
+                'sale_product_search', 'sale_new_qty', 'sale_new_price',
+            ];
+            if (excludedIds.includes(e.target.id)) return;
 
             if (e.target.closest('[data-rental-input]')) return;
 

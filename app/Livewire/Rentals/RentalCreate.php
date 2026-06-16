@@ -10,6 +10,8 @@ use App\Models\RentalItem;
 use App\Models\RentalPayment;
 use App\Models\RentalSecurityDeposit;
 use App\Models\RentalTask;
+use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\User;
 use App\Services\AccountService;
 use Carbon\Carbon;
@@ -25,6 +27,7 @@ class RentalCreate extends Component
     public ?int $rentalId = null;
 
     public bool $isEditMode = false;
+
     public string $customerCity = '';
 
     // ── Step 1: Customer ──────────────────────────────────
@@ -105,6 +108,25 @@ class RentalCreate extends Component
     public bool $showPriceInput = false;
 
     public array $items = [];
+
+    // ── Linked Sale Items ─────────────────────────────────
+    public array $saleItems = [];
+
+    public string $saleProductSearch = '';
+
+    public array $saleSearchResults = [];
+
+    public ?int $salePendingProductId = null;
+
+    public string $salePendingProductName = '';
+
+    public string $salePendingProductCode = '';
+
+    public string $saleNewItemQty = '1';
+
+    public string $saleNewItemPrice = '0';
+
+    public string $saleDiscount = '0';
 
     // ── Step 4: Payment ───────────────────────────────────
     public string $totalAmount = '0';
@@ -831,6 +853,49 @@ class RentalCreate extends Component
             }
         }
 
+        // ── Create linked sale if sale items were added ────────
+        if (! empty($this->saleItems)) {
+            $saleSubtotal = collect($this->saleItems)->sum(fn ($i) => (float) ($i['total_price'] ?? 0));
+            $saleDiscount = (float) $this->saleDiscount;
+            $saleTotal = max(0, $saleSubtotal - $saleDiscount);
+
+            $linkedSale = Sale::create([
+                'rental_id' => $rental->id,
+                'bill_ref' => $this->billRef ?: null,
+                'customer_id' => $customerId,
+                'customer_name' => $this->customerName,
+                'customer_phone1' => $this->customerPhone1 ?: '0000-0000000',
+                'customer_phone2' => $this->customerPhone2 ?: null,
+                'customer_cnic' => $this->customerCnic ?: null,
+                'delivery_address' => $this->deliveryAddress ?: null,
+                'sale_date' => Carbon::parse($this->bookingDate)->toDateString(),
+                'advance_payment_method' => Account::find($this->advanceAccountId)?->name ?? 'cash',
+                'status' => 'completed',
+                'total_amount' => $saleTotal,
+                'discount' => $saleDiscount,
+                'advance_paid' => 0,
+                'remaining_balance' => $saleTotal,
+                'employee_id' => $this->employeeId ?: null,
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+
+            foreach ($this->saleItems as $item) {
+                $qty = (int) ($item['qty'] ?? 1);
+
+                SaleItem::create([
+                    'sale_id' => $linkedSale->id,
+                    'product_id' => $item['product_id'],
+                    'product_name' => $item['item_name'],
+                    'product_code' => $item['item_code'],
+                    'sale_price' => (float) $item['unit_price'],
+                    'qty' => $qty,
+                ]);
+
+                Product::where('id', $item['product_id'])->decrement('stock_qty', $qty);
+            }
+        }
+
         session()->flash('success', "Rental #{$rental->id} created successfully.");
         $this->redirect(route('rentals.show', $rental->id));
     }
@@ -847,6 +912,138 @@ class RentalCreate extends Component
     public function removeSecurityDeposit(int $index): void
     {
         array_splice($this->securityDeposits, $index, 1);
+    }
+
+    public function searchSaleProducts(): void
+    {
+        \Log::info('[SALE SEARCH] searchSaleProducts called', [
+            'query' => $this->saleProductSearch,
+            'length' => strlen($this->saleProductSearch),
+        ]);
+
+        if (strlen($this->saleProductSearch) < 2) {
+            $this->saleSearchResults = [];
+            \Log::info('[SALE SEARCH] Query too short, cleared results');
+
+            return;
+        }
+
+        $alreadyAdded = collect($this->saleItems)->pluck('product_id')->filter()->toArray();
+
+        // Debug: check what products exist at all
+        $totalProducts = Product::count();
+        $saleProducts = Product::whereIn('type', ['sale', 'both'])->count();
+        $activeProducts = Product::whereIn('type', ['sale', 'both'])->where('is_active', true)->count();
+        $withStock = Product::whereIn('type', ['sale', 'both'])->where('is_active', true)->where('stock_qty', '>', 0)->count();
+
+        \Log::info('[SALE SEARCH] Product counts', [
+            'total' => $totalProducts,
+            'sale_type' => $saleProducts,
+            'active_sale_type' => $activeProducts,
+            'with_stock' => $withStock,
+        ]);
+
+        // Debug: search without stock filter
+        $withoutStockFilter = Product::whereIn('type', ['sale', 'both'])
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->where('code', $this->saleProductSearch)
+                    ->orWhere('name', 'like', "%{$this->saleProductSearch}%");
+            })
+            ->get(['id', 'code', 'name', 'type', 'stock_qty', 'is_active', 'is_abandoned']);
+
+        \Log::info('[SALE SEARCH] Without stock filter', [
+            'count' => $withoutStockFilter->count(),
+            'items' => $withoutStockFilter->toArray(),
+        ]);
+
+        $this->saleSearchResults = Product::with('category')
+            ->where('is_active', true)
+            ->where('is_abandoned', false)
+            ->whereIn('type', ['sale', 'both'])
+            ->where('stock_qty', '>', 0)
+            ->where(function ($q) {
+                $q->where('code', $this->saleProductSearch)
+                    ->orWhere('name', 'like', "%{$this->saleProductSearch}%");
+            })
+            ->whereNotIn('id', $alreadyAdded)
+            ->limit(10)
+            ->get()
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'code' => $p->code,
+                'name' => $p->name,
+                'sale_price' => $p->sale_price,
+                'stock_qty' => $p->stock_qty,
+                'category' => $p->category->name ?? '',
+            ])
+            ->toArray();
+
+        \Log::info('[SALE SEARCH] Results count:', ['count' => count($this->saleSearchResults)]);
+    }
+
+    public function selectSaleProduct(int $productId): void
+    {
+        $product = Product::findOrFail($productId);
+        $this->salePendingProductId = $product->id;
+        $this->salePendingProductName = $product->name;
+        $this->salePendingProductCode = $product->code;
+        $this->saleNewItemPrice = (string) $product->sale_price;
+        $this->saleProductSearch = $product->code.' — '.$product->name;
+        $this->saleSearchResults = [];
+        $this->dispatch('focus-sale-qty');
+    }
+
+    public function addSaleItem(): void
+    {
+        if (! $this->salePendingProductId) {
+            return;
+        }
+
+        $qty = max(1, (int) $this->saleNewItemQty);
+        $price = max(0, (float) $this->saleNewItemPrice);
+
+        array_unshift($this->saleItems, [
+            'product_id' => $this->salePendingProductId,
+            'item_name' => $this->salePendingProductName,
+            'item_code' => $this->salePendingProductCode,
+            'qty' => $qty,
+            'unit_price' => (string) $price,
+            'total_price' => (string) ($qty * $price),
+        ]);
+
+        $this->saleProductSearch = '';
+        $this->saleSearchResults = [];
+        $this->saleNewItemQty = '1';
+        $this->saleNewItemPrice = '0';
+        $this->salePendingProductId = null;
+        $this->salePendingProductName = '';
+        $this->salePendingProductCode = '';
+        $this->dispatch('focus-sale-search');
+    }
+
+    public function removeSaleItem(int $index): void
+    {
+        array_splice($this->saleItems, $index, 1);
+    }
+
+    public function recalcSaleItems(): void
+    {
+        foreach ($this->saleItems as $i => $item) {
+            $qty = max(1, (int) ($item['qty'] ?? 1));
+            $price = max(0, (float) ($item['unit_price'] ?? 0));
+            $this->saleItems[$i]['total_price'] = (string) ($qty * $price);
+        }
+    }
+
+    public function getSaleSubtotalProperty(): float
+    {
+        return collect($this->saleItems)->sum(fn ($i) => (float) ($i['total_price'] ?? 0));
+    }
+
+    public function getSaleTotalProperty(): float
+    {
+        return max(0, $this->getSaleSubtotalProperty() - (float) $this->saleDiscount);
     }
 
     public function render()

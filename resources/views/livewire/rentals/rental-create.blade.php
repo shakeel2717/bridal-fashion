@@ -678,6 +678,166 @@
                         </div>
                     @endif
                 </div>
+
+                {{-- ── Linked Sale Items (optional) ── --}}
+                <div style="border-top:2px solid var(--border); margin-top:24px; padding-top:20px;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <div style="font-size:12px; font-weight:700; color:var(--navy); text-transform:uppercase;">
+                                <i class="bi bi-cart-plus me-1"></i> Also Selling Items?
+                                <span
+                                    style="font-size:10px; font-weight:400; color:var(--text-muted); text-transform:none; margin-left:6px;">(optional
+                                    — creates a linked sale automatically)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Sale Product Search Row --}}
+                    <div
+                        style="background:#f0f4ff; border:1.5px solid #a3bffa; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+                        <div style="display:grid; grid-template-columns:1fr 80px 120px; gap:8px; align-items:end;">
+
+                            <div style="position:relative;">
+                                <label
+                                    style="font-size:10px; font-weight:700; text-transform:uppercase; color:#3c4f9e; margin-bottom:4px; display:block;">
+                                    Product Code / Name
+                                </label>
+                                <input type="text" id="sale_product_search"
+                                    wire:model.live.debounce.300ms="saleProductSearch" wire:keyup="searchSaleProducts"
+                                    class="form-control form-control-sm" placeholder="Search sale product..."
+                                    autocomplete="off">
+
+                                @if (count($saleSearchResults) > 0)
+                                    <div class="product-search-dropdown" style="min-width:420px;">
+                                        @foreach ($saleSearchResults as $result)
+                                            <div class="search-item sale-search-item"
+                                                wire:click="selectSaleProduct({{ $result['id'] }})"
+                                                data-product-id="{{ $result['id'] }}" style="cursor:pointer;">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <span class="search-item-code">{{ $result['code'] }}</span>
+                                                        <div class="search-item-name">{{ $result['name'] }}</div>
+                                                        <div class="search-item-category">
+                                                            {{ $result['category'] }} · Stock:
+                                                            {{ $result['stock_qty'] }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="search-item-price">Rs.
+                                                        {{ number_format($result['sale_price'], 0) }}</div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div>
+                                <label
+                                    style="font-size:10px; font-weight:700; text-transform:uppercase; color:#3c4f9e; margin-bottom:4px; display:block;">Qty</label>
+                                <input type="number" id="sale_new_qty" wire:model="saleNewItemQty"
+                                    class="form-control form-control-sm" min="1" style="text-align:center;"
+                                    placeholder="1">
+                            </div>
+
+                            <div>
+                                <label
+                                    style="font-size:10px; font-weight:700; text-transform:uppercase; color:#3c4f9e; margin-bottom:4px; display:block;">Price
+                                    (Rs.)</label>
+                                <input type="number" id="sale_new_price" wire:model="saleNewItemPrice"
+                                    class="form-control form-control-sm" min="0" style="text-align:right;"
+                                    placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Sale Items Table --}}
+                    @if (count($saleItems) > 0)
+                        <table class="table mb-0" style="font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px; text-align:center;">#</th>
+                                    <th style="width:90px;">Code</th>
+                                    <th>Item</th>
+                                    <th style="width:70px; text-align:center;">Qty</th>
+                                    <th style="width:110px; text-align:right;">Price (Rs.)</th>
+                                    <th style="width:110px; text-align:right;">Total</th>
+                                    <th style="width:36px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($saleItems as $index => $item)
+                                    <tr>
+                                        <td style="text-align:center; font-weight:700; color:var(--text-muted);">
+                                            {{ count($saleItems) - $index }}</td>
+                                        <td><span
+                                                style="font-family:monospace; font-weight:700;">{{ $item['item_code'] }}</span>
+                                        </td>
+                                        <td>{{ $item['item_name'] }}</td>
+                                        <td>
+                                            <input type="number" wire:model.lazy="saleItems.{{ $index }}.qty"
+                                                wire:change="recalcSaleItems" class="form-control form-control-sm"
+                                                style="text-align:center;" min="1">
+                                        </td>
+                                        <td>
+                                            <input type="number"
+                                                wire:model.lazy="saleItems.{{ $index }}.unit_price"
+                                                wire:change="recalcSaleItems" class="form-control form-control-sm"
+                                                style="text-align:right;" min="0">
+                                        </td>
+                                        <td style="text-align:right; font-weight:700; color:var(--navy);">
+                                            Rs. {{ number_format((float) ($item['total_price'] ?? 0), 0) }}
+                                        </td>
+                                        <td style="text-align:center;">
+                                            <button type="button" wire:click="removeSaleItem({{ $index }})"
+                                                style="background:none; border:none; color:#fc8181; font-size:18px; cursor:pointer; padding:0;">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5"
+                                        style="text-align:right; font-size:12px; color:var(--text-muted); padding-top:8px;">
+                                        Subtotal
+                                    </td>
+                                    <td style="text-align:right; font-weight:700; padding-top:8px; color:var(--navy);">
+                                        Rs. {{ number_format($this->getSaleSubtotalProperty(), 0) }}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4"
+                                        style="text-align:right; font-size:12px; color:var(--text-muted);">
+                                        Discount (Rs.)
+                                    </td>
+                                    <td style="padding:4px 6px;">
+                                        <input type="number" wire:model.lazy="saleDiscount"
+                                            wire:change="recalcSaleItems" class="form-control form-control-sm"
+                                            min="0" style="text-align:right;" placeholder="0">
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5"
+                                        style="text-align:right; font-size:12px; font-weight:700; color:var(--navy); padding-top:4px;">
+                                        Sale Total
+                                    </td>
+                                    <td
+                                        style="text-align:right; font-weight:800; font-size:13px; color:var(--navy); padding-top:4px;">
+                                        Rs. {{ number_format($this->getSaleTotalProperty(), 0) }}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    @else
+                        <div style="font-size:12px; color:var(--text-muted); padding:8px 0;">
+                            No sale items added — search above to add products for sale.
+                        </div>
+                    @endif
+                </div>
             </div>
 
             {{-- Summary --}}
@@ -701,23 +861,65 @@
                         <span
                             class="s-value">{{ $returnDate ? \Carbon\Carbon::parse($returnDate)->format('d/m/Y') : '—' }}</span>
                     </div>
-                    <div class="summary-row">
-                        <span class="s-label">Items</span>
-                        <span class="s-value">{{ count($items) }}</span>
+
+                    {{-- Rental items --}}
+                    <div
+                        style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
+                        Rental Items ({{ count($items) }})
                     </div>
                     @foreach ($items as $item)
                         <div class="summary-row" style="font-size:11px;">
                             <span class="s-label">{{ $item['code'] }}</span>
-                            <span class="s-value">
-                                Rs.
-                                {{ number_format((float) $item['rental_price'] + collect($item['addons'])->sum(fn($a) => (float) ($a['price'] ?? 0)), 0) }}
-                            </span>
+                            <span class="s-value">Rs.
+                                {{ number_format((float) $item['rental_price'] + collect($item['addons'])->sum(fn($a) => (float) ($a['price'] ?? 0)), 0) }}</span>
                         </div>
                     @endforeach
-                    <div class="summary-row total-row">
-                        <span class="s-label">Total</span>
-                        <span class="s-value gold">Rs. {{ number_format((float) $totalAmount, 0) }}</span>
+                    <div class="summary-row"
+                        style="border-top:1px solid rgba(255,255,255,0.1); padding-top:6px; margin-top:4px;">
+                        <span class="s-label">Rental Total</span>
+                        <span class="s-value">Rs. {{ number_format((float) $totalAmount, 0) }}</span>
                     </div>
+
+                    {{-- Sale items (if any) --}}
+                    @if (count($saleItems) > 0)
+                        <div
+                            style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
+                            Sale Items ({{ count($saleItems) }})
+                        </div>
+                        @foreach ($saleItems as $item)
+                            <div class="summary-row" style="font-size:11px;">
+                                <span class="s-label">{{ $item['item_code'] }}</span>
+                                <span class="s-value">{{ $item['qty'] }}× Rs.
+                                    {{ number_format((float) $item['unit_price'], 0) }}</span>
+                            </div>
+                        @endforeach
+                        @if ((float) $saleDiscount > 0)
+                            <div class="summary-row" style="font-size:11px;">
+                                <span class="s-label">Sale Discount</span>
+                                <span class="s-value" style="color:#fc8181;">− Rs.
+                                    {{ number_format((float) $saleDiscount, 0) }}</span>
+                            </div>
+                        @endif
+                        <div class="summary-row"
+                            style="border-top:1px solid rgba(255,255,255,0.1); padding-top:6px; margin-top:4px;">
+                            <span class="s-label">Sale Total</span>
+                            <span class="s-value">Rs. {{ number_format($this->getSaleTotalProperty(), 0) }}</span>
+                        </div>
+                    @endif
+
+                    {{-- Grand Total --}}
+                    <div class="summary-row total-row" style="margin-top:8px;">
+                        <span class="s-label">Grand Total</span>
+                        <span class="s-value gold">
+                            Rs. {{ number_format((float) $totalAmount + $this->getSaleTotalProperty(), 0) }}
+                        </span>
+                    </div>
+
+                    @if (count($saleItems) > 0)
+                        <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:8px;">
+                            <i class="bi bi-info-circle me-1"></i> Sale will be recorded separately.
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -779,36 +981,62 @@
                             </select>
                         </div>
                         <div class="col-12">
+                            @php
+                                $linkedSaleTotal = $isEditMode
+                                    ? \App\Models\Sale::where('rental_id', $rentalId)->value('total_amount') ?? 0
+                                    : $this->getSaleTotalProperty();
+                                $saleItemsExist = $isEditMode
+                                    ? \App\Models\Sale::where('rental_id', $rentalId)->exists()
+                                    : count($saleItems) > 0;
+                            @endphp
                             <div
                                 style="background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:14px;">
                                 <div class="row g-2 text-center">
-                                    <div class="col-4" style="border-right:1px solid var(--border);">
+                                    <div class="col-3" style="border-right:1px solid var(--border);">
                                         <div
                                             style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
-                                            Subtotal</div>
-                                        <div style="font-size:16px; font-weight:700; color:var(--navy);">
-                                            Rs. {{ number_format((float) $totalAmount + (float) $discountAmount, 0) }}
+                                            Rental</div>
+                                        <div style="font-size:15px; font-weight:700; color:var(--navy);">
+                                            Rs. {{ number_format((float) $totalAmount, 0) }}
                                         </div>
                                     </div>
-                                    <div class="col-4" style="border-right:1px solid var(--border);">
+                                    <div class="col-3" style="border-right:1px solid var(--border);">
                                         <div
                                             style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
-                                            Discount</div>
-                                        <div style="font-size:16px; font-weight:700; color:#e53e3e;">
-                                            − Rs. {{ number_format((float) $discountAmount, 0) }}
+                                            Sale</div>
+                                        <div style="font-size:15px; font-weight:700; color:var(--navy);">
+                                            Rs. {{ number_format((float) $linkedSaleTotal, 0) }}
                                         </div>
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-3" style="border-right:1px solid var(--border);">
+                                        <div
+                                            style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
+                                            Advance</div>
+                                        <div style="font-size:15px; font-weight:700; color:#276749;">
+                                            Rs. {{ number_format((float) $advancePaid, 0) }}
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
                                         <div
                                             style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
                                             Remaining</div>
                                         <div
-                                            style="font-size:16px; font-weight:800; color:{{ (float) $advancePaid >= (float) $totalAmount ? '#38a169' : '#e53e3e' }};">
+                                            style="font-size:15px; font-weight:800; color:{{ (float) $advancePaid >= (float) $totalAmount ? '#38a169' : '#e53e3e' }};">
                                             Rs.
                                             {{ number_format(max(0, (float) $totalAmount - (float) $advancePaid), 0) }}
                                         </div>
                                     </div>
                                 </div>
+                                @if ($saleItemsExist)
+                                    <div
+                                        style="border-top:1px solid var(--border); margin-top:10px; padding-top:10px; text-align:center; font-size:12px; color:var(--text-muted);">
+                                        Grand Total (Rental + Sale): <strong
+                                            style="color:var(--navy); font-size:14px;">
+                                            Rs.
+                                            {{ number_format((float) $totalAmount + (float) $linkedSaleTotal, 0) }}
+                                        </strong>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -817,6 +1045,7 @@
 
             {{-- Final Summary --}}
             <div class="col-4">
+                {{-- Final Summary --}}
                 <div class="rental-summary-box mb-3">
                     <div
                         style="font-size:11px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px;">
@@ -831,10 +1060,6 @@
                         <span class="s-value">{{ $customerPhone1 }}</span>
                     </div>
                     <div class="summary-row">
-                        <span class="s-label">Items</span>
-                        <span class="s-value">{{ count($items) }}</span>
-                    </div>
-                    <div class="summary-row">
                         <span class="s-label">Pickup</span>
                         <span
                             class="s-value">{{ $pickupDate ? \Carbon\Carbon::parse($pickupDate)->format('d/m/Y') : '—' }}</span>
@@ -844,25 +1069,80 @@
                         <span
                             class="s-value">{{ $returnDate ? \Carbon\Carbon::parse($returnDate)->format('d/m/Y') : '—' }}</span>
                     </div>
-                    <div class="summary-row">
-                        <span class="s-label">Total</span>
-                        <span class="s-value">Rs. {{ number_format((float) $totalAmount, 0) }}</span>
+
+                    {{-- Rental --}}
+                    <div
+                        style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
+                        Rental ({{ count($items) }} items)
                     </div>
                     <div class="summary-row">
-                        <span class="s-label">Discount</span>
-                        <span class="s-value" style="color:#e53e3e;">− Rs.
-                            {{ number_format((float) $discountAmount, 0) }}</span>
+                        <span class="s-label">Subtotal</span>
+                        <span class="s-value">Rs.
+                            {{ number_format((float) $totalAmount + (float) $discountAmount, 0) }}</span>
+                    </div>
+                    @if ((float) $discountAmount > 0)
+                        <div class="summary-row">
+                            <span class="s-label">Discount</span>
+                            <span class="s-value" style="color:#fc8181;">− Rs.
+                                {{ number_format((float) $discountAmount, 0) }}</span>
+                        </div>
+                    @endif
+                    <div class="summary-row">
+                        <span class="s-label">Rental Total</span>
+                        <span class="s-value">Rs. {{ number_format((float) $totalAmount, 0) }}</span>
                     </div>
                     <div class="summary-row">
                         <span class="s-label">Advance</span>
                         <span class="s-value">Rs. {{ number_format((float) $advancePaid, 0) }}</span>
                     </div>
-                    <div class="summary-row total-row">
+                    <div class="summary-row">
                         <span class="s-label">Remaining</span>
-                        <span class="s-value gold">
+                        <span class="s-value"
+                            style="color:{{ (float) $advancePaid >= (float) $totalAmount ? '#68d391' : '#fc8181' }};">
                             Rs. {{ number_format(max(0, (float) $totalAmount - (float) $advancePaid), 0) }}
                         </span>
                     </div>
+
+                    {{-- Sale (if any) --}}
+                    @if (count($saleItems) > 0)
+                        <div
+                            style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
+                            Linked Sale ({{ count($saleItems) }} items)
+                        </div>
+                        @foreach ($saleItems as $item)
+                            <div class="summary-row" style="font-size:11px;">
+                                <span class="s-label">{{ $item['item_code'] }}</span>
+                                <span class="s-value">{{ $item['qty'] }}× Rs.
+                                    {{ number_format((float) $item['unit_price'], 0) }}</span>
+                            </div>
+                        @endforeach
+                        @if ((float) $saleDiscount > 0)
+                            <div class="summary-row" style="font-size:11px;">
+                                <span class="s-label">Sale Discount</span>
+                                <span class="s-value" style="color:#fc8181;">− Rs.
+                                    {{ number_format((float) $saleDiscount, 0) }}</span>
+                            </div>
+                        @endif
+                        <div class="summary-row">
+                            <span class="s-label">Sale Total</span>
+                            <span class="s-value">Rs. {{ number_format($this->getSaleTotalProperty(), 0) }}</span>
+                        </div>
+                    @endif
+
+                    {{-- Grand Total --}}
+                    <div class="summary-row total-row" style="margin-top:8px;">
+                        <span class="s-label">Grand Total</span>
+                        <span class="s-value gold">
+                            Rs. {{ number_format((float) $totalAmount + $this->getSaleTotalProperty(), 0) }}
+                        </span>
+                    </div>
+
+                    @if (count($saleItems) > 0)
+                        <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:8px;">
+                            <i class="bi bi-info-circle me-1"></i> Sale recorded separately — payment managed in Sales
+                            module.
+                        </div>
+                    @endif
                 </div>
 
                 <button class="btn btn-primary w-100" style="height:46px; font-size:14px; font-weight:700;"
@@ -941,7 +1221,72 @@
                     }
                 }, 100);
             });
+
+            Livewire.on('focus-sale-search', () => {
+                setTimeout(() => {
+                    const el = document.getElementById('sale_product_search');
+                    if (el) {
+                        el.focus();
+                        el.select();
+                    }
+                }, 100);
+            });
+
+            Livewire.on('focus-sale-qty', () => {
+                setTimeout(() => {
+                    const el = document.getElementById('sale_new_qty');
+                    if (el) {
+                        el.focus();
+                        el.select();
+                    }
+                }, 100);
+            });
         });
+
+        document.addEventListener('livewire:updated', () => {
+            if (document.getElementById('rental_product_search')) {
+                setupRentalSearch();
+            }
+        });
+
+        let _saleHighlight = -1;
+
+        function saleSearchKeydown(e) {
+            const dropdown = document.querySelector('.sale-search-item')?.closest('.product-search-dropdown');
+            const dropItems = dropdown ? Array.from(dropdown.querySelectorAll('.sale-search-item')) : [];
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                e.stopPropagation();
+                if (dropItems.length > 0) {
+                    const idx = _saleHighlight >= 0 ? _saleHighlight : 0;
+                    const target = dropItems[idx] ?? dropItems[0];
+                    const id = target?.dataset.productId;
+                    if (id) @this.call('selectSaleProduct', parseInt(id));
+                    _saleHighlight = -1;
+                }
+                return;
+            }
+
+            if (!dropItems.length) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                _saleHighlight = Math.min(_saleHighlight + 1, dropItems.length - 1);
+                dropItems.forEach((el, i) => el.style.background = i === _saleHighlight ? '#ebf8ff' : '');
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                _saleHighlight = Math.max(_saleHighlight - 1, 0);
+                dropItems.forEach((el, i) => el.style.background = i === _saleHighlight ? '#ebf8ff' : '');
+            }
+            if (e.key === 'Escape') {
+                _saleHighlight = -1;
+                @this.set('saleProductSearch', '');
+                @this.set('saleSearchResults', []);
+            }
+        }
 
         function rentalSearchKeydown(e) {
             const dropdown = document.querySelector('.po-search-item')?.closest('.product-search-dropdown');
@@ -1034,6 +1379,39 @@
             if (priceInput) {
                 priceInput.removeEventListener('keydown', rentalPriceKeydown, true);
                 priceInput.addEventListener('keydown', rentalPriceKeydown, true);
+            }
+
+            // ── Sale product search ────────────────────────────────
+            const saleSearchInput = document.getElementById('sale_product_search');
+            const saleQtyInput = document.getElementById('sale_new_qty');
+            const salePriceInput = document.getElementById('sale_new_price');
+
+            if (saleSearchInput) {
+                saleSearchInput.removeEventListener('keydown', saleSearchKeydown, true);
+                saleSearchInput.addEventListener('keydown', saleSearchKeydown, true);
+            }
+
+            if (saleQtyInput && !saleQtyInput._saleQtyBound) {
+                saleQtyInput._saleQtyBound = true;
+                saleQtyInput.addEventListener('keydown', function(e) {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    if (salePriceInput) {
+                        salePriceInput.focus();
+                        salePriceInput.select();
+                    }
+                });
+            }
+
+            if (salePriceInput && !salePriceInput._salePriceBound) {
+                salePriceInput._salePriceBound = true;
+                salePriceInput.addEventListener('keydown', function(e) {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    @this.call('addSaleItem');
+                });
             }
         }
 

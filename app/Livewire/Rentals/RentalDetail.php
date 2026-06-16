@@ -428,6 +428,7 @@ class RentalDetail extends Component
             'items.tasks.createdBy',
             'items.pickedUpBy',
             'items.receivedBy',
+            'linkedSale.items',        // ← add this
             'customer',
             'employee',
             'payments.createdBy',
