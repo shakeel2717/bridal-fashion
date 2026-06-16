@@ -10,17 +10,22 @@ class CustomerForm extends Component
 {
     use WithFileUploads;
 
-    public ?int $customerId = null;
-    public string $name     = '';
-    public string $phone1   = '';
-    public string $phone2   = '';
-    public string $whatsapp = '';
-    public string $cnic     = '';
-    public string $address  = '';
-    public string $notes    = '';
-    public $photo           = null;
-    public ?string $existingPhoto = null;
-    public bool $isEdit     = false;
+    public ?int $customerId   = null;
+    public string $name       = '';
+    public string $phone1     = '';
+    public string $phone2     = '';
+    public string $whatsapp   = '';
+    public string $cnic       = '';
+    public string $city       = '';
+    public string $address    = '';
+    public string $notes      = '';
+    public $photo             = null;
+    public $cnicFront         = null;
+    public $cnicBack          = null;
+    public ?string $existingPhoto     = null;
+    public ?string $existingCnicFront = null;
+    public ?string $existingCnicBack  = null;
+    public bool $isEdit       = false;
 
     public function mount(?int $customerId = null): void
     {
@@ -35,14 +40,17 @@ class CustomerForm extends Component
     {
         $customer = Customer::findOrFail($this->customerId);
 
-        $this->name          = $customer->name;
-        $this->phone1        = $customer->phone1;
-        $this->phone2        = $customer->phone2 ?? '';
-        $this->whatsapp      = $customer->whatsapp ?? '';
-        $this->cnic          = $customer->cnic ?? '';
-        $this->address       = $customer->address ?? '';
-        $this->notes         = $customer->notes ?? '';
-        $this->existingPhoto = $customer->photo;
+        $this->name               = $customer->name;
+        $this->phone1             = $customer->phone1;
+        $this->phone2             = $customer->phone2 ?? '';
+        $this->whatsapp           = $customer->whatsapp ?? '';
+        $this->cnic               = $customer->cnic ?? '';
+        $this->city               = $customer->city ?? '';
+        $this->address            = $customer->address ?? '';
+        $this->notes              = $customer->notes ?? '';
+        $this->existingPhoto      = $customer->photo;
+        $this->existingCnicFront  = $customer->cnic_front;
+        $this->existingCnicBack   = $customer->cnic_back;
     }
 
     public function openCreate(): void
@@ -62,33 +70,41 @@ class CustomerForm extends Component
     public function save(): void
     {
         $this->validate([
-            'name'    => 'required|string|max:150',
-            'phone1'  => 'required|string|max:20',
-            'phone2'  => 'nullable|string|max:20',
-            'whatsapp'=> 'nullable|string|max:20',
-            'cnic'    => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:500',
-            'notes'   => 'nullable|string|max:1000',
-            'photo'   => 'nullable|image|max:2048',
+            'name'      => 'required|string|max:150',
+            'phone1'    => 'required|string|max:20',
+            'phone2'    => 'nullable|string|max:20',
+            'whatsapp'  => 'nullable|string|max:20',
+            'cnic'      => 'nullable|string|max:20',
+            'city'      => 'nullable|string|max:100',
+            'address'   => 'nullable|string|max:500',
+            'notes'     => 'nullable|string|max:1000',
+            'photo'     => 'nullable|image|max:2048',
+            'cnicFront' => 'nullable|image|max:2048',
+            'cnicBack'  => 'nullable|image|max:2048',
         ]);
 
-        $photoPath = $this->existingPhoto;
+        $photoPath     = $this->existingPhoto;
+        $cnicFrontPath = $this->existingCnicFront;
+        $cnicBackPath  = $this->existingCnicBack;
 
-        if ($this->photo) {
-            $photoPath = $this->photo->store('customers', 'public');
-        }
+        if ($this->photo)     $photoPath     = $this->photo->store('customers/photos', 'public');
+        if ($this->cnicFront) $cnicFrontPath = $this->cnicFront->store('customers/cnic', 'public');
+        if ($this->cnicBack)  $cnicBackPath  = $this->cnicBack->store('customers/cnic', 'public');
 
         $data = [
-            'name'      => $this->name,
-            'phone1'    => $this->phone1,
-            'phone2'    => $this->phone2 ?: null,
-            'whatsapp'  => $this->whatsapp ?: null,
-            'cnic'      => $this->cnic ?: null,
-            'address'   => $this->address ?: null,
-            'notes'     => $this->notes ?: null,
-            'photo'     => $photoPath,
-            'is_walkin' => false,
-            'updated_by'=> auth()->id(),
+            'name'       => $this->name,
+            'phone1'     => $this->phone1,
+            'phone2'     => $this->phone2 ?: null,
+            'whatsapp'   => $this->whatsapp ?: null,
+            'cnic'       => $this->cnic ?: null,
+            'city'       => $this->city ?: null,
+            'address'    => $this->address ?: null,
+            'notes'      => $this->notes ?: null,
+            'photo'      => $photoPath,
+            'cnic_front' => $cnicFrontPath,
+            'cnic_back'  => $cnicBackPath,
+            'is_walkin'  => false,
+            'updated_by' => auth()->id(),
         ];
 
         if ($this->isEdit) {
@@ -107,17 +123,22 @@ class CustomerForm extends Component
 
     public function resetForm(): void
     {
-        $this->customerId    = null;
-        $this->isEdit        = false;
-        $this->name          = '';
-        $this->phone1        = '';
-        $this->phone2        = '';
-        $this->whatsapp      = '';
-        $this->cnic          = '';
-        $this->address       = '';
-        $this->notes         = '';
-        $this->photo         = null;
-        $this->existingPhoto = null;
+        $this->customerId        = null;
+        $this->isEdit            = false;
+        $this->name              = '';
+        $this->phone1            = '';
+        $this->phone2            = '';
+        $this->whatsapp          = '';
+        $this->cnic              = '';
+        $this->city              = '';
+        $this->address           = '';
+        $this->notes             = '';
+        $this->photo             = null;
+        $this->cnicFront         = null;
+        $this->cnicBack          = null;
+        $this->existingPhoto     = null;
+        $this->existingCnicFront = null;
+        $this->existingCnicBack  = null;
         $this->resetValidation();
     }
 

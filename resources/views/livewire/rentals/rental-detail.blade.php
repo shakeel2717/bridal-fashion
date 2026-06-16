@@ -94,7 +94,7 @@
                     @if ($rental->delivery_address)
                         <div class="col-6">
                             <div style="font-size:10px; color:var(--text-muted);">Address</div>
-                            <div style="font-weight:600;">{{ $rental->delivery_address }}</div>
+                            <div style="font-weight:600;">{{ $rental->delivery_address }} | {{$rental->customer_city}}</div>
                         </div>
                     @endif
 

@@ -1,4 +1,4 @@
-<div>
+<div wire:init="$dispatch('focus-step-1')">
     {{-- Header --}}
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -89,7 +89,7 @@
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                                <input type="text" wire:model.live="customerName"
+                                <input autofocus type="text" wire:model.live="customerName"
                                     class="form-control @error('customerName') is-invalid @enderror"
                                     placeholder="Customer name"
                                     {{ $customerType === 'existing' && $customerId ? 'readonly' : '' }}>
@@ -98,10 +98,16 @@
                                 @enderror
                             </div>
 
-                            <div class="col-6">
+                            <div class="col-4">
                                 <label class="form-label">Delivery Address</label>
                                 <input type="text" wire:model="deliveryAddress" class="form-control"
                                     placeholder="Customer address">
+                            </div>
+
+                            <div class="col-2">
+                                <label class="form-label">City</label>
+                                <input type="text" wire:model="customerCity" class="form-control"
+                                    placeholder="e.g. Lahore">
                             </div>
 
                             <div class="col-6">
@@ -234,23 +240,6 @@
                                         </div>
                                     </div>
                                 @endif
-                            @endif
-
-                            @if ($customerType === 'walkin' && strlen($customerName) > 0 && strlen($customerPhone1) > 0 && !$customerId)
-                                <div class="col-12">
-                                    <div
-                                        style="background:#f0fff4; border:1px solid #9ae6b4; border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
-                                        <div style="font-size:12px; color:#276749;">
-                                            <i class="bi bi-person-plus me-1"></i>
-                                            Save <strong>{{ $customerName }}</strong> as a registered customer for
-                                            future use?
-                                        </div>
-                                        <button type="button" wire:click="saveWalkinAsCustomer"
-                                            class="btn btn-sm btn-success">
-                                            <i class="bi bi-person-check me-1"></i> Save Customer
-                                        </button>
-                                    </div>
-                                </div>
                             @endif
                         </div>
                     @endif
@@ -920,10 +909,38 @@
 @push('scripts')
     <script>
         document.addEventListener('livewire:initialized', function() {
+
+            // Step 1 — focus Full Name on load
+            Livewire.on('focus-step-1', () => {
+                setTimeout(() => {
+                    const el = document.querySelector(
+                        'input[wire\\:model\\.live="customerName"], input[wire\\:model="customerName"]'
+                    );
+                    if (el) el.focus();
+                }, 150);
+            });
+
+            // Step 2 — focus Booking Date
+            Livewire.on('focus-step-2', () => {
+                setTimeout(() => {
+                    const el = document.querySelector('input[wire\\:model="bookingDate"]');
+                    if (el) el.focus();
+                }, 150);
+            });
+
+            // Step 3 — focus Product Code search
             Livewire.on('step-changed-to-3', () => {
                 setTimeout(() => {
                     setupRentalSearch();
                     const el = document.getElementById('rental_product_search');
+                    if (el) el.focus();
+                }, 150);
+            });
+
+            // Step 4 — focus Advance Paid
+            Livewire.on('focus-step-4', () => {
+                setTimeout(() => {
+                    const el = document.querySelector('input[wire\\:model\\.lazy="advancePaid"]');
                     if (el) el.focus();
                 }, 150);
             });
@@ -1048,8 +1065,13 @@
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-                @this.call('nextStep');
+                const step = @this.get('step');
+                if (step === 4) {
+                    @this.call('save');
+                } else {
+                    @this.call('nextStep');
+                }
             }
-        }, true); // ← capture phase
+        }, true);
     </script>
 @endpush

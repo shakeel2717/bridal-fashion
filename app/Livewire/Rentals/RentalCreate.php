@@ -25,6 +25,7 @@ class RentalCreate extends Component
     public ?int $rentalId = null;
 
     public bool $isEditMode = false;
+    public string $customerCity = '';
 
     // ── Step 1: Customer ──────────────────────────────────
     public string $customerType = 'walkin';
@@ -115,6 +116,8 @@ class RentalCreate extends Component
     public function mount(?Rental $rental = null): void
     {
         $this->bookingDate = now()->format('Y-m-d');
+        $this->pickupDate = now()->addDays(2)->format('Y-m-d');
+        $this->returnDate = now()->addDays(5)->format('Y-m-d');
         $defaultAccount = Account::where('is_default', true)->first()
             ?? Account::where('is_active', true)->first();
         $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
@@ -130,6 +133,7 @@ class RentalCreate extends Component
             $this->customerId = $isWalkinRental ? null : $rental->customer_id;
 
             $this->customerName = $rental->customer_name;
+            $this->customerCity = $rental->customer_city ?? '';
             $this->customerPhone1 = $rental->customer_phone1;
             $this->customerPhone2 = $rental->customer_phone2 ?? '';
             $this->customerWhatsapp = $rental->customer_whatsapp ?? '';
@@ -216,6 +220,7 @@ class RentalCreate extends Component
     {
         if ($this->step === 1) {
             $this->validateStep1();
+            $this->autoSaveWalkinCustomer();
         }
         if ($this->step === 2) {
             $this->validateStep2();
@@ -233,9 +238,40 @@ class RentalCreate extends Component
 
         $this->step++;
 
+        if ($this->step === 2) {
+            $this->dispatch('focus-step-2');
+        }
         if ($this->step === 3) {
             $this->dispatch('step-changed-to-3');
         }
+        if ($this->step === 4) {
+            $this->dispatch('focus-step-4');
+        }
+    }
+
+    private function autoSaveWalkinCustomer(): void
+    {
+        // Only auto-save walk-in with name+phone and not already saved
+        if ($this->customerType !== 'walkin' || $this->customerId || empty($this->customerName) || empty($this->customerPhone1)) {
+            return;
+        }
+
+        $customer = Customer::create([
+            'name' => $this->customerName,
+            'phone1' => $this->customerPhone1,
+            'city' => $this->customerCity ?: null,
+            'phone2' => $this->customerPhone2 ?: null,
+            'whatsapp' => $this->customerWhatsapp ?: null,
+            'cnic' => $this->customerCnic ?: null,
+            'address' => $this->deliveryAddress ?: null,
+            'is_walkin' => false,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->customerId = $customer->id;
+        $this->customerType = 'existing';
+        $this->customerSearch = $customer->name;
     }
 
     public function prevStep(): void
@@ -256,6 +292,7 @@ class RentalCreate extends Component
         $this->customerType = $type;
         $this->customerId = null;
         $this->customerName = '';
+        $this->customerCity = '';
         $this->customerPhone1 = '';
         $this->customerPhone2 = '';
         $this->walkinPhoto = null;
@@ -286,7 +323,7 @@ class RentalCreate extends Component
                     ->orWhere('cnic', 'like', "%{$this->customerSearch}%");
             })
             ->limit(6)
-            ->get(['id', 'name', 'phone1', 'cnic'])
+            ->get(['id', 'name', 'phone1', 'cnic', 'city'])
             ->toArray();
     }
 
@@ -298,7 +335,9 @@ class RentalCreate extends Component
         $this->customerPhone1 = $customer->phone1;
         $this->customerPhone2 = $customer->phone2 ?? '';
         $this->customerWhatsapp = $customer->whatsapp ?? '';
+        $this->customerCity = $customer->city ?? '';
         $this->customerCnic = $customer->cnic ?? '';
+        $this->city = $customer->city ?? '';
         $this->deliveryAddress = $customer->address ?? '';
         $this->customerSearch = $customer->name;
         $this->foundCustomers = null;
@@ -537,6 +576,7 @@ class RentalCreate extends Component
                 'bill_ref' => $this->billRef ?: null,
                 'customer_name' => $this->customerName,
                 'customer_phone1' => $this->customerPhone1,
+                'customer_city' => $this->customerCity ?: null,
                 'customer_phone2' => $this->customerPhone2 ?: null,
                 'customer_whatsapp' => $this->customerWhatsapp ?: null,
                 'customer_cnic' => $this->customerCnic ?: null,
@@ -676,6 +716,7 @@ class RentalCreate extends Component
             'customer_id' => $customerId,
             'customer_name' => $this->customerName,
             'customer_phone1' => $this->customerPhone1,
+            'customer_city' => $this->customerCity ?: null,
             'customer_phone2' => $this->customerPhone2 ?: null,
             'customer_whatsapp' => $this->customerWhatsapp ?: null,
             'customer_cnic' => $this->customerCnic ?: null,
