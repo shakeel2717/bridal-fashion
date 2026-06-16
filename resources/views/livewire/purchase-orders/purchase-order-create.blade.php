@@ -390,138 +390,46 @@
                     @endif
                 </div>
 
-                {{-- Summary Table --}}
+                {{-- Summary --}}
                 <table class="table mb-0" style="font-size:13px;">
                     <tbody>
-                        @php
-                            $priceGroups = collect($items)
-                                ->groupBy('unit_price')
-                                ->filter(fn($g) => $g->count() > 1)
-                                ->keys()
-                                ->values()
-                                ->toArray();
-
-                            $colors = [
-                                'rgba(255, 255, 0, 0.15)',
-                                'rgba(0, 200, 100, 0.12)',
-                                'rgba(0, 150, 255, 0.12)',
-                                'rgba(200, 0, 255, 0.10)',
-                                'rgba(255, 100, 0, 0.12)',
-                                'rgba(0, 200, 200, 0.12)',
-                                'rgba(255, 0, 100, 0.10)',
-                                'rgba(100, 100, 255, 0.12)',
-                            ];
-
-                            $priceColorMap = [];
-                            foreach ($priceGroups as $idx => $price) {
-                                $priceColorMap[(string) $price] = $colors[$idx % count($colors)];
-                            }
-
-                            // Build group metadata: for each price group, track rowspan and total
-                            $priceGroupMeta = [];
-                            foreach ($items as $index => $item) {
-                                $price = (string) $item['unit_price'];
-                                if (!in_array($price, $priceGroups)) {
-                                    continue;
-                                }
-
-                                if (!isset($priceGroupMeta[$price])) {
-                                    $priceGroupMeta[$price] = [
-                                        'first_index' => $index,
-                                        'count' => 0,
-                                        'total' => 0,
-                                    ];
-                                }
-                                $priceGroupMeta[$price]['count']++;
-                                $priceGroupMeta[$price]['total'] += (float) ($item['total_price'] ?? 0);
-                            }
-
-                            // Track which indices are the first of their group
-                            $firstIndexForPrice = [];
-                            $renderedPrices = [];
-                            foreach ($items as $index => $item) {
-                                $price = (string) $item['unit_price'];
-                                if (in_array($price, $priceGroups) && !in_array($price, $renderedPrices)) {
-                                    $firstIndexForPrice[$index] = $price;
-                                    $renderedPrices[] = $price;
-                                }
-                            }
-                        @endphp
-
-                        @forelse($items as $index => $item)
-                            @php
-                                $price = (string) $item['unit_price'];
-                                $bg = $priceColorMap[$price] ?? null;
-                                $tdStyle = $bg ? "background-color:{$bg};" : '';
-                                $inGroup = in_array($price, $priceGroups);
-                                $isFirst = isset($firstIndexForPrice[$index]);
-                                $groupMeta = $inGroup ? $priceGroupMeta[$price] : null;
-                            @endphp
+                        <tr>
+                            <td style="color:var(--text-muted);">Items</td>
+                            <td style="text-align:right; font-weight:700;">{{ count($items) }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--text-muted);">Subtotal</td>
+                            <td style="text-align:right; font-weight:700;">Rs. {{ number_format($this->subtotal, 0) }}
+                            </td>
+                        </tr>
+                        @if ((float) $discount > 0)
                             <tr>
-                                <td
-                                    style="text-align:center; font-weight:700; color:var(--text-muted); {{ $tdStyle }}">
-                                    {{ count($items) - $index }}
-                                </td>
-                                <td style="{{ $tdStyle }}">
-                                    <input type="text" wire:model="items.{{ $index }}.item_code"
-                                        class="form-control form-control-sm"
-                                        style="font-family:monospace; text-transform:uppercase; background:transparent;"
-                                        {{ $item['product_id'] ? 'readonly' : '' }}>
-                                </td>
-                                <td style="{{ $tdStyle }}">
-                                    <input type="text" wire:model="items.{{ $index }}.item_name"
-                                        class="form-control form-control-sm" style="background:transparent;"
-                                        {{ $item['product_id'] ? 'readonly' : '' }}>
-                                </td>
-                                <td style="{{ $tdStyle }}">
-                                    <input type="number" wire:model.lazy="items.{{ $index }}.qty"
-                                        wire:change="recalcItems" class="form-control form-control-sm" min="1"
-                                        style="text-align:center; background:transparent;" data-po-field="qty"
-                                        data-po-index="{{ $index }}">
-                                </td>
-                                <td style="{{ $tdStyle }}">
-                                    <input type="number" wire:model.lazy="items.{{ $index }}.unit_price"
-                                        wire:change="recalcItems" class="form-control form-control-sm" min="0"
-                                        style="text-align:right; background:transparent;" placeholder="0"
-                                        data-po-field="price" data-po-index="{{ $index }}">
-                                </td>
-                                <td style="text-align:right; font-weight:700; color:var(--navy); {{ $tdStyle }}">
-                                    Rs. {{ number_format((float) ($item['total_price'] ?? 0), 0) }}
-                                </td>
-
-                                {{-- Group Total Column --}}
-                                @if ($inGroup && $isFirst)
-                                    <td rowspan="{{ $groupMeta['count'] }}"
-                                        style="text-align:center; vertical-align:middle; border-left:2px solid {{ str_replace(['rgba(', ')'], ['rgb(', ')'], preg_replace('/,\s*[\d.]+\)/', ')', $bg)) }}; background-color:{{ $bg }}; padding:6px 8px; min-width:80px;">
-                                        <div
-                                            style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:2px;">
-                                            Group
-                                        </div>
-                                        <div style="font-size:13px; font-weight:800; color:var(--navy);">
-                                            Rs. {{ number_format($groupMeta['total'], 0) }}
-                                        </div>
-                                        <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">
-                                            {{ $groupMeta['count'] }} items
-                                        </div>
-                                    </td>
-                                @elseif (!$inGroup)
-                                    <td style="{{ $tdStyle }}"></td>
-                                @endif
-
-                                <td style="text-align:center; {{ $tdStyle }}">
-                                    <button type="button" wire:click="removeItem({{ $index }})"
-                                        style="background:none; border:none; color:#fc8181; font-size:18px; cursor:pointer; padding:0;">
-                                        <i class="bi bi-x"></i>
-                                    </button>
+                                <td style="color:var(--text-muted);">Discount</td>
+                                <td style="text-align:right; font-weight:700; color:#e53e3e;">
+                                    − Rs. {{ number_format((float) $discount, 0) }}
                                 </td>
                             </tr>
-                        @empty
+                        @endif
+                        <tr style="background:#f7fafc;">
+                            <td style="font-weight:700; color:var(--navy);">Total</td>
+                            <td style="text-align:right; font-size:16px; font-weight:800; color:var(--navy);">
+                                Rs. {{ number_format($this->total, 0) }}
+                            </td>
+                        </tr>
+                        @if (!$isEditMode && (float) $initialPayment > 0)
                             <tr>
-                                <td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">
-                                    Search products or add custom items above
+                                <td style="color:var(--text-muted);">Paid</td>
+                                <td style="text-align:right; font-weight:700; color:#276749;">
+                                    Rs. {{ number_format((float) $initialPayment, 0) }}
                                 </td>
                             </tr>
-                        @endforelse
+                            <tr>
+                                <td style="font-weight:700; color:#e53e3e;">Balance Due</td>
+                                <td style="text-align:right; font-weight:800; color:#e53e3e; font-size:15px;">
+                                    Rs. {{ number_format($this->balanceDue, 0) }}
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
