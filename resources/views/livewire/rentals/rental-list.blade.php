@@ -96,7 +96,7 @@
                     <td>
                         <div style="font-size:12px;">
                             @foreach($rental->items->take(2) as $item)
-                                <span style="font-family:monospace; font-size:10px; background:var(--gold-light); color:var(--gold-hover); padding:1px 6px; border-radius:3px; margin-right:2px;">
+                                <span class="badge badge-primary bg-primary" style="font-size:15px;">
                                     {{ $item->product_code }}
                                 </span>
                             @endforeach
