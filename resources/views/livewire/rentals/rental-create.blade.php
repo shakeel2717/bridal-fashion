@@ -618,7 +618,7 @@
                                 @endif
 
                                 <button type="button" wire:click="addAddon({{ $index }})"
-                                    style="background:none; border:1.5px dashed var(--border); border-radius:6px; padding:4px 12px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; width:100%;">
+                                    style="background:none; border:1.5px solid var(--border); border-radius:6px; padding:4px 12px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; width:100%;">
                                     <i class="bi bi-plus me-1"></i> Add Custom Option
                                 </button>
                             </div>
