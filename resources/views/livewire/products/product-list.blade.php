@@ -54,22 +54,23 @@
             <div class="d-flex gap-2 align-items-center flex-wrap">
                 {{-- Status filter --}}
                 <div class="tab-pills" style="margin-bottom:0;">
-                    <button class="tab-pill {{ $filterStatus === 'active' ? 'active' : '' }}"
-                        wire:click="$set('filterStatus','active')">Active</button>
+                    <button class="tab-pill {{ $filterStatus === 'active' && $filterStock === '' ? 'active' : '' }}"
+                        wire:click="$set('filterStatus','active'); $set('filterStock','')">Active</button>
                     <button class="tab-pill {{ $filterStatus === 'abandoned' ? 'active' : '' }}"
-                        wire:click="$set('filterStatus','abandoned')">Abandoned</button>
+                        wire:click="$set('filterStatus','abandoned'); $set('filterStock','')">Abandoned</button>
                     <button class="tab-pill {{ $filterStatus === 'inactive' ? 'active' : '' }}"
-                        wire:click="$set('filterStatus','inactive')">Inactive</button>
+                        wire:click="$set('filterStatus','inactive'); $set('filterStock','')">Inactive</button>
                     <button class="tab-pill {{ $filterStock === 'zero' ? 'active' : '' }}"
-                        wire:click="$set('filterStock','zero')">
+                        wire:click="$set('filterStock','zero'); $set('filterStatus','active')">
                         Zero Stock
                         <span
                             style="font-size:10px; background:#e53e3e; color:#fff; padding:0 5px; border-radius:3px; margin-left:4px;">
                             {{ $counts['zero_stock'] }}
                         </span>
                     </button>
-                    <button class="tab-pill {{ $filterStock === '' ? 'active' : '' }}"
-                        wire:click="$set('filterStock','')">All</button>
+                    <button
+                        class="tab-pill {{ $filterStock === '' && $filterStatus === 'active' ? '' : ($filterStock === '' && $filterStatus !== 'active' ? '' : '') }} {{ $filterStock === '' && $filterStatus === 'active' && request()->has('page') ? 'active' : '' }}"
+                        wire:click="$set('filterStock',''); $set('filterStatus','active')">All</button>
                 </div>
 
                 {{-- Type filter --}}

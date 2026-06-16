@@ -176,9 +176,9 @@ class ProductList extends Component
             ->when($this->filterType, fn ($q) => $q->where('type', $this->filterType))
             ->when($this->filterCategory, fn ($q) => $q->where('category_id', $this->filterCategory))
             ->when($this->filterStatus === 'active', fn ($q) => $q->where('is_active', true)->where('is_abandoned', false))
-            ->when($this->filterStatus === 'abandoned', fn ($q) => $q->where('is_abandoned', true))
             ->when($this->filterStock === 'zero', fn ($q) => $q->where('stock_qty', 0))
             ->when($this->filterStatus === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when($this->filterStatus === 'abandoned', fn ($q) => $q->where('is_abandoned', true))
             ->when($this->filterGroup, fn ($q) => $q->where('group_id', $this->filterGroup))
             ->latest()
             ->paginate(15);
