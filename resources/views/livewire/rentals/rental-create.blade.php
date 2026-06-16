@@ -527,173 +527,149 @@
                         <div class="alert alert-danger py-2 mb-3" style="font-size:12px;">{{ $message }}</div>
                     @enderror
 
-                    {{-- Added Items --}}
+                    {{-- Items Table --}}
                     @if (count($items) > 0)
-                        <div
-                            style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">
-                            Added Items ({{ count($items) }})
-                        </div>
+                        <table class="table mb-0" style="font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px; text-align:center;">#</th>
+                                    <th style="width:40px;"></th>
+                                    <th style="width:70px;">Code</th>
+                                    <th>Item</th>
+                                    <th style="width:120px; text-align:right;">Price (Rs.)</th>
+                                    <th style="width:36px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($items as $index => $item)
+                                    @php
+                                        $isDoubleBooked = $item['double_booked'] ?? false;
+                                        $addonCount = count($item['addons']);
+                                        $totalRows = 1 + $addonCount + 1; // item row + addon rows + "add button" row
+                                    @endphp
+                                    <tr style="{{ $isDoubleBooked ? 'border-left:3px solid #e53e3e;' : '' }}">
 
-                        @foreach ($items as $index => $item)
-                            <div class="rental-item-row"
-                                style="{{ $item['double_booked'] ?? false ? 'border-left: 3px solid #e53e3e;' : '' }}">
+                                        {{-- # --}}
+                                        <td rowspan="{{ $totalRows }}"
+                                            style="text-align:center; font-weight:700; color:var(--text-muted); vertical-align:middle;">
+                                            {{ count($items) - $index }}
+                                        </td>
 
-                                @if (isset($item['double_booked']) && $item['double_booked'] === true)
-                                    <div
-                                        style="background:#fff5f5; border:1px solid #fed7d7; border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:11px; color:#c53030; font-weight:600;">
-                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                        Warning: This item is already booked for the selected date range.
-                                        You can still add it — admin will manage the conflict.
-                                    </div>
-                                @endif
-                                <button class="item-remove-btn" wire:click="removeItem({{ $index }})">
-                                    <i class="bi bi-x"></i>
-                                </button>
-
-                                <div class="d-flex align-items-start gap-3 mb-2">
-                                    @if ($item['photo'])
-                                        <img src="{{ Storage::url($item['photo']) }}"
-                                            style="width:40px; height:40px; object-fit:cover; border-radius:6px; flex-shrink:0;">
-                                    @endif
-                                    <span class="item-code">{{ $item['code'] }}</span>
-                                    <div>
-                                        <div class="item-name">{{ $item['name'] }}</div>
-                                        <div style="font-size:11px; color:var(--text-muted);">
-                                            {{ $item['category'] }}
-                                            @if ($item['size'])
-                                                · Size: {{ $item['size'] }}
+                                        {{-- Photo --}}
+                                        <td rowspan="{{ $totalRows }}"
+                                            style="vertical-align:middle; padding:6px 4px;">
+                                            @if ($item['photo'])
+                                                <img src="{{ Storage::url($item['photo']) }}"
+                                                    style="width:34px; height:34px; object-fit:cover; border-radius:5px; display:block;">
+                                            @else
+                                                <div
+                                                    style="width:34px; height:34px; background:var(--gold-light); border-radius:5px; display:flex; align-items:center; justify-content:center;">
+                                                    <i class="bi bi-image"
+                                                        style="font-size:12px; color:var(--gold);"></i>
+                                                </div>
                                             @endif
-                                            @if ($item['color'])
-                                                · {{ $item['color'] }}
+                                        </td>
+
+                                        {{-- Code --}}
+                                        <td rowspan="{{ $totalRows }}" style="vertical-align:middle;">
+                                            <span
+                                                style="font-family:monospace; font-weight:700; font-size:12px;">{{ $item['code'] }}</span>
+                                            @if ($isDoubleBooked)
+                                                <div
+                                                    style="font-size:10px; color:#c53030; font-weight:600; margin-top:2px;">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Conflict
+                                                </div>
                                             @endif
-                                        </div>
-                                    </div>
-                                </div>
+                                        </td>
 
-                                <div class="row g-2 mb-2">
-                                    <div class="col-4">
-                                        <label
-                                            style="font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">
-                                            Rental Price (Rs.)
-                                        </label>
-                                        <input type="number"
-                                            wire:model.lazy="items.{{ $index }}.rental_price"
-                                            wire:change="recalcTotal" class="form-control form-control-sm"
-                                            min="0">
-                                    </div>
-                                    <div class="col-8">
-                                        <label
-                                            style="font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">
-                                            Note (optional)
-                                        </label>
-                                        <input type="text" wire:model="items.{{ $index }}.note"
-                                            class="form-control form-control-sm" placeholder="e.g. needs alteration">
-                                    </div>
-                                </div>
+                                        {{-- Item name (first inner row) --}}
+                                        <td style="border-bottom:1px dashed var(--border); padding:8px 8px;">
+                                            <div style="font-weight:600; font-size:12px;">{{ $item['name'] }}</div>
+                                            <div style="font-size:11px; color:var(--text-muted);">
+                                                {{ $item['category'] }}
+                                                @if ($item['size'])
+                                                    · {{ $item['size'] }}
+                                                @endif
+                                                @if ($item['color'])
+                                                    · {{ $item['color'] }}
+                                                @endif
+                                            </div>
+                                        </td>
 
-                                @if (count($item['addons']) > 0)
-                                    <div class="mb-2">
-                                        <div
-                                            style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;">
-                                            Custom Add-ons
-                                        </div>
-                                        @foreach ($item['addons'] as $addonIndex => $addon)
-                                            <div class="d-flex gap-2 align-items-center mb-2">
-                                                <input type="text"
-                                                    wire:model="items.{{ $index }}.addons.{{ $addonIndex }}.label"
-                                                    class="form-control form-control-sm"
-                                                    placeholder="e.g. Name written on dupatta" style="flex:1;">
+                                        {{-- Price (item) --}}
+                                        <td
+                                            style="border-bottom:1px dashed var(--border); padding:8px 6px; vertical-align:middle;">
+                                            <input type="number"
+                                                wire:model.lazy="items.{{ $index }}.rental_price"
+                                                wire:change="recalcTotal" class="form-control form-control-sm"
+                                                style="text-align:right;" min="0">
+                                        </td>
+
+                                        {{-- Remove --}}
+                                        <td rowspan="{{ $totalRows }}"
+                                            style="text-align:center; vertical-align:middle;">
+                                            <button type="button" wire:click="removeItem({{ $index }})"
+                                                style="background:none; border:none; color:#fc8181; font-size:18px; cursor:pointer; padding:0;">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    {{-- Addon rows --}}
+                                    @foreach ($item['addons'] as $addonIndex => $addon)
+                                        <tr style="{{ $isDoubleBooked ? 'border-left:3px solid #e53e3e;' : '' }}">
+                                            <td style="padding:4px 8px; border-bottom:1px dashed var(--border);">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <i class="bi bi-arrow-return-right"
+                                                        style="font-size:11px; color:var(--text-muted); flex-shrink:0;"></i>
+                                                    <input type="text"
+                                                        wire:model="items.{{ $index }}.addons.{{ $addonIndex }}.label"
+                                                        class="form-control form-control-sm"
+                                                        placeholder="e.g. Name written on dupatta" style="flex:1;">
+                                                </div>
+                                            </td>
+                                            <td
+                                                style="padding:4px 6px; border-bottom:1px dashed var(--border); vertical-align:middle;">
                                                 <input type="number"
                                                     wire:model.lazy="items.{{ $index }}.addons.{{ $addonIndex }}.price"
                                                     wire:change="recalcTotal" class="form-control form-control-sm"
-                                                    placeholder="Price" style="width:100px;" min="0">
-                                                <button type="button"
-                                                    wire:click="removeAddon({{ $index }}, {{ $addonIndex }})"
-                                                    style="background:none; border:none; color:#fc8181; font-size:18px; cursor:pointer; padding:0 4px;">
-                                                    <i class="bi bi-x"></i>
-                                                </button>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-
-                                <button type="button" wire:click="addAddon({{ $index }})"
-                                    style="background:none; border:1.5px solid var(--border); border-radius:6px; padding:4px 12px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; width:100%;">
-                                    <i class="bi bi-plus me-1"></i> Add Custom Option
-                                </button>
-                            </div>
-                        @endforeach
-
-                        {{-- Security Deposits --}}
-                        <div style="border-top:1px solid var(--border); margin-top:20px; padding-top:16px;">
-                            <div class="d-flex align-items-center justify-content-between mb-10">
-                                <div
-                                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">
-                                    <i class="bi bi-shield-check me-1"></i>
-                                    Security / Refundable Deposits
-                                    <span style="font-size:10px; font-weight:400; margin-left:4px;">(optional)</span>
-                                </div>
-                                <button type="button" wire:click="addSecurityDeposit"
-                                    class="btn btn-sm btn-outline-secondary action-btn">
-                                    <i class="bi bi-plus me-1"></i> Add Deposit Item
-                                </button>
-                            </div>
-
-                            @if (count($securityDeposits) > 0)
-                                <div style="margin-top:10px;">
-                                    @foreach ($securityDeposits as $dIndex => $deposit)
-                                        <div
-                                            style="background:#fffff0; border:1px solid #f6e05e; border-radius:8px; padding:12px; margin-bottom:8px; position:relative;">
-                                            <button type="button"
-                                                wire:click="removeSecurityDeposit({{ $dIndex }})"
-                                                style="position:absolute; top:8px; right:8px; background:none; border:none; color:#fc8181; font-size:16px; cursor:pointer; padding:0 4px;">
-                                                <i class="bi bi-x"></i>
-                                            </button>
-
-                                            <div class="row g-2">
-                                                <div class="col-5">
-                                                    <label
-                                                        style="font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">
-                                                        Item Name
-                                                    </label>
-                                                    <input type="text"
-                                                        wire:model="securityDeposits.{{ $dIndex }}.item_name"
-                                                        class="form-control form-control-sm"
-                                                        placeholder="e.g. Jewelry Box, Packing">
-                                                </div>
-                                                <div class="col-3">
-                                                    <label
-                                                        style="font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">
-                                                        Amount (Rs.)
-                                                    </label>
-                                                    <input type="number"
-                                                        wire:model="securityDeposits.{{ $dIndex }}.amount"
-                                                        class="form-control form-control-sm" placeholder="300"
-                                                        min="0">
-                                                </div>
-                                                <div class="col-4" style="padding-top:18px;">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            wire:model="securityDeposits.{{ $dIndex }}.is_paid"
-                                                            id="deposit_paid_{{ $dIndex }}">
-                                                        <label class="form-check-label"
-                                                            for="deposit_paid_{{ $dIndex }}"
-                                                            style="font-size:12px; color:#b7791f; font-weight:600;">
-                                                            Customer Paid
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                                    placeholder="0" style="text-align:right;" min="0">
+                                            </td>
+                                        </tr>
                                     @endforeach
-                                </div>
-                            @else
-                                <div
-                                    style="font-size:12px; color:var(--text-muted); text-align:center; padding:12px 0;">
-                                    No security deposits — click "Add Deposit Item" to add one
-                                </div>
-                            @endif
-                        </div>
+
+                                    {{-- Add addon button row --}}
+                                    <tr style="{{ $isDoubleBooked ? 'border-left:3px solid #e53e3e;' : '' }}">
+                                        <td colspan="2" style="padding:5px 8px;">
+                                            <button type="button" wire:click="addAddon({{ $index }})"
+                                                class="btn btn-primary btn-sm">
+                                                <i class="bi bi-plus me-1"></i> Add Custom Option
+                                            </button>
+                                            @if ($addonCount > 0)
+                                                <span
+                                                    style="font-size:11px; color:#38a169; font-weight:600; margin-left:10px;">
+                                                    + Rs.
+                                                    {{ number_format(collect($item['addons'])->sum(fn($a) => (float) ($a['price'] ?? 0)), 0) }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4"
+                                        style="text-align:right; font-size:12px; color:var(--text-muted); padding-top:10px;">
+                                        Subtotal
+                                    </td>
+                                    <td
+                                        style="text-align:right; font-weight:700; padding-top:10px; color:var(--navy);">
+                                        Rs. {{ number_format((float) $totalAmount + (float) $discountAmount, 0) }}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     @else
                         <div
                             style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px; border:2px dashed var(--border); border-radius:8px;">
