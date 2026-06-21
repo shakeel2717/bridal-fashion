@@ -12,7 +12,15 @@
 
                 <div class="modal-body"
                     style="padding:20px 24px; background:
-    {{ $type === 'rental' ? 'rgba(0, 150, 255, 0.05)' : ($type === 'sale' ? 'rgba(0, 200, 100, 0.05)' : 'rgba(200, 150, 0, 0.05)') }};
+    {{ $type === 'rental'
+        ? 'rgba(0, 150, 255, 0.05)'
+        : ($type === 'sale'
+            ? 'rgba(0, 200, 100, 0.05)'
+            : ($type === 'service'
+                ? 'rgba(255, 180, 0, 0.06)'
+                : ($type === 'fabric'
+                    ? 'rgba(0, 180, 200, 0.06)'
+                    : 'rgba(200, 150, 0, 0.05)'))) }};
     transition: background 0.3s ease;">
                     <div class="row g-3">
                         <div class="row g-3">
@@ -147,12 +155,40 @@
                                 <select wire:model.live="type" class="form-select">
                                     <option value="rental">Rental Only</option>
                                     <option value="sale">Sale Only</option>
-                                    <option value="both">Both</option>
+                                    <option value="both">Both (Rent + Sale)</option>
+                                    <option value="service">Service (No Stock)</option>
+                                    <option value="fabric">Fabric / Thaan (Meter or Gaz)</option>
                                 </select>
                             </div>
 
+                            @if ($type === 'fabric')
+                                <div class="col-4">
+                                    <label class="form-label">Fabric Unit <span class="text-danger">*</span></label>
+                                    <select wire:model="fabricUnit"
+                                        class="form-select @error('fabricUnit') is-invalid @enderror">
+                                        <option value="meter">Meter</option>
+                                        <option value="gaz">Gaz (Yard)</option>
+                                    </select>
+                                    @error('fabricUnit')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">
+                                        Price per {{ $fabricUnit === 'gaz' ? 'Gaz' : 'Meter' }} (Rs.)
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="number" wire:model="salePrice"
+                                        class="form-control @error('salePrice') is-invalid @enderror" placeholder="0"
+                                        min="0" step="0.01">
+                                    @error('salePrice')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            @endif
+
                             {{-- Qty — only for rental/both --}}
-                            @if ($type !== 'sale')
+                            @if (in_array($type, ['rental', 'both']))
                                 <div class="col-4">
                                     <label class="form-label">
                                         How Many Separate Records
@@ -168,7 +204,66 @@
                                 </div>
                             @endif
 
-                            {{-- For SALE type: simple single code input --}}
+                            {{-- Service: single code input --}}
+                            @if (!$isEdit && $type === 'service')
+                                <div class="col-4">
+                                    <label class="form-label">Design # (Code) <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" wire:model="itemVariants.0.code"
+                                        class="form-control @error('itemVariants.0.code') is-invalid @enderror"
+                                        placeholder="e.g. SVC-001"
+                                        style="text-transform:uppercase; font-family:monospace;">
+                                    @error('itemVariants.0.code')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">Service Price (Rs.) <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" wire:model="salePrice"
+                                        class="form-control @error('salePrice') is-invalid @enderror" placeholder="0"
+                                        min="0" step="0.01">
+                                    @error('salePrice')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-12">
+                                    <div
+                                        style="background:#fffbeb; border:1px solid #f6e05e; border-radius:6px; padding:8px 12px; font-size:12px; color:#744210;">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <strong>Service type:</strong> Customer brings their own item (dry clean,
+                                        repair, stitching). No stock tracking. Added to sales as a billable service
+                                        line.
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Fabric: single code input (unit shown in header) --}}
+                            @if (!$isEdit && $type === 'fabric')
+                                <div class="col-4">
+                                    <label class="form-label">Design # (Code) <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" wire:model="itemVariants.0.code"
+                                        class="form-control @error('itemVariants.0.code') is-invalid @enderror"
+                                        placeholder="e.g. TH-001"
+                                        style="text-transform:uppercase; font-family:monospace;">
+                                    @error('itemVariants.0.code')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-12">
+                                    <div
+                                        style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:6px; padding:8px 12px; font-size:12px; color:#2c5282;">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <strong>Fabric / Thaan:</strong> Stock tracked in
+                                        {{ $fabricUnit === 'gaz' ? 'Gaz' : 'Meters' }}. Customers can buy 3.5
+                                        {{ $fabricUnit === 'gaz' ? 'gaz' : 'meters' }}, etc. Add stock via Purchase
+                                        Order.
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Sale type: simple single code input (existing) --}}
                             @if (!$isEdit && $type === 'sale')
                                 <div class="col-4">
                                     <label class="form-label">Design # (Code) <span
@@ -181,9 +276,9 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
+                            @endif
 
-                                {{-- For RENTAL/BOTH type: full per-item grid --}}
-                            @elseif(!$isEdit && in_array($type, ['rental', 'both']) && count($itemVariants) > 0)
+                            @if (!$isEdit && in_array($type, ['rental', 'both']) && count($itemVariants) > 0)
                                 <div class="col-12">
                                     <div
                                         style="background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:14px;">

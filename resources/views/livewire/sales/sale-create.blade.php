@@ -14,7 +14,8 @@
 
             {{-- Sale Info & Customer --}}
             <div class="table-card mb-3" style="padding:20px;">
-                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
+                <div
+                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
                     <i class="bi bi-receipt me-1"></i> Sale Info
                 </div>
                 <div class="row g-3">
@@ -23,7 +24,9 @@
                         <label class="form-label">Sale Date <span class="text-danger">*</span></label>
                         <input type="date" wire:model="saleDate"
                             class="form-control @error('saleDate') is-invalid @enderror" autofocus>
-                        @error('saleDate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        @error('saleDate')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="col-5" style="position:relative;">
@@ -31,11 +34,9 @@
                         <div class="d-flex gap-2">
                             <div style="flex:1; position:relative;">
                                 <input type="text" id="sale_customer_search"
-                                    wire:model.live.debounce.400ms="customerSearch"
-                                    wire:keyup="searchCustomers"
+                                    wire:model.live.debounce.400ms="customerSearch" wire:keyup="searchCustomers"
                                     class="form-control @error('customerId') is-invalid @enderror"
-                                    placeholder="Search name, phone, CNIC..."
-                                    autocomplete="off">
+                                    placeholder="Search name, phone, CNIC..." autocomplete="off">
 
                                 @if ($foundCustomers !== null)
                                     <div class="product-search-dropdown" style="min-width:340px;">
@@ -48,7 +49,8 @@
                                                 @endif
                                             </div>
                                         @empty
-                                            <div style="padding:14px; font-size:12px; color:var(--text-muted); text-align:center;">
+                                            <div
+                                                style="padding:14px; font-size:12px; color:var(--text-muted); text-align:center;">
                                                 No customers found
                                             </div>
                                         @endforelse
@@ -56,13 +58,15 @@
                                 @endif
                             </div>
                             @if ($customerId && !app(App\Models\Customer::class)->where('id', $customerId)->where('is_walkin', true)->exists())
-                                <button type="button" wire:click="clearCustomer"
-                                    class="btn btn-outline-secondary" style="padding:0 12px;" title="Reset to Walk-in">
+                                <button type="button" wire:click="clearCustomer" class="btn btn-outline-secondary"
+                                    style="padding:0 12px;" title="Reset to Walk-in">
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             @endif
                         </div>
-                        @error('customerId') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        @error('customerId')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="col-3">
@@ -85,24 +89,26 @@
 
             {{-- Items --}}
             <div class="table-card mb-3" style="padding:20px; overflow:visible;">
-                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
+                <div
+                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
                     <i class="bi bi-cart me-1"></i> Items
                 </div>
 
                 {{-- Product Search Row --}}
-                <div style="background:#f0fff4; border:1.5px solid #9ae6b4; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+                <div
+                    style="background:#f0fff4; border:1.5px solid #9ae6b4; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
                     <div style="display:grid; grid-template-columns: 1fr 80px 120px; gap:8px; align-items:end;">
 
                         {{-- Design # Search --}}
                         <div style="position:relative;">
-                            <label style="font-size:10px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:4px; display:block;">
+                            <label
+                                style="font-size:10px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:4px; display:block;">
                                 Design # / Name
                             </label>
                             <input type="text" id="sale_product_search"
-                                wire:model.live.debounce.300ms="productSearch"
-                                wire:keyup="searchProducts"
-                                class="form-control form-control-sm"
-                                placeholder="Search code or name..." autocomplete="off">
+                                wire:model.live.debounce.300ms="productSearch" wire:keyup="searchProducts"
+                                class="form-control form-control-sm" placeholder="Search code or name..."
+                                autocomplete="off">
 
                             @if (count($searchResults) > 0)
                                 <div class="product-search-dropdown" style="min-width:500px;">
@@ -115,14 +121,26 @@
                                                 <div>
                                                     <span class="search-item-code">{{ $result['code'] }}</span>
                                                     @if (!$result['is_direct'] && $result['group'])
-                                                        <span style="font-size:10px; background:#ebf8ff; color:#2c5282; padding:1px 6px; border-radius:3px; margin-left:4px;">
+                                                        <span
+                                                            style="font-size:10px; background:#ebf8ff; color:#2c5282; padding:1px 6px; border-radius:3px; margin-left:4px;">
                                                             Group: {{ $result['group'] }}
                                                         </span>
                                                     @endif
                                                     <div class="search-item-name">{{ $result['name'] }}</div>
+                                                    {{-- Replace the stock_qty line in search results --}}
                                                     <div class="search-item-category">
                                                         {{ $result['category'] }}
-                                                        · Stock: {{ $result['stock_qty'] }}
+                                                        @if ($result['type'] === 'service')
+                                                            <span
+                                                                style="font-size:10px; background:#fffbeb; color:#b7791f; padding:1px 6px; border-radius:3px; margin-left:4px;">Service</span>
+                                                        @elseif ($result['type'] === 'fabric')
+                                                            · Stock: {{ number_format($result['stock_qty'], 2) }}
+                                                            {{ $result['fabric_unit'] }}
+                                                            <span
+                                                                style="font-size:10px; background:#ebf8ff; color:#2c5282; padding:1px 6px; border-radius:3px; margin-left:4px;">Fabric</span>
+                                                        @else
+                                                            · Stock: {{ $result['stock_qty'] }}
+                                                        @endif
                                                     </div>
                                                 </div>
                                                 <div class="search-item-price">
@@ -137,22 +155,28 @@
 
                         {{-- Qty --}}
                         <div>
-                            <label style="font-size:10px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:4px; display:block;">
-                                Qty
+                            <label
+                                style="font-size:10px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:4px; display:block;">
+                                Qty @if ($pendingFabricUnit)
+                                    ({{ $pendingFabricUnit }})
+                                @endif
                             </label>
                             <input type="number" id="sale_new_qty" wire:model="newItemQty"
-                                class="form-control form-control-sm" min="1"
-                                style="text-align:center;" placeholder="1">
+                                class="form-control form-control-sm"
+                                min="{{ $pendingProductType === 'fabric' ? '0.001' : '1' }}"
+                                step="{{ $pendingProductType === 'fabric' ? '0.5' : '1' }}" style="text-align:center;"
+                                placeholder="1">
                         </div>
 
                         {{-- Price --}}
                         <div>
-                            <label style="font-size:10px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:4px; display:block;">
+                            <label
+                                style="font-size:10px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:4px; display:block;">
                                 Sale Price (Rs.)
                             </label>
                             <input type="number" id="sale_new_price" wire:model="newItemPrice"
-                                class="form-control form-control-sm" min="0"
-                                style="text-align:right;" placeholder="0">
+                                class="form-control form-control-sm" min="0" style="text-align:right;"
+                                placeholder="0">
                         </div>
                     </div>
                 </div>
@@ -179,7 +203,9 @@
                             $priceGroups = collect($items)
                                 ->groupBy('unit_price')
                                 ->filter(fn($g) => $g->count() > 1)
-                                ->keys()->values()->toArray();
+                                ->keys()
+                                ->values()
+                                ->toArray();
 
                             $colors = [
                                 'rgba(255,255,0,0.15)',
@@ -200,11 +226,12 @@
 
                         @forelse($items as $index => $item)
                             @php
-                                $bg      = $priceColorMap[(string) $item['unit_price']] ?? null;
+                                $bg = $priceColorMap[(string) $item['unit_price']] ?? null;
                                 $tdStyle = $bg ? "background-color:{$bg};" : '';
                             @endphp
                             <tr>
-                                <td style="text-align:center; font-weight:700; color:var(--text-muted); {{ $tdStyle }}">
+                                <td
+                                    style="text-align:center; font-weight:700; color:var(--text-muted); {{ $tdStyle }}">
                                     {{ count($items) - $index }}
                                 </td>
                                 <td style="{{ $tdStyle }}">
@@ -215,19 +242,28 @@
                                 </td>
                                 <td style="{{ $tdStyle }}">
                                     <input type="text" wire:model="items.{{ $index }}.item_name"
-                                        class="form-control form-control-sm"
-                                        style="background:transparent;" readonly>
+                                        class="form-control form-control-sm" style="background:transparent;" readonly>
                                 </td>
                                 <td style="{{ $tdStyle }}">
-                                    <input type="number" wire:model.lazy="items.{{ $index }}.qty"
-                                        wire:change="recalcItems"
-                                        class="form-control form-control-sm" min="1"
-                                        style="text-align:center; background:transparent;">
+                                    @if (($item['product_type'] ?? '') === 'fabric')
+                                        <input type="number" wire:model.lazy="items.{{ $index }}.qty"
+                                            wire:change="recalcItems" class="form-control form-control-sm"
+                                            min="0.001" step="0.5"
+                                            style="text-align:center; background:transparent; width:80px;">
+                                        <div style="font-size:10px; color:var(--text-muted); text-align:center;">
+                                            {{ $item['fabric_unit'] ?? '' }}</div>
+                                    @elseif (($item['product_type'] ?? '') === 'service')
+                                        <div style="text-align:center; font-weight:700;">1</div>
+                                        <div style="font-size:10px; color:#b7791f; text-align:center;">service</div>
+                                    @else
+                                        <input type="number" wire:model.lazy="items.{{ $index }}.qty"
+                                            wire:change="recalcItems" class="form-control form-control-sm"
+                                            min="1" style="text-align:center; background:transparent;">
+                                    @endif
                                 </td>
                                 <td style="{{ $tdStyle }}">
                                     <input type="number" wire:model.lazy="items.{{ $index }}.unit_price"
-                                        wire:change="recalcItems"
-                                        class="form-control form-control-sm" min="0"
+                                        wire:change="recalcItems" class="form-control form-control-sm" min="0"
                                         style="text-align:right; background:transparent;" placeholder="0">
                                 </td>
                                 <td style="text-align:right; font-weight:700; color:var(--navy); {{ $tdStyle }}">
@@ -251,7 +287,8 @@
                     @if (count($items) > 0)
                         <tfoot>
                             <tr>
-                                <td colspan="5" style="text-align:right; font-size:12px; color:var(--text-muted); padding-top:10px;">
+                                <td colspan="5"
+                                    style="text-align:right; font-size:12px; color:var(--text-muted); padding-top:10px;">
                                     Subtotal
                                 </td>
                                 <td style="text-align:right; font-weight:700; padding-top:10px;">
@@ -278,11 +315,13 @@
                             <div style="font-size:14px; font-weight:700; color:#fff;">
                                 {{ $selectedCustomer->name }}
                                 @if ($selectedCustomer->is_walkin)
-                                    <span style="font-size:10px; background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); padding:1px 7px; border-radius:10px; margin-left:6px;">Walk-in</span>
+                                    <span
+                                        style="font-size:10px; background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); padding:1px 7px; border-radius:10px; margin-left:6px;">Walk-in</span>
                                 @endif
                             </div>
                             @if ($selectedCustomer->phone1 && !$selectedCustomer->is_walkin)
-                                <div style="font-size:12px; color:rgba(255,255,255,0.6);">{{ $selectedCustomer->phone1 }}</div>
+                                <div style="font-size:12px; color:rgba(255,255,255,0.6);">
+                                    {{ $selectedCustomer->phone1 }}</div>
                             @endif
                         @endif
                     @else
@@ -298,7 +337,8 @@
                         </tr>
                         <tr>
                             <td style="color:var(--text-muted);">Subtotal</td>
-                            <td style="text-align:right; font-weight:700;">Rs. {{ number_format($this->subtotal, 0) }}</td>
+                            <td style="text-align:right; font-weight:700;">Rs. {{ number_format($this->subtotal, 0) }}
+                            </td>
                         </tr>
                         @if ((float) $discount > 0)
                             <tr>
@@ -334,7 +374,8 @@
 
             {{-- Discount & Payment --}}
             <div class="table-card mb-3" style="padding:20px;">
-                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
+                <div
+                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
                     <i class="bi bi-cash me-1"></i> Discount & Payment
                 </div>
                 <div class="row g-3">
@@ -350,9 +391,11 @@
                     <div class="col-6">
                         <label class="form-label">Amount Received (Rs.)</label>
                         <input type="number" wire:model.lazy="advancePaid"
-                            class="form-control @error('advancePaid') is-invalid @enderror"
-                            min="0" placeholder="0">
-                        @error('advancePaid') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            class="form-control @error('advancePaid') is-invalid @enderror" min="0"
+                            placeholder="0">
+                        @error('advancePaid')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="col-6">
                         <label class="form-label">Payment Date</label>
@@ -387,21 +430,27 @@
                 Livewire.on('focus-sale-qty', () => {
                     setTimeout(() => {
                         const qty = document.getElementById('sale_new_qty');
-                        if (qty) { qty.focus(); qty.select(); }
+                        if (qty) {
+                            qty.focus();
+                            qty.select();
+                        }
                     }, 100);
                 });
                 Livewire.on('focus-sale-search', () => {
                     setTimeout(() => {
                         const s = document.getElementById('sale_product_search');
-                        if (s) { s.focus(); s.select(); }
+                        if (s) {
+                            s.focus();
+                            s.select();
+                        }
                     }, 100);
                 });
             });
 
             function setupSaleSearch() {
                 const searchInput = document.getElementById('sale_product_search');
-                const qtyInput    = document.getElementById('sale_new_qty');
-                const priceInput  = document.getElementById('sale_new_price');
+                const qtyInput = document.getElementById('sale_new_qty');
+                const priceInput = document.getElementById('sale_new_price');
 
                 if (!searchInput || searchInput._saleSearchBound) return;
                 searchInput._saleSearchBound = true;
@@ -413,11 +462,12 @@
                         ?.closest('.product-search-dropdown');
 
                     if (e.key === 'Enter') {
-                        e.preventDefault(); e.stopImmediatePropagation();
-                        const dropItems = dropdown
-                            ? Array.from(dropdown.querySelectorAll('.po-search-item')) : [];
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        const dropItems = dropdown ?
+                            Array.from(dropdown.querySelectorAll('.po-search-item')) : [];
                         if (dropItems.length > 0) {
-                            const target    = dropItems[highlightIndex] ?? dropItems[0];
+                            const target = dropItems[highlightIndex] ?? dropItems[0];
                             const productId = target.dataset.productId;
                             if (productId) @this.call('selectProductForRow', parseInt(productId));
                             highlightIndex = -1;
@@ -449,8 +499,12 @@
                     qtyInput._saleQtyBound = true;
                     qtyInput.addEventListener('keydown', function(e) {
                         if (e.key !== 'Enter') return;
-                        e.preventDefault(); e.stopImmediatePropagation();
-                        if (priceInput) { priceInput.focus(); priceInput.select(); }
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        if (priceInput) {
+                            priceInput.focus();
+                            priceInput.select();
+                        }
                     });
                 }
 
@@ -458,7 +512,8 @@
                     priceInput._salePriceBound = true;
                     priceInput.addEventListener('keydown', function(e) {
                         if (e.key !== 'Enter') return;
-                        e.preventDefault(); e.stopImmediatePropagation();
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
                         @this.call('addItemToTable');
                     });
                 }

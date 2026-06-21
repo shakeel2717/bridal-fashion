@@ -18,6 +18,7 @@ class SaleItem extends Model
     {
         return [
             'sale_price' => 'decimal:2',
+            'qty' => 'decimal:3',
             'custom_option_price' => 'decimal:2',
         ];
     }

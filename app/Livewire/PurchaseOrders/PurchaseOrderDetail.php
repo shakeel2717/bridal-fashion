@@ -189,8 +189,14 @@ class PurchaseOrderDetail extends Component
 
             // Only increment by the difference not already received
             if ($item->product_id && $diff > 0) {
-                Product::where('id', $item->product_id)
-                    ->increment('stock_qty', $diff);
+                $product = Product::find($item->product_id);
+                if ($product && $product->type === 'fabric') {
+                    Product::where('id', $item->product_id)
+                        ->increment('stock_decimal', $diff);
+                } elseif ($product) {
+                    Product::where('id', $item->product_id)
+                        ->increment('stock_qty', $diff);
+                }
             }
         }
 
@@ -217,7 +223,14 @@ class PurchaseOrderDetail extends Component
 
         // Update stock only for the difference
         if ($item->product_id && $diff > 0) {
-            Product::where('id', $item->product_id)->increment('stock_qty', $diff);
+            $product = Product::find($item->product_id);
+            if ($product && $product->type === 'fabric') {
+                Product::where('id', $item->product_id)
+                    ->increment('stock_decimal', $diff);
+            } elseif ($product) {
+                Product::where('id', $item->product_id)
+                    ->increment('stock_qty', $diff);
+            }
         }
 
         // Check if all items received

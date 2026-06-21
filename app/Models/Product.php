@@ -1,7 +1,5 @@
 <?php
 
-// app/Models/Product.php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +13,9 @@ class Product extends Model
 
     protected $fillable = [
         'code', 'name', 'category_id', 'vendor_id', 'size', 'type',
-        'purchase_price', 'rental_price', 'sale_price', 'stock_qty', 'color', 'photo', 'group_id',
+        'purchase_price', 'rental_price', 'sale_price', 'stock_qty',
+        'fabric_unit', 'stock_decimal',
+        'color', 'photo', 'group_id',
         'is_abandoned', 'abandoned_price', 'abandoned_date', 'abandoned_note',
         'notes', 'is_active', 'created_by', 'updated_by',
     ];
@@ -23,14 +23,36 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'purchase_price' => 'decimal:2',
-            'rental_price' => 'decimal:2',
-            'sale_price' => 'decimal:2',
+            'purchase_price'  => 'decimal:2',
+            'rental_price'    => 'decimal:2',
+            'sale_price'      => 'decimal:2',
             'abandoned_price' => 'decimal:2',
-            'abandoned_date' => 'date',
-            'is_abandoned' => 'boolean',
-            'is_active' => 'boolean',
+            'stock_decimal'   => 'decimal:3',
+            'abandoned_date'  => 'date',
+            'is_abandoned'    => 'boolean',
+            'is_active'       => 'boolean',
         ];
+    }
+
+    // Helper: is this a fabric type?
+    public function isFabric(): bool
+    {
+        return $this->type === 'fabric';
+    }
+
+    // Helper: is this a service type?
+    public function isService(): bool
+    {
+        return $this->type === 'service';
+    }
+
+    // Returns display stock (decimal for fabric, int for others)
+    public function getDisplayStockAttribute(): string
+    {
+        if ($this->type === 'fabric') {
+            return number_format((float) $this->stock_decimal, 2) . ' ' . ($this->fabric_unit ?? 'meter');
+        }
+        return (string) $this->stock_qty;
     }
 
     public function scopeActive($query)
@@ -45,7 +67,7 @@ class Product extends Model
 
     public function scopeForSale($query)
     {
-        return $query->whereIn('type', ['sale', 'both']);
+        return $query->whereIn('type', ['sale', 'both', 'fabric', 'service']);
     }
 
     public function category(): BelongsTo

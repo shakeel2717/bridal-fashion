@@ -202,7 +202,15 @@
                             </div>
                         </td>
                         <td style="font-size:13px; font-weight:600; text-align:center;">
-                            {{ $product->stock_qty }}
+                            @if ($product->type === 'fabric')
+                                {{ number_format((float) $product->stock_decimal, 2) }}
+                                <div style="font-size:10px; color:var(--text-muted); font-weight:400;">
+                                    {{ $product->fabric_unit }}</div>
+                            @elseif ($product->type === 'service')
+                                <span style="font-size:11px; color:var(--text-muted);">—</span>
+                            @else
+                                {{ $product->stock_qty }}
+                            @endif
                         </td>
                         <td>
                             @if ($product->is_abandoned)

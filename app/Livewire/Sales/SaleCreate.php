@@ -42,6 +42,10 @@ class SaleCreate extends Component
 
     public string $newItemQty = '1';
 
+    public string $pendingProductType = '';
+
+    public string $pendingFabricUnit = '';
+
     public string $newItemPrice = '0';
 
     // ── Items table ───────────────────────────────────────
@@ -58,13 +62,13 @@ class SaleCreate extends Component
 
     public function mount(): void
     {
-        $this->saleDate    = now()->format('Y-m-d');
+        $this->saleDate = now()->format('Y-m-d');
         $this->paymentDate = now()->format('Y-m-d');
 
         // Auto-select Walk-in Customer
         $walkin = Customer::where('is_walkin', true)->first();
         if ($walkin) {
-            $this->customerId     = $walkin->id;
+            $this->customerId = $walkin->id;
             $this->customerSearch = $walkin->name;
         }
 
@@ -78,6 +82,7 @@ class SaleCreate extends Component
     {
         if (strlen($this->customerSearch) < 2) {
             $this->foundCustomers = null;
+
             return;
         }
 
@@ -94,8 +99,8 @@ class SaleCreate extends Component
 
     public function selectCustomer(int $id): void
     {
-        $customer             = Customer::findOrFail($id);
-        $this->customerId     = $id;
+        $customer = Customer::findOrFail($id);
+        $this->customerId = $id;
         $this->customerSearch = $customer->name;
         $this->foundCustomers = null;
     }
@@ -103,7 +108,7 @@ class SaleCreate extends Component
     public function clearCustomer(): void
     {
         $walkin = Customer::where('is_walkin', true)->first();
-        $this->customerId     = $walkin?->id;
+        $this->customerId = $walkin?->id;
         $this->customerSearch = $walkin?->name ?? 'Walk-in Customer';
         $this->foundCustomers = null;
     }
@@ -113,12 +118,14 @@ class SaleCreate extends Component
     {
         $product = Product::findOrFail($productId);
 
-        $this->pendingProductId   = $product->id;
+        $this->pendingProductId = $product->id;
         $this->pendingProductName = $product->name;
         $this->pendingProductCode = $product->code;
-        $this->newItemPrice       = (string) $product->sale_price;
-        $this->productSearch      = $product->code.' — '.$product->name;
-        $this->searchResults      = [];
+        $this->pendingProductType = $product->type;
+        $this->pendingFabricUnit = $product->fabric_unit ?? '';
+        $this->newItemPrice = (string) $product->sale_price;
+        $this->productSearch = $product->code.' — '.$product->name;
+        $this->searchResults = [];
         $this->dispatch('focus-sale-qty');
     }
 
@@ -128,25 +135,36 @@ class SaleCreate extends Component
             return;
         }
 
-        $qty   = max(1, (int) $this->newItemQty);
+        $isFabric = $this->pendingProductType === 'fabric';
+        $isService = $this->pendingProductType === 'service';
+
+        // Fabric supports decimal qty (e.g. 3.5 meters)
+        $qty = $isFabric
+            ? max(0.001, (float) $this->newItemQty)
+            : max(1, (int) $this->newItemQty);
+
         $price = max(0, (float) $this->newItemPrice);
 
         array_unshift($this->items, [
-            'product_id'  => $this->pendingProductId,
-            'item_name'   => $this->pendingProductName,
-            'item_code'   => $this->pendingProductCode,
-            'qty'         => $qty,
-            'unit_price'  => (string) $price,
+            'product_id' => $this->pendingProductId,
+            'item_name' => $this->pendingProductName,
+            'item_code' => $this->pendingProductCode,
+            'product_type' => $this->pendingProductType,
+            'fabric_unit' => $this->pendingFabricUnit,
+            'qty' => $qty,
+            'unit_price' => (string) $price,
             'total_price' => (string) ($qty * $price),
         ]);
 
-        $this->productSearch      = '';
-        $this->searchResults      = [];
-        $this->newItemQty         = '1';
-        $this->newItemPrice       = '0';
-        $this->pendingProductId   = null;
+        $this->productSearch = '';
+        $this->searchResults = [];
+        $this->newItemQty = '1';
+        $this->newItemPrice = '0';
+        $this->pendingProductId = null;
         $this->pendingProductName = '';
         $this->pendingProductCode = '';
+        $this->pendingProductType = '';
+        $this->pendingFabricUnit = '';
         $this->dispatch('focus-sale-search');
     }
 
@@ -154,6 +172,7 @@ class SaleCreate extends Component
     {
         if (strlen($this->productSearch) < 2) {
             $this->searchResults = [];
+
             return;
         }
 
@@ -163,8 +182,17 @@ class SaleCreate extends Component
         $directMatches = Product::with(['category', 'group'])
             ->where('is_active', true)
             ->where('is_abandoned', false)
-            ->whereIn('type', ['sale', 'both'])
-            ->where('stock_qty', '>', 0)
+            ->whereIn('type', ['sale', 'both', 'fabric', 'service'])
+            ->where(function ($q) {
+                $q->where(function ($inner) {
+                    $inner->whereIn('type', ['sale', 'both'])
+                        ->where('stock_qty', '>', 0);
+                })->orWhere(function ($inner) {
+                    $inner->where('type', 'fabric')
+                        ->where('stock_decimal', '>', 0);
+                })->orWhere('type', 'service');
+            })
+    // ← no extra ->where('stock_qty', '>', 0) here
             ->where(function ($q) {
                 $q->where('code', $this->productSearch)
                     ->orWhere('name', 'like', "%{$this->productSearch}%");
@@ -183,26 +211,28 @@ class SaleCreate extends Component
             $groupProducts = Product::with(['category', 'group'])
                 ->where('is_active', true)
                 ->where('is_abandoned', false)
-                ->whereIn('type', ['sale', 'both'])
-                ->where('stock_qty', '>', 0)
+                ->whereIn('type', ['sale', 'both', 'fabric', 'service'])
+                // ← no ->where('stock_qty', '>', 0) here either
                 ->whereIn('group_id', $groupIds)
                 ->whereNotIn('id', $directMatches->pluck('id')->toArray())
                 ->whereNotIn('id', $alreadyAdded)
                 ->get();
         }
 
-        $all      = $directMatches->merge($groupProducts)->take(12);
+        $all = $directMatches->merge($groupProducts)->take(12);
         $directIds = $directMatches->pluck('id')->toArray();
 
         $this->searchResults = $all->map(fn ($p) => [
-            'id'             => $p->id,
-            'code'           => $p->code,
-            'name'           => $p->name,
-            'sale_price'     => $p->sale_price,
-            'stock_qty'      => $p->stock_qty,
-            'category'       => $p->category->name ?? '',
-            'group'          => $p->group->name ?? null,
-            'is_direct'      => in_array($p->id, $directIds),
+            'id' => $p->id,
+            'code' => $p->code,
+            'name' => $p->name,
+            'sale_price' => $p->sale_price,
+            'stock_qty' => $p->type === 'fabric' ? (float) $p->stock_decimal : $p->stock_qty,
+            'fabric_unit' => $p->fabric_unit,
+            'type' => $p->type,
+            'category' => $p->category->name ?? '',
+            'group' => $p->group->name ?? null,
+            'is_direct' => in_array($p->id, $directIds),
         ])->toArray();
     }
 
@@ -219,8 +249,12 @@ class SaleCreate extends Component
     public function recalcItems(): void
     {
         foreach ($this->items as $i => $item) {
-            $qty   = max(1, (int) ($item['qty'] ?? 1));
+            $isFabric = ($item['product_type'] ?? '') === 'fabric';
+            $qty = $isFabric
+                ? max(0.001, (float) ($item['qty'] ?? 1))
+                : max(1, (int) ($item['qty'] ?? 1));
             $price = max(0, (float) ($item['unit_price'] ?? 0));
+            $this->items[$i]['qty'] = $qty;
             $this->items[$i]['total_price'] = (string) ($qty * $price);
         }
     }
@@ -253,55 +287,66 @@ class SaleCreate extends Component
     {
         $this->validate([
             'customerId' => 'required|exists:customers,id',
-            'saleDate'   => 'required|date',
+            'saleDate' => 'required|date',
             'advancePaid' => 'nullable|numeric|min:0',
-            'employeeId'  => 'nullable|exists:users,id',
+            'employeeId' => 'nullable|exists:users,id',
         ]);
 
         if (empty($this->items)) {
             $this->addError('items', 'Please add at least one item.');
+
             return;
         }
 
-        $customer  = Customer::findOrFail($this->customerId);
-        $total     = $this->total;
-        $advance   = (float) $this->advancePaid;
+        $customer = Customer::findOrFail($this->customerId);
+        $total = $this->total;
+        $advance = (float) $this->advancePaid;
         $remaining = max(0, $total - $advance);
 
         $sale = Sale::create([
-            'bill_ref'               => $this->billRef ?: null,
-            'customer_id'            => $this->customerId,
-            'customer_name'          => $customer->name,
-            'customer_phone1'        => $customer->phone1 ?? '0000-0000000',
-            'customer_phone2'        => $customer->phone2 ?? null,
-            'customer_cnic'          => $customer->cnic ?? null,
-            'delivery_address'       => $customer->address ?? null,
-            'sale_date'              => Carbon::parse($this->saleDate)->toDateString(),
+            'bill_ref' => $this->billRef ?: null,
+            'customer_id' => $this->customerId,
+            'customer_name' => $customer->name,
+            'customer_phone1' => $customer->phone1 ?? '0000-0000000',
+            'customer_phone2' => $customer->phone2 ?? null,
+            'customer_cnic' => $customer->cnic ?? null,
+            'delivery_address' => $customer->address ?? null,
+            'sale_date' => Carbon::parse($this->saleDate)->toDateString(),
             'advance_payment_method' => Account::find($this->advanceAccountId)?->name ?? 'cash',
-            'status'                 => 'completed',
-            'total_amount'           => $total,
-            'discount'               => (float) $this->discount,
-            'advance_paid'           => $advance,
-            'remaining_balance'      => $remaining,
-            'employee_id'            => $this->employeeId ?: null,
-            'created_by'             => auth()->id(),
-            'updated_by'             => auth()->id(),
+            'status' => 'completed',
+            'total_amount' => $total,
+            'discount' => (float) $this->discount,
+            'advance_paid' => $advance,
+            'remaining_balance' => $remaining,
+            'employee_id' => $this->employeeId ?: null,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
         foreach ($this->items as $item) {
-            $qty = (int) ($item['qty'] ?? 1);
+            $qty = $item['qty']; // already correct type (float or int)
 
             SaleItem::create([
-                'sale_id'      => $sale->id,
-                'product_id'   => $item['product_id'],
+                'sale_id' => $sale->id,
+                'product_id' => $item['product_id'],
                 'product_name' => $item['item_name'],
                 'product_code' => $item['item_code'],
-                'sale_price'   => (float) $item['unit_price'],
-                'qty'          => $qty,
+                'sale_price' => (float) $item['unit_price'],
+                'qty' => $qty,
             ]);
 
-            Product::where('id', $item['product_id'])
-                ->decrement('stock_qty', $qty);
+            $productType = $item['product_type'] ?? '';
+
+            if ($productType === 'fabric') {
+                // Decrement decimal stock
+                Product::where('id', $item['product_id'])
+                    ->decrement('stock_decimal', (float) $qty);
+            } elseif ($productType !== 'service') {
+                // Normal integer stock decrement (sale, both)
+                Product::where('id', $item['product_id'])
+                    ->decrement('stock_qty', (int) $qty);
+            }
+            // service: no stock change
         }
 
         if ($advance > 0 && $this->advanceAccountId) {

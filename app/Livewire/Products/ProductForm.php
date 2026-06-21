@@ -16,6 +16,8 @@ class ProductForm extends Component
 
     public ?int $productId = null;
 
+    public string $fabricUnit = 'meter';
+
     public bool $isEdit = false;
 
     public string $name = '';
@@ -83,17 +85,22 @@ class ProductForm extends Component
         if ($this->type === 'rental') {
             $this->salePrice = '';
         }
+        if ($this->type === 'service') {
+            $this->salePrice = '';
+            $this->stockQty = 1;
+        }
         $this->rebuildVariants();
     }
 
+    // Replace rebuildVariants():
     protected function rebuildVariants(): void
     {
         if ($this->isEdit) {
             return;
         }
 
-        if ($this->type === 'sale') {
-            // Sale always has exactly 1 variant (code only)
+        if (in_array($this->type, ['sale', 'service', 'fabric'])) {
+            // These types always have exactly 1 variant (code only)
             $this->itemVariants = [['code' => $this->itemVariants[0]['code'] ?? '', 'color' => '', 'size' => '']];
 
             return;
@@ -132,6 +139,7 @@ class ProductForm extends Component
         $this->type = $product->type;
         $this->rentalPrice = (string) $product->rental_price;
         $this->salePrice = (string) $product->sale_price;
+        $this->fabricUnit = $product->fabric_unit ?? 'meter';
         $this->stockQty = $product->stock_qty;
         $this->notes = $product->notes ?? '';
         $this->isActive = $product->is_active;
@@ -162,18 +170,24 @@ class ProductForm extends Component
         $rules = [
             'name' => 'required|string|max:200',
             'categoryId' => 'required|exists:categories,id',
-            'type' => 'required|in:rental,sale,both',
-            'stockQty' => 'required|integer|min:1',
+            'type' => 'required|in:rental,sale,both,service,fabric',
             'notes' => 'nullable|string|max:1000',
             'photo' => 'nullable|image|max:3072',
         ];
 
+        if (in_array($this->type, ['rental', 'both'])) {
+            $rules['stockQty'] = 'required|integer|min:1';
+        }
+
         if (in_array($this->type, ['sale', 'both'])) {
             $rules['salePrice'] = 'required|numeric|min:0';
         }
-        if ($this->isAbandoned) {
-            $rules['abandonedPrice'] = 'required|numeric|min:0';
-            $rules['abandonedDate'] = 'required|date';
+        if ($this->type === 'service') {
+            $rules['salePrice'] = 'required|numeric|min:0';
+        }
+        if ($this->type === 'fabric') {
+            $rules['fabricUnit'] = 'required|in:meter,gaz';
+            $rules['salePrice'] = 'required|numeric|min:0';
         }
 
         // Validate at least first variant has a code
@@ -228,7 +242,9 @@ class ProductForm extends Component
             'group_id' => $this->groupId ?: null,
             'type' => $this->type,
             'rental_price' => 0,
-            'sale_price' => in_array($this->type, ['sale', 'both']) ? ($this->salePrice ?: 0) : 0,
+            'sale_price' => in_array($this->type, ['sale', 'both', 'service', 'fabric'])
+                                    ? ($this->salePrice ?: 0)
+                                    : 0,
             'purchase_price' => 0,
             'notes' => $this->notes ?: null,
             'is_active' => $this->isActive,
@@ -247,25 +263,62 @@ class ProductForm extends Component
             $baseData['size'] = $variant['size'] ?: null;
             $baseData['stock_qty'] = $this->stockQty;
 
+            // Fabric: preserve stock_decimal, update fabric_unit
+            if ($this->type === 'fabric') {
+                $baseData['fabric_unit'] = $this->fabricUnit;
+            }
+
             Product::findOrFail($this->productId)->update($baseData);
             session()->flash('success', 'Product updated.');
 
+        } elseif ($this->type === 'service') {
+            // Service: single record, no stock tracking
+            $variant = $this->itemVariants[0] ?? [];
+            $baseData['code'] = strtoupper($variant['code'] ?? '');
+            $baseData['color'] = null;
+            $baseData['size'] = null;
+            $baseData['stock_qty'] = 0;
+            $baseData['stock_decimal'] = 0;
+            $baseData['fabric_unit'] = null;
+            $baseData['created_by'] = auth()->id();
+
+            Product::create($baseData);
+            session()->flash('success', 'Service product created. Add it to sales to bill customers.');
+
+        } elseif ($this->type === 'fabric') {
+            // Fabric: single record, decimal stock, unit of measure
+            $variant = $this->itemVariants[0] ?? [];
+            $baseData['code'] = strtoupper($variant['code'] ?? '');
+            $baseData['color'] = null;
+            $baseData['size'] = null;
+            $baseData['stock_qty'] = 0;
+            $baseData['stock_decimal'] = 0; // starts at 0, PO will update
+            $baseData['fabric_unit'] = $this->fabricUnit;
+            $baseData['created_by'] = auth()->id();
+
+            Product::create($baseData);
+            session()->flash('success', 'Fabric (Thaan) created. Add a Purchase Order to receive stock.');
+
         } elseif ($this->type === 'sale') {
-            // Sale: single record with actual qty
+            // Sale: single record, integer stock
             $variant = $this->itemVariants[0] ?? [];
             $baseData['code'] = strtoupper($variant['code'] ?? '');
             $baseData['color'] = $variant['color'] ?: null;
             $baseData['size'] = $variant['size'] ?: null;
-            $baseData['stock_qty'] = 0; // starts at 0, PO will update
+            $baseData['stock_qty'] = 0;
+            $baseData['stock_decimal'] = 0;
+            $baseData['fabric_unit'] = null;
             $baseData['created_by'] = auth()->id();
 
             Product::create($baseData);
             session()->flash('success', 'Product created. Add a Purchase Order to update stock.');
 
         } else {
-            // Rental/Both: N separate records, each qty 0
+            // Rental/Both: N separate records
             $qty = (int) $this->stockQty;
             $baseData['created_by'] = auth()->id();
+            $baseData['stock_decimal'] = 0;
+            $baseData['fabric_unit'] = null;
 
             for ($i = 0; $i < $qty; $i++) {
                 $variant = $this->itemVariants[$i] ?? [];
@@ -276,7 +329,7 @@ class ProductForm extends Component
                 Product::create($baseData);
             }
 
-            session()->flash('success', "{$qty} product(s) created with stock 0. Add Purchase Order to receive stock.");
+            session()->flash('success', "{$qty} product(s) created. Add Purchase Order to receive stock.");
         }
 
         $this->dispatch('product-saved');
@@ -367,6 +420,7 @@ class ProductForm extends Component
         $this->categoryId = '';
         $this->groupId = '';
         $this->type = 'rental';
+        $this->fabricUnit = 'meter';
         $this->rentalPrice = '0';
         $this->salePrice = '';
         $this->showCategoryForm = false;

@@ -176,7 +176,12 @@ class ProductList extends Component
             ->when($this->filterType, fn ($q) => $q->where('type', $this->filterType))
             ->when($this->filterCategory, fn ($q) => $q->where('category_id', $this->filterCategory))
             ->when($this->filterStatus === 'active', fn ($q) => $q->where('is_active', true)->where('is_abandoned', false))
-            ->when($this->filterStock === 'zero', fn ($q) => $q->where('stock_qty', 0))
+            ->when($this->filterStock === 'zero', fn ($q) => $q->where(function ($inner) {
+                $inner->whereNotIn('type', ['fabric', 'service'])->where('stock_qty', 0);
+            })->orWhere(function ($inner) {
+                $inner->where('type', 'fabric')->where('stock_decimal', 0);
+            })
+            )
             ->when($this->filterStatus === 'inactive', fn ($q) => $q->where('is_active', false))
             ->when($this->filterStatus === 'abandoned', fn ($q) => $q->where('is_abandoned', true))
             ->when($this->filterGroup, fn ($q) => $q->where('group_id', $this->filterGroup))
@@ -192,7 +197,11 @@ class ProductList extends Component
             'abandoned' => Product::where('is_abandoned', true)->count(),
             'inactive' => Product::where('is_active', false)->count(),
             'total' => Product::count(),
-            'zero_stock' => Product::where('stock_qty', 0)->count(),
+            'zero_stock' => Product::where(function ($q) {
+                $q->whereNotIn('type', ['fabric', 'service'])->where('stock_qty', 0);
+            })->orWhere(function ($q) {
+                $q->where('type', 'fabric')->where('stock_decimal', 0);
+            })->count(),
         ];
 
         $expenses = $this->expenseProductId
