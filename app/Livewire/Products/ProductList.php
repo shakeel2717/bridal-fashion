@@ -8,13 +8,53 @@ use App\Models\ProductExpense;
 use App\Models\ProductGroup;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class ProductList extends Component
 {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     public string $filterGroup = '';
+
+    // ── Edit Modal ────────────────────────────────────────
+    public ?int $editId = null;
+
+    public $editPhoto = null;
+
+    public string $editName = '';
+
+    public string $editCategoryId = '';
+
+    public string $editGroupId = '';
+
+    public string $editCode = '';
+
+    public string $editColor = '';
+
+    public string $editSize = '';
+
+    public string $editSalePrice = '';
+
+    public string $editRentalPrice = '';
+
+    public string $editNotes = '';
+
+    public bool $editIsActive = true;
+
+    public bool $editIsAbandoned = false;
+
+    public string $editAbandonedPrice = '';
+
+    public string $editAbandonedDate = '';
+
+    public string $editAbandonedNote = '';
+
+    public ?string $editExistingPhoto = null;
+
+    public string $editType = '';
+
+    public string $editFabricUnit = 'meter';
 
     public string $filterStock = 'zero';
 
@@ -71,6 +111,94 @@ class ProductList extends Component
     {
         $this->deleteId = $id;
     }
+
+    public function openEditModal(int $id): void
+{
+    $product = Product::findOrFail($id);
+    $this->editId = $id;
+    $this->editName = $product->name;
+    $this->editCategoryId = (string) $product->category_id;
+    $this->editGroupId = (string) ($product->group_id ?? '');
+    $this->editCode = $product->code ?? '';
+    $this->editColor = $product->color ?? '';
+    $this->editSize = $product->size ?? '';
+    $this->editSalePrice = (string) $product->sale_price;
+    $this->editRentalPrice = (string) $product->rental_price;
+    $this->editNotes = $product->notes ?? '';
+    $this->editIsActive = $product->is_active;
+    $this->editIsAbandoned = $product->is_abandoned;
+    $this->editAbandonedPrice = (string) ($product->abandoned_price ?? '');
+    $this->editAbandonedDate = $product->abandoned_date?->format('Y-m-d') ?? '';
+    $this->editAbandonedNote = $product->abandoned_note ?? '';
+    $this->editExistingPhoto = $product->photo;
+    $this->editType = $product->type;
+    $this->editFabricUnit = $product->fabric_unit ?? 'meter';
+    $this->editPhoto = null;
+    $this->resetValidation();
+}
+
+public function closeEditModal(): void
+{
+    $this->editId = null;
+    $this->editPhoto = null;
+    $this->resetValidation();
+}
+
+public function saveEdit(): void
+{
+    $this->validate([
+        'editName'          => 'required|string|max:200',
+        'editCategoryId'    => 'required|exists:categories,id',
+        'editCode'          => 'required|string|max:50',
+        'editSalePrice'     => 'nullable|numeric|min:0',
+        'editRentalPrice'   => 'nullable|numeric|min:0',
+        'editNotes'         => 'nullable|string|max:1000',
+        'editPhoto'         => 'nullable|image|max:3072',
+        'editAbandonedPrice'=> 'nullable|numeric|min:0',
+        'editAbandonedDate' => 'nullable|date',
+    ], [
+        'editName.required'       => 'Name is required.',
+        'editCategoryId.required' => 'Category is required.',
+        'editCode.required'       => 'Code is required.',
+    ]);
+
+    $code = strtoupper(trim($this->editCode));
+    $exists = Product::where('code', $code)
+        ->where('id', '!=', $this->editId)
+        ->exists();
+    if ($exists) {
+        $this->addError('editCode', "Code {$code} already exists.");
+        return;
+    }
+
+    $photoPath = $this->editExistingPhoto;
+    if ($this->editPhoto) {
+        $photoPath = $this->editPhoto->store('products', 'public');
+    }
+
+    Product::findOrFail($this->editId)->update([
+        'name'           => $this->editName,
+        'category_id'    => $this->editCategoryId,
+        'group_id'       => $this->editGroupId ?: null,
+        'code'           => $code,
+        'color'          => $this->editColor ?: null,
+        'size'           => $this->editSize ?: null,
+        'sale_price'     => $this->editSalePrice ?: 0,
+        'rental_price'   => $this->editRentalPrice ?: 0,
+        'notes'          => $this->editNotes ?: null,
+        'is_active'      => $this->editIsActive,
+        'is_abandoned'   => $this->editIsAbandoned,
+        'abandoned_price'=> $this->editIsAbandoned ? ($this->editAbandonedPrice ?: 0) : 0,
+        'abandoned_date' => $this->editIsAbandoned ? ($this->editAbandonedDate ?: null) : null,
+        'abandoned_note' => $this->editIsAbandoned ? ($this->editAbandonedNote ?: null) : null,
+        'fabric_unit'    => $this->editType === 'fabric' ? $this->editFabricUnit : null,
+        'photo'          => $photoPath,
+        'updated_by'     => auth()->id(),
+    ]);
+
+    $this->closeEditModal();
+    session()->flash('success', 'Product updated.');
+}
 
     public function delete(): void
     {

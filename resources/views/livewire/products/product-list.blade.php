@@ -224,8 +224,7 @@
                         <td>
                             <div class="d-flex gap-1 flex-wrap">
                                 <button class="btn btn-sm btn-outline-secondary action-btn"
-                                    wire:click="$dispatch('open-edit-product', { id: {{ $product->id }} })"
-                                    title="Edit">
+                                    wire:click="openEditModal({{ $product->id }})" title="Edit">
                                     <i class="bi bi-pencil" style="font-size:12px;"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-warning action-btn"
@@ -273,6 +272,218 @@
                         <button class="btn btn-sm btn-outline-secondary"
                             wire:click="$set('deleteId', null)">Cancel</button>
                         <button class="btn btn-sm btn-danger" wire:click="delete()">Yes, Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Edit Product Modal --}}
+    @if ($editId)
+        <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title">
+                            <i class="bi bi-pencil me-2"></i> Edit Stock
+                            <span class="tbl-code-badge ms-2">{{ $editCode }}</span>
+                            <span class="product-type-badge {{ $editType }} ms-2">{{ ucfirst($editType) }}</span>
+                        </h6>
+                        <button type="button" class="btn-close" wire:click="closeEditModal"></button>
+                    </div>
+                    <div class="modal-body" style="padding:20px 24px;">
+                        <div class="row g-3">
+
+                            {{-- Name --}}
+                            <div class="col-6">
+                                <label class="form-label">Stock Name <span class="text-danger">*</span></label>
+                                <input type="text" wire:model="editName"
+                                    class="form-control @error('editName') is-invalid @enderror"
+                                    placeholder="e.g. Red Bridal Lahnga">
+                                @error('editName')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- Category --}}
+                            <div class="col-6">
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <select wire:model="editCategoryId"
+                                    class="form-select @error('editCategoryId') is-invalid @enderror">
+                                    <option value="">Select category...</option>
+                                    @foreach ($categories as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}
+                                            ({{ $cat->code }})</option>
+                                    @endforeach
+                                </select>
+                                @error('editCategoryId')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- Group --}}
+                            <div class="col-6">
+                                <label class="form-label">Stock Group</label>
+                                <select wire:model="editGroupId" class="form-select">
+                                    <option value="">No group</option>
+                                    @foreach ($groups as $group)
+                                        <option value="{{ $group->id }}">
+                                            {{ $group->name }}{{ $group->code ? ' (' . $group->code . ')' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Code --}}
+                            <div class="col-4">
+                                <label class="form-label">Item Code <span class="text-danger">*</span></label>
+                                <input type="text" wire:model="editCode"
+                                    class="form-control @error('editCode') is-invalid @enderror"
+                                    style="text-transform:uppercase; font-family:monospace;">
+                                @error('editCode')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            {{-- Color --}}
+                            <div class="col-4">
+                                <label class="form-label">Color</label>
+                                <input type="text" wire:model="editColor" class="form-control"
+                                    placeholder="e.g. Red, Golden">
+                            </div>
+
+                            {{-- Size --}}
+                            <div class="col-4">
+                                <label class="form-label">Size / Waist</label>
+                                <input type="text" wire:model="editSize" class="form-control"
+                                    placeholder="e.g. 36, Free">
+                            </div>
+
+                            {{-- Prices --}}
+                            @if (in_array($editType, ['rental', 'both']))
+                                <div class="col-4">
+                                    <label class="form-label">Rental Price (Rs.)</label>
+                                    <input type="number" wire:model="editRentalPrice" class="form-control"
+                                        min="0" placeholder="0">
+                                </div>
+                            @endif
+                            @if (in_array($editType, ['sale', 'both', 'service', 'fabric']))
+                                <div class="col-4">
+                                    <label class="form-label">
+                                        {{ $editType === 'fabric' ? 'Price per ' . ($editFabricUnit === 'gaz' ? 'Gaz' : 'Meter') : 'Sale Price' }}
+                                        (Rs.)
+                                    </label>
+                                    <input type="number" wire:model="editSalePrice"
+                                        class="form-control @error('editSalePrice') is-invalid @enderror"
+                                        min="0" placeholder="0">
+                                    @error('editSalePrice')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            @endif
+
+                            {{-- Fabric unit --}}
+                            @if ($editType === 'fabric')
+                                <div class="col-4">
+                                    <label class="form-label">Fabric Unit</label>
+                                    <select wire:model="editFabricUnit" class="form-select">
+                                        <option value="meter">Meter</option>
+                                        <option value="gaz">Gaz (Yard)</option>
+                                    </select>
+                                </div>
+                            @endif
+
+                            {{-- Photo --}}
+                            <div class="col-12">
+                                <label class="form-label">Photo
+                                    <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(optional,
+                                        max 3MB)</span>
+                                </label>
+                                @if ($editExistingPhoto)
+                                    <div class="mb-2 d-flex align-items-center gap-3">
+                                        <img src="{{ Storage::url($editExistingPhoto) }}"
+                                            style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid var(--border);">
+                                        <span style="font-size:12px; color:var(--text-muted);">Current photo</span>
+                                    </div>
+                                @endif
+                                <input type="file" wire:model="editPhoto"
+                                    class="form-control @error('editPhoto') is-invalid @enderror" accept="image/*">
+                                @error('editPhoto')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                @if ($editPhoto)
+                                    <div class="mt-2">
+                                        <img src="{{ $editPhoto->temporaryUrl() }}"
+                                            style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:2px solid var(--gold);">
+                                    </div>
+                                @endif
+                            </div>
+
+                            {{-- Notes --}}
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <textarea wire:model="editNotes" class="form-control" rows="2" placeholder="Any notes..."></textarea>
+                            </div>
+
+                            {{-- Status --}}
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" wire:model="editIsActive"
+                                        id="editActive">
+                                    <label class="form-check-label" for="editActive"
+                                        style="font-size:13px;">Active</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" wire:model.live="editIsAbandoned"
+                                        id="editAbandoned">
+                                    <label class="form-check-label" for="editAbandoned"
+                                        style="font-size:13px; color:#e53e3e;">Mark as Abandoned</label>
+                                </div>
+                            </div>
+
+                            @if ($editIsAbandoned)
+                                <div class="col-12">
+                                    <div
+                                        style="background:#fff5f5; border:1px solid #fed7d7; border-radius:8px; padding:14px;">
+                                        <div
+                                            style="font-size:11px; font-weight:700; color:#c53030; margin-bottom:10px; text-transform:uppercase;">
+                                            Abandoned Details
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-4">
+                                                <label class="form-label">Written-off Value (Rs.)</label>
+                                                <input type="number" wire:model="editAbandonedPrice"
+                                                    class="form-control form-control-sm" placeholder="0"
+                                                    min="0">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label">Date</label>
+                                                <input type="date" wire:model="editAbandonedDate"
+                                                    class="form-control form-control-sm">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label">Reason</label>
+                                                <input type="text" wire:model="editAbandonedNote"
+                                                    class="form-control form-control-sm"
+                                                    placeholder="e.g. torn, lost">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                        </div>
+                    </div>
+                    <div class="modal-footer gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" wire:click="closeEditModal">Cancel</button>
+                        <button class="btn btn-sm btn-primary" wire:click="saveEdit" wire:loading.attr="disabled">
+                            <span wire:loading wire:target="saveEdit">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            Update Stock
+                        </button>
                     </div>
                 </div>
             </div>
