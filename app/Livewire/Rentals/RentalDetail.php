@@ -3,11 +3,14 @@
 namespace App\Livewire\Rentals;
 
 use App\Models\Account;
+use App\Models\Product;
 use App\Models\Rental;
 use App\Models\RentalItem;
 use App\Models\RentalPayment;
 use App\Models\RentalSecurityDeposit;
 use App\Models\RentalTask;
+use App\Models\Sale;
+use App\Models\Transaction;
 use App\Services\AccountService;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
@@ -17,6 +20,13 @@ class RentalDetail extends Component
     public Rental $rental;
 
     public bool $showReturnModal = false;
+
+    // Delete rental
+    public bool $showDeleteConfirm = false;
+
+    public string $deletePassword = '';
+
+    public string $deletePasswordError = '';
 
     public bool $showPickupModal = false;
 
@@ -191,6 +201,78 @@ class RentalDetail extends Component
     {
         $this->rental->update(['status' => 'ready', 'updated_by' => auth()->id()]);
         $this->rental->refresh();
+    }
+
+    public function openDeleteConfirm(): void
+    {
+        $this->deletePassword = '';
+        $this->deletePasswordError = '';
+        $this->showDeleteConfirm = true;
+    }
+
+    public function executeDelete(): void
+    {
+        $this->deletePasswordError = '';
+
+        if (! Hash::check($this->deletePassword, auth()->user()->password)) {
+            $this->deletePasswordError = 'Incorrect password.';
+
+            return;
+        }
+
+        $rental = $this->rental;
+
+        // 1. Reverse account balances for all payments
+        foreach ($rental->payments as $payment) {
+            // Find the transaction linked to this rental payment and reverse it
+            $accountName = $payment->payment_method; // stored as account name string
+            $account = Account::where('name', $accountName)->first();
+            if ($account) {
+                $account->debit($payment->amount); // reverse the credit
+                $account->save();
+            }
+        }
+
+        // 2. Delete all transactions referencing this rental
+        Transaction::where('referenceable_type', Rental::class)
+            ->where('referenceable_id', $rental->id)
+            ->delete();
+
+        // 3. Handle linked sale — restore stock, delete transactions, then delete sale
+        if ($rental->linkedSale) {
+            $linkedSale = $rental->linkedSale;
+
+            foreach ($linkedSale->items as $saleItem) {
+                $product = Product::find($saleItem->product_id);
+                if ($product) {
+                    if ($product->isFabric()) {
+                        $product->increment('stock_decimal', $saleItem->qty);
+                    } else {
+                        $product->increment('stock_qty', (int) $saleItem->qty);
+                    }
+                }
+            }
+
+            Transaction::where('referenceable_type', Sale::class)
+                ->where('referenceable_id', $linkedSale->id)
+                ->delete();
+
+            $linkedSale->items()->delete();
+            $linkedSale->payments()->delete();
+            $linkedSale->delete();
+        }
+
+        // 4. Delete all child records
+        $rental->tasks()->delete();
+        $rental->items()->delete();
+        $rental->securityDeposits()->delete();
+        $rental->payments()->delete();
+
+        // 5. Delete the rental itself
+        $rental->delete();
+
+        session()->flash('success', 'Rental permanently deleted.');
+        $this->redirect(route('rentals.index'));
     }
 
     // ── Payment ───────────────────────────────────────────

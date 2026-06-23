@@ -840,6 +840,12 @@
                         class="btn btn-sm btn-outline-secondary w-100">
                         <i class="bi bi-pencil me-1"></i> Edit Rental
                     </a>
+
+                    @if (auth()->user()->role === 'admin')
+                        <button class="btn btn-sm btn-danger w-100 mt-2" wire:click="openDeleteConfirm">
+                            <i class="bi bi-trash me-1"></i> Delete Rental
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -1096,6 +1102,52 @@
                             <span class="spinner-border spinner-border-sm me-1"></span>
                         </span>
                         Confirm Return
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Delete Rental Modal --}}
+    @if ($showDeleteConfirm)
+        <div class="confirm-modal-overlay">
+            <div class="confirm-modal-box" style="max-width:440px;">
+                <div class="confirm-title">
+                    <i class="bi bi-trash me-2" style="color:#e53e3e;"></i>
+                    Delete Rental Permanently
+                </div>
+                <div class="confirm-subtitle">
+                    <span style="color:#e53e3e; font-weight:600;">This cannot be undone.</span>
+                    The following will be permanently removed:
+                    <ul style="margin:8px 0 0 16px; font-size:12px; color:var(--text-muted); line-height:1.9;">
+                        <li>All rental items & tasks</li>
+                        <li>All payments & account transactions</li>
+                        <li>All security deposits</li>
+                        @if ($rental->linkedSale)
+                            <li>Linked sale #{{ $rental->linkedSale->id }} & its items (stock will be restored)</li>
+                        @endif
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Your Password <span class="text-danger">*</span></label>
+                    <input type="password" wire:model="deletePassword" wire:keydown.enter="executeDelete"
+                        class="form-control" placeholder="Enter your password" autocomplete="new-password">
+                    @if ($deletePasswordError)
+                        <div style="color:#e53e3e; font-size:12px; margin-top:5px;">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            {{ $deletePasswordError }}
+                        </div>
+                    @endif
+                </div>
+                <div class="confirm-actions">
+                    <button class="btn btn-sm btn-outline-secondary" wire:click="$set('showDeleteConfirm', false)">
+                        Cancel
+                    </button>
+                    <button class="btn btn-sm btn-danger" wire:click="executeDelete" wire:loading.attr="disabled">
+                        <span wire:loading wire:target="executeDelete">
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        </span>
+                        Delete Permanently
                     </button>
                 </div>
             </div>

@@ -12,6 +12,7 @@ use App\Models\RentalSecurityDeposit;
 use App\Models\RentalTask;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AccountService;
 use Carbon\Carbon;
