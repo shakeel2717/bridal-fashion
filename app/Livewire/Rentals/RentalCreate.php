@@ -391,14 +391,23 @@ class RentalCreate extends Component
     // ── Step 2: Dates ─────────────────────────────────────
     public function validateStep2(): void
     {
-        $this->validate([
+        $rules = [
             'bookingDate' => 'required|date',
             'pickupDate' => 'required|date',
             'returnDate' => 'required|date|after:pickupDate',
-        ], [
+        ];
+
+        if ($this->billRef !== '') {
+            $rules['billRef'] = $this->isEditMode
+                ? 'nullable|string|max:50|unique:rentals,bill_ref,'.$this->rentalId
+                : 'nullable|string|max:50|unique:rentals,bill_ref';
+        }
+
+        $this->validate($rules, [
             'pickupDate.required' => 'Pickup date is required to check availability.',
             'returnDate.required' => 'Return date is required to check availability.',
             'returnDate.after' => 'Return date must be after pickup date.',
+            'billRef.unique' => 'This Bill Ref is already used in another rental.',
         ]);
     }
 
@@ -594,6 +603,18 @@ class RentalCreate extends Component
                 $walkinCnicBackPath = $this->walkinCnicBack->store('walkin/cnic', 'public');
             }
 
+            if ($this->billRef !== '') {
+                $exists = Rental::where('bill_ref', $this->billRef)
+                    ->where('id', '!=', $this->rentalId)
+                    ->exists();
+                if ($exists) {
+                    $this->addError('billRef', 'This Bill Ref is already used in another rental.');
+                    $this->step = 2;
+
+                    return;
+                }
+            }
+
             $rental->update([
                 'bill_ref' => $this->billRef ?: null,
                 'customer_name' => $this->customerName,
@@ -730,6 +751,16 @@ class RentalCreate extends Component
             }
             if ($this->walkinCnicBack) {
                 $walkinCnicBackPath = $this->walkinCnicBack->store('walkin/cnic', 'public');
+            }
+        }
+
+        if ($this->billRef !== '') {
+            $exists = Rental::where('bill_ref', $this->billRef)->exists();
+            if ($exists) {
+                $this->addError('billRef', 'This Bill Ref is already used in another rental.');
+                $this->step = 2;
+
+                return;
             }
         }
 

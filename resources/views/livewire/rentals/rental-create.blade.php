@@ -343,8 +343,11 @@
 
                         <div class="col-6">
                             <label class="form-label">Bill Book Ref</label>
-                            <input type="text" wire:model="billRef" class="form-control"
-                                placeholder="e.g. B-1042">
+                            <input type="text" wire:model="billRef"
+                                class="form-control @error('billRef') is-invalid @enderror" placeholder="e.g. B-1042">
+                            @error('billRef')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-6">
                             <label class="form-label">Handled By</label>
@@ -774,7 +777,8 @@
                                         </td>
                                         <td>{{ $item['item_name'] }}</td>
                                         <td>
-                                            <input type="number" wire:model.lazy="saleItems.{{ $index }}.qty"
+                                            <input type="number"
+                                                wire:model.lazy="saleItems.{{ $index }}.qty"
                                                 wire:change="recalcSaleItems" class="form-control form-control-sm"
                                                 style="text-align:center;" min="1">
                                         </td>
