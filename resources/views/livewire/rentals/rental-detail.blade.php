@@ -360,7 +360,7 @@
                                 <td style="text-align:center; vertical-align:middle;">
                                     @if ($item->pickup_status === 'pending')
                                         @if ($canPickup && !in_array($rental->status, ['cancelled', 'abandoned']))
-                                            <button class="btn btn-sm btn-outline-success action-btn"
+                                            <button class="btn btn-sm btn-success action-btn"
                                                 wire:click="markItemPickedUp({{ $item->id }})">
                                                 <i class="bi bi-box-arrow-up me-1"></i> Picked Up
                                             </button>
@@ -380,7 +380,7 @@
                                                 by <strong>{{ $item->pickedUpBy->name }}</strong>
                                             </div>
                                         @endif
-                                        <button class="btn btn-sm btn-outline-primary action-btn"
+                                        <button class="btn btn-sm btn-primary action-btn"
                                             wire:click="markItemReturned({{ $item->id }})">
                                             <i class="bi bi-box-arrow-in-down me-1"></i> Returned
                                         </button>
@@ -739,9 +739,10 @@
                                     <div style="color:#e53e3e; font-size:12px; margin-top:4px;">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-12">
+                             <div class="col-12">
                                 <label class="form-label">Note</label>
-                                <input type="text" wire:model="paymentNote" class="form-control form-control-sm"
+                                <input type="text" wire:model="paymentNote" wire:keydown.enter="addPayment"
+                                    class="form-control form-control-sm"
                                     placeholder="e.g. remaining balance on pickup">
                             </div>
                             <div class="col-12 d-flex gap-2">
