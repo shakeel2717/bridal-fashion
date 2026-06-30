@@ -12,9 +12,10 @@ class RentalList extends Component
 
     public string $search = '';
 
-    public string $filterStatus = '';
-
-    public string $filterDate = '';
+    // Single source of truth for all pill/status filters.
+    // One of: '', 'booked', 'ready', 'picked_up', 'partially_picked_up',
+    // 'returned', 'cancelled', 'overdue', 'overpaid', 'late_pickup', 'late_return'
+    public string $activeFilter = '';
 
     public string $dateFrom = '';
 
@@ -29,8 +30,15 @@ class RentalList extends Component
         $this->resetPage();
     }
 
-    public function updatedFilterStatus(): void
+    public function setActiveFilter(string $filter): void
     {
+        $this->activeFilter = $this->activeFilter === $filter ? '' : $filter;
+        $this->resetPage();
+    }
+
+    public function clearFilter(): void
+    {
+        $this->activeFilter = '';
         $this->resetPage();
     }
 
@@ -73,7 +81,10 @@ class RentalList extends Component
 
     public function render()
     {
+        $today = now()->toDateString();
+
         $rentals = Rental::with(['items', 'employee'])
+            ->withSum('payments', 'amount')
             ->when($this->search, function ($q) {
                 $q->where(function ($q) {
                     $q->where('customer_name', 'like', "%{$this->search}%")
@@ -86,9 +97,30 @@ class RentalList extends Component
                         });
                 });
             })
-            ->when($this->filterStatus, fn ($q) => $q->where('status', $this->filterStatus))
             ->when($this->dateFrom, fn ($q) => $q->where('booking_date', '>=', $this->dateFrom))
             ->when($this->dateTo, fn ($q) => $q->where('booking_date', '<=', $this->dateTo))
+            ->when($this->activeFilter === 'overdue', function ($q) use ($today) {
+                $q->whereNotNull('return_date')
+                    ->where('return_date', '<', $today)
+                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
+            })
+            ->when($this->activeFilter === 'overpaid', function ($q) {
+                $q->whereRaw('(select coalesce(sum(amount), 0) from rental_payments where rental_payments.rental_id = rentals.id) > rentals.total_amount');
+            })
+            ->when($this->activeFilter === 'late_pickup', function ($q) use ($today) {
+                $q->whereNotNull('pickup_date')
+                    ->where('pickup_date', '<', $today)
+                    ->whereIn('status', ['booked', 'ready']);
+            })
+            ->when($this->activeFilter === 'late_return', function ($q) use ($today) {
+                $q->whereNotNull('return_date')
+                    ->where('return_date', '<', $today)
+                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
+            })
+            ->when(
+                $this->activeFilter && ! in_array($this->activeFilter, ['overdue', 'overpaid', 'late_pickup', 'late_return']),
+                fn ($q) => $q->where('status', $this->activeFilter)
+            )
             ->latest()
             ->paginate(15);
 
@@ -99,6 +131,15 @@ class RentalList extends Component
             'partially_picked_up' => Rental::where('status', 'partially_picked_up')->count(),
             'returned' => Rental::where('status', 'returned')->count(),
             'overdue' => Rental::overdue()->count(),
+            'overpaid' => Rental::whereRaw('(select coalesce(sum(amount), 0) from rental_payments where rental_payments.rental_id = rentals.id) > rentals.total_amount')->count(),
+            'late_pickup' => Rental::whereNotNull('pickup_date')
+                ->where('pickup_date', '<', $today)
+                ->whereIn('status', ['booked', 'ready'])
+                ->count(),
+            'late_return' => Rental::whereNotNull('return_date')
+                ->where('return_date', '<', $today)
+                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->count(),
         ];
 
         return view('livewire.rentals.rental-list', compact('rentals', 'counts'));
