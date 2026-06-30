@@ -1,4 +1,12 @@
-<div wire:init="$dispatch('focus-step-1')">
+<div id="rental-create-page" wire:init="$dispatch('focus-step-1')">
+    <style>
+        #rental-create-page#rental-create-page .table-card,
+        #rental-create-page#rental-create-page .card,
+        #rental-create-page#rental-create-page .modal-content,
+        #rental-create-page#rental-create-page .product-search-dropdown {
+            background-color: #eaf6fd !important;
+        }
+    </style>
     {{-- Header --}}
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -6,7 +14,6 @@
             <div class="page-subtitle">
                 {{ $isEditMode ? 'Update rental details step by step' : 'Fill in details step by step' }}</div>
         </div>
-        {{-- Back button --}}
         <a href="{{ $isEditMode ? route('rentals.show', $rentalId) : route('rentals.index') }}"
             class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> Back
@@ -62,15 +69,17 @@
                     @if ($customerType === 'existing')
                         <div class="mb-3" style="position:relative;">
                             <label class="form-label">Search Customer</label>
-                            <input type="text" wire:model.live.debounce.400ms="customerSearch"
-                                wire:keyup="searchCustomers" class="form-control"
-                                placeholder="Type name, phone or CNIC...">
+                            <input type="text" id="customer_search_input"
+                                wire:model.live.debounce.400ms="customerSearch" wire:keyup="searchCustomers"
+                                class="form-control" placeholder="Type name, phone or CNIC...">
 
                             @if ($foundCustomers !== null)
                                 <div class="product-search-dropdown">
                                     @forelse($foundCustomers as $c)
-                                        <div class="search-item" wire:click="selectCustomer({{ $c['id'] }})">
-                                            <div class="search-item-code">{{ $c['cnic'] ?? 'No CNIC' }}</div>
+                                        <div class="search-item customer-search-item"
+                                            wire:click="selectCustomer({{ $c['id'] }})"
+                                            data-customer-id="{{ $c['id'] }}">
+                                            <div class="search-item-code">{{ $c['address'] ?? 'No address' }}</div>
                                             <div class="search-item-name">{{ $c['name'] }}</div>
                                             <div class="search-item-category">{{ $c['phone1'] }}</div>
                                         </div>
@@ -151,7 +160,7 @@
                                 <label class="form-label">WhatsApp</label>
                                 <div class="d-flex gap-2">
                                     <input type="text" wire:model="customerWhatsapp" class="form-control"
-                                        placeholder="03XX-XXXXXXX">
+                                        data-step-last="1" placeholder="03XX-XXXXXXX">
                                     <div class="gender-toggle">
                                         <button type="button"
                                             class="gt-btn male {{ $whatsappGender === 'male' ? 'active' : '' }}"
@@ -258,7 +267,7 @@
                         <i class="bi bi-person me-1"></i>
                         Walk-in customers — name & phone only.<br><br>
                         <i class="bi bi-calendar me-1"></i>
-                        You'll set dates on the next step, then we'll check item availability.
+                        Dates are optional — you can set or update pickup/return dates later.
                     </div>
                 </div>
             </div>
@@ -291,9 +300,9 @@
                         </div>
                         <div class="col-4">
                             <label class="form-label">
-                                Pickup Date <span class="text-danger">*</span>
-                                <span style="font-size:10px; color:var(--gold-hover); font-weight:400;">
-                                    (used for availability)
+                                Pickup Date
+                                <span style="font-size:10px; color:var(--text-muted); font-weight:400;">
+                                    (optional — used for availability)
                                 </span>
                             </label>
                             <input type="date" wire:model="pickupDate"
@@ -304,9 +313,9 @@
                         </div>
                         <div class="col-4">
                             <label class="form-label">
-                                Return Date <span class="text-danger">*</span>
-                                <span style="font-size:10px; color:var(--gold-hover); font-weight:400;">
-                                    (used for availability)
+                                Return Date
+                                <span style="font-size:10px; color:var(--text-muted); font-weight:400;">
+                                    (optional — used for availability)
                                 </span>
                             </label>
                             <input type="date" wire:model="returnDate"
@@ -316,7 +325,6 @@
                             @enderror
                         </div>
 
-                        {{-- Replace the stitching date + instructions inputs (col-4 and col-8) with: --}}
                         <div class="col-12">
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="stitchingToggle"
@@ -351,7 +359,7 @@
                         </div>
                         <div class="col-6">
                             <label class="form-label">Handled By</label>
-                            <select wire:model="employeeId" class="form-select">
+                            <select wire:model="employeeId" class="form-select" data-step-last="2">
                                 <option value="">Select employee...</option>
                                 @foreach ($employees as $emp)
                                     <option value="{{ $emp->id }}">{{ $emp->name }}</option>
@@ -397,6 +405,16 @@
                                 Items will be checked for availability in next step.
                             </div>
                         </div>
+                    @else
+                        <div
+                            style="margin-top:16px; background:#fffff0; border:1px solid #f6e05e; border-radius:8px; padding:12px;">
+                            <div style="font-size:11px; font-weight:700; color:#b7791f;">
+                                <i class="bi bi-calendar-x me-1"></i> No dates set yet
+                            </div>
+                            <div style="font-size:11px; color:#b7791f; margin-top:4px;">
+                                You can book now and add dates later from the edit screen.
+                            </div>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -430,6 +448,12 @@
                             Items marked <span style="color:#e53e3e; font-weight:700;">Booked</span> are already
                             reserved.
                         </div>
+                    @else
+                        <div
+                            style="background:#f0f4ff; border:1px solid #a3bffa; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:12px; color:#3c4f9e;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            No pickup/return dates set — availability checking is skipped. You can add dates later.
+                        </div>
                     @endif
 
                     {{-- Search Row: Code + Price --}}
@@ -441,6 +465,8 @@
                                 <label
                                     style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px; display:block;">
                                     Product Code
+                                    <span style="font-weight:400; text-transform:none;">(Enter on empty → next
+                                        step)</span>
                                 </label>
                                 <input type="text" id="rental_product_search" data-rental-input="1"
                                     class="form-control" placeholder="Type exact code e.g. 101..."
@@ -466,12 +492,14 @@
                                                     @endif
                                                     <div class="flex-fill">
                                                         <span class="search-item-code">{{ $result['code'] }}</span>
-                                                        @if (!$result['available'])
-                                                            <span
-                                                                style="font-size:10px; background:#fff5f5; color:#c53030; padding:1px 5px; border-radius:3px; margin-left:4px; font-weight:700;">Booked</span>
-                                                        @else
-                                                            <span
-                                                                style="font-size:10px; background:#f0fff4; color:#276749; padding:1px 5px; border-radius:3px; margin-left:4px; font-weight:700;">Available</span>
+                                                        @if ($pickupDate && $returnDate)
+                                                            @if (!$result['available'])
+                                                                <span
+                                                                    style="font-size:10px; background:#fff5f5; color:#c53030; padding:1px 5px; border-radius:3px; margin-left:4px; font-weight:700;">Booked</span>
+                                                            @else
+                                                                <span
+                                                                    style="font-size:10px; background:#f0fff4; color:#276749; padding:1px 5px; border-radius:3px; margin-left:4px; font-weight:700;">Available</span>
+                                                            @endif
                                                         @endif
                                                         <div class="search-item-name">{{ $result['name'] }}</div>
                                                         <div class="search-item-category">
@@ -548,17 +576,14 @@
                                     @php
                                         $isDoubleBooked = $item['double_booked'] ?? false;
                                         $addonCount = count($item['addons']);
-                                        $totalRows = 1 + $addonCount + 1; // item row + addon rows + "add button" row
+                                        $totalRows = 1 + $addonCount + 1;
                                     @endphp
                                     <tr style="{{ $isDoubleBooked ? 'border-left:3px solid #e53e3e;' : '' }}">
-
-                                        {{-- # --}}
                                         <td rowspan="{{ $totalRows }}"
                                             style="text-align:center; font-weight:700; color:var(--text-muted); vertical-align:middle;">
                                             {{ count($items) - $index }}
                                         </td>
 
-                                        {{-- Photo --}}
                                         <td rowspan="{{ $totalRows }}"
                                             style="vertical-align:middle; padding:6px 4px;">
                                             @if ($item['photo'])
@@ -573,7 +598,6 @@
                                             @endif
                                         </td>
 
-                                        {{-- Code --}}
                                         <td rowspan="{{ $totalRows }}" style="vertical-align:middle;">
                                             <span
                                                 style="font-family:monospace; font-weight:700; font-size:12px;">{{ $item['code'] }}</span>
@@ -585,7 +609,6 @@
                                             @endif
                                         </td>
 
-                                        {{-- Item name (first inner row) --}}
                                         <td style="border-bottom:1px dashed var(--border); padding:8px 8px;">
                                             <div style="font-weight:600; font-size:12px;">{{ $item['name'] }}</div>
                                             <div style="font-size:11px; color:var(--text-muted);">
@@ -599,7 +622,6 @@
                                             </div>
                                         </td>
 
-                                        {{-- Price (item) --}}
                                         <td
                                             style="border-bottom:1px dashed var(--border); padding:8px 6px; vertical-align:middle;">
                                             <input type="number"
@@ -608,7 +630,6 @@
                                                 style="text-align:right;" min="0">
                                         </td>
 
-                                        {{-- Remove --}}
                                         <td rowspan="{{ $totalRows }}"
                                             style="text-align:center; vertical-align:middle;">
                                             <button type="button" wire:click="removeItem({{ $index }})"
@@ -618,7 +639,6 @@
                                         </td>
                                     </tr>
 
-                                    {{-- Addon rows --}}
                                     @foreach ($item['addons'] as $addonIndex => $addon)
                                         <tr style="{{ $isDoubleBooked ? 'border-left:3px solid #e53e3e;' : '' }}">
                                             <td style="padding:4px 8px; border-bottom:1px dashed var(--border);">
@@ -641,7 +661,6 @@
                                         </tr>
                                     @endforeach
 
-                                    {{-- Add addon button row --}}
                                     <tr style="{{ $isDoubleBooked ? 'border-left:3px solid #e53e3e;' : '' }}">
                                         <td colspan="2" style="padding:5px 8px;">
                                             <button type="button" wire:click="addAddon({{ $index }})"
@@ -695,7 +714,6 @@
                         </div>
                     </div>
 
-                    {{-- Sale Product Search Row --}}
                     <div
                         style="background:#f0f4ff; border:1.5px solid #a3bffa; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
                         <div style="display:grid; grid-template-columns:1fr 80px 120px; gap:8px; align-items:end;">
@@ -753,7 +771,6 @@
                         </div>
                     </div>
 
-                    {{-- Sale Items Table --}}
                     @if (count($saleItems) > 0)
                         <table class="table mb-0" style="font-size:12px;">
                             <thead>
@@ -842,6 +859,71 @@
                         </div>
                     @endif
                 </div>
+
+                {{-- ── Security Deposits (optional) ── --}}
+                <div style="border-top:2px solid var(--border); margin-top:24px; padding-top:20px;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <div style="font-size:12px; font-weight:700; color:var(--navy); text-transform:uppercase;">
+                                <i class="bi bi-shield-check me-1"></i> Security Deposits
+                                <span
+                                    style="font-size:10px; font-weight:400; color:var(--text-muted); text-transform:none; margin-left:6px;">(optional)</span>
+                            </div>
+                        </div>
+                        <button type="button" wire:click="addSecurityDeposit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus me-1"></i> Add Deposit
+                        </button>
+                    </div>
+
+                    @if (count($securityDeposits) > 0)
+                        <table class="table mb-0" style="font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px; text-align:center;">#</th>
+                                    <th>Item / Reason</th>
+                                    <th style="width:130px; text-align:right;">Amount (Rs.)</th>
+                                    <th style="width:90px; text-align:center;">Paid?</th>
+                                    <th style="width:36px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($securityDeposits as $index => $deposit)
+                                    <tr>
+                                        <td style="text-align:center; font-weight:700; color:var(--text-muted);">
+                                            {{ $index + 1 }}</td>
+                                        <td>
+                                            <input type="text"
+                                                wire:model="securityDeposits.{{ $index }}.item_name"
+                                                class="form-control form-control-sm"
+                                                placeholder="e.g. Original CNIC, Mobile">
+                                        </td>
+                                        <td>
+                                            <input type="number"
+                                                wire:model="securityDeposits.{{ $index }}.amount"
+                                                class="form-control form-control-sm" style="text-align:right;"
+                                                min="0" placeholder="0">
+                                        </td>
+                                        <td style="text-align:center;">
+                                            <input type="checkbox" class="form-check-input"
+                                                wire:model="securityDeposits.{{ $index }}.is_paid">
+                                        </td>
+                                        <td style="text-align:center;">
+                                            <button type="button"
+                                                wire:click="removeSecurityDeposit({{ $index }})"
+                                                style="background:none; border:none; color:#fc8181; font-size:18px; cursor:pointer; padding:0;">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <div style="font-size:12px; color:var(--text-muted); padding:8px 0;">
+                            No security deposits added — e.g. original CNIC held, advance against accessories.
+                        </div>
+                    @endif
+                </div>
             </div>
 
             {{-- Summary --}}
@@ -858,15 +940,14 @@
                     <div class="summary-row">
                         <span class="s-label">Pickup</span>
                         <span
-                            class="s-value">{{ $pickupDate ? \Carbon\Carbon::parse($pickupDate)->format('d/m/Y') : '—' }}</span>
+                            class="s-value">{{ $pickupDate ? \Carbon\Carbon::parse($pickupDate)->format('d/m/Y') : 'Not set' }}</span>
                     </div>
                     <div class="summary-row">
                         <span class="s-label">Return</span>
                         <span
-                            class="s-value">{{ $returnDate ? \Carbon\Carbon::parse($returnDate)->format('d/m/Y') : '—' }}</span>
+                            class="s-value">{{ $returnDate ? \Carbon\Carbon::parse($returnDate)->format('d/m/Y') : 'Not set' }}</span>
                     </div>
 
-                    {{-- Rental items --}}
                     <div
                         style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
                         Rental Items ({{ count($items) }})
@@ -884,7 +965,6 @@
                         <span class="s-value">Rs. {{ number_format((float) $totalAmount, 0) }}</span>
                     </div>
 
-                    {{-- Sale items (if any) --}}
                     @if (count($saleItems) > 0)
                         <div
                             style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
@@ -911,7 +991,18 @@
                         </div>
                     @endif
 
-                    {{-- Grand Total --}}
+                    @if (count($securityDeposits) > 0)
+                        <div
+                            style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
+                            Security Deposits
+                        </div>
+                        <div class="summary-row">
+                            <span class="s-label">Total</span>
+                            <span class="s-value">Rs.
+                                {{ number_format(collect($securityDeposits)->sum(fn($d) => (float) ($d['amount'] ?? 0)), 0) }}</span>
+                        </div>
+                    @endif
+
                     <div class="summary-row total-row" style="margin-top:8px;">
                         <span class="s-label">Grand Total</span>
                         <span class="s-value gold">
@@ -947,7 +1038,6 @@
                         style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px;">
                         <i class="bi bi-cash me-1"></i> Payment Details
                     </div>
-                    {{-- Replace the row g-3 inside the payment card with: --}}
                     <div class="row g-3">
                         <div class="col-4">
                             <label class="form-label">Advance Paid (Rs.)</label>
@@ -1047,13 +1137,14 @@
                 </div>
             </div>
 
-            {{-- Final Summary --}}
+            {{-- Final Summary — redesigned: Dates → Rental → Sale → Grand Total → Submit --}}
             <div class="col-4">
-                {{-- Final Summary --}}
+
+                {{-- Box 1: Dates & Customer --}}
                 <div class="rental-summary-box mb-3">
                     <div
                         style="font-size:11px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px;">
-                        Final Summary
+                        <i class="bi bi-calendar3 me-1"></i> Dates & Customer
                     </div>
                     <div class="summary-row">
                         <span class="s-label">Customer</span>
@@ -1064,20 +1155,27 @@
                         <span class="s-value">{{ $customerPhone1 }}</span>
                     </div>
                     <div class="summary-row">
+                        <span class="s-label">Booking</span>
+                        <span
+                            class="s-value">{{ $bookingDate ? \Carbon\Carbon::parse($bookingDate)->format('d/m/Y') : '—' }}</span>
+                    </div>
+                    <div class="summary-row">
                         <span class="s-label">Pickup</span>
                         <span
-                            class="s-value">{{ $pickupDate ? \Carbon\Carbon::parse($pickupDate)->format('d/m/Y') : '—' }}</span>
+                            class="s-value">{{ $pickupDate ? \Carbon\Carbon::parse($pickupDate)->format('d/m/Y') : 'Not set' }}</span>
                     </div>
                     <div class="summary-row">
                         <span class="s-label">Return</span>
                         <span
-                            class="s-value">{{ $returnDate ? \Carbon\Carbon::parse($returnDate)->format('d/m/Y') : '—' }}</span>
+                            class="s-value">{{ $returnDate ? \Carbon\Carbon::parse($returnDate)->format('d/m/Y') : 'Not set' }}</span>
                     </div>
+                </div>
 
-                    {{-- Rental --}}
+                {{-- Box 2: Rental --}}
+                <div class="rental-summary-box mb-3">
                     <div
-                        style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
-                        Rental ({{ count($items) }} items)
+                        style="font-size:11px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px;">
+                        <i class="bi bi-bag-check me-1"></i> Rental ({{ count($items) }} items)
                     </div>
                     <div class="summary-row">
                         <span class="s-label">Subtotal</span>
@@ -1106,12 +1204,14 @@
                             Rs. {{ number_format(max(0, (float) $totalAmount - (float) $advancePaid), 0) }}
                         </span>
                     </div>
+                </div>
 
-                    {{-- Sale (if any) --}}
-                    @if (count($saleItems) > 0)
+                {{-- Box 3: Linked Sale (only if exists) --}}
+                @if (count($saleItems) > 0)
+                    <div class="rental-summary-box mb-3">
                         <div
-                            style="font-size:10px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin:10px 0 6px;">
-                            Linked Sale ({{ count($saleItems) }} items)
+                            style="font-size:11px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px;">
+                            <i class="bi bi-cart-check me-1"></i> Linked Sale ({{ count($saleItems) }} items)
                         </div>
                         @foreach ($saleItems as $item)
                             <div class="summary-row" style="font-size:11px;">
@@ -1127,28 +1227,29 @@
                                     {{ number_format((float) $saleDiscount, 0) }}</span>
                             </div>
                         @endif
-                        <div class="summary-row">
+                        <div class="summary-row"
+                            style="border-top:1px solid rgba(255,255,255,0.1); padding-top:6px; margin-top:4px;">
                             <span class="s-label">Sale Total</span>
                             <span class="s-value">Rs. {{ number_format($this->getSaleTotalProperty(), 0) }}</span>
                         </div>
-                    @endif
+                        <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:8px;">
+                            <i class="bi bi-info-circle me-1"></i> Sale recorded separately — payment managed in
+                            Sales module.
+                        </div>
+                    </div>
+                @endif
 
-                    {{-- Grand Total --}}
-                    <div class="summary-row total-row" style="margin-top:8px;">
+                {{-- Box 4: Subtotal / Grand Total --}}
+                <div class="rental-summary-box mb-3">
+                    <div class="summary-row total-row">
                         <span class="s-label">Grand Total</span>
                         <span class="s-value gold">
                             Rs. {{ number_format((float) $totalAmount + $this->getSaleTotalProperty(), 0) }}
                         </span>
                     </div>
-
-                    @if (count($saleItems) > 0)
-                        <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:8px;">
-                            <i class="bi bi-info-circle me-1"></i> Sale recorded separately — payment managed in Sales
-                            module.
-                        </div>
-                    @endif
                 </div>
 
+                {{-- Submit --}}
                 <button class="btn btn-primary w-100" style="height:46px; font-size:14px; font-weight:700;"
                     wire:click="save" wire:loading.attr="disabled">
                     <span wire:loading wire:target="save">
@@ -1170,25 +1271,24 @@
     <script>
         document.addEventListener('livewire:initialized', function() {
 
-            // Step 1 — focus Full Name on load
             Livewire.on('focus-step-1', () => {
                 setTimeout(() => {
                     const el = document.querySelector(
                         'input[wire\\:model\\.live="customerName"], input[wire\\:model="customerName"]'
                     );
                     if (el) el.focus();
+                    setupStepEnterNav();
                 }, 150);
             });
 
-            // Step 2 — focus Booking Date
             Livewire.on('focus-step-2', () => {
                 setTimeout(() => {
                     const el = document.querySelector('input[wire\\:model="bookingDate"]');
                     if (el) el.focus();
+                    setupStepEnterNav();
                 }, 150);
             });
 
-            // Step 3 — focus Product Code search
             Livewire.on('step-changed-to-3', () => {
                 setTimeout(() => {
                     setupRentalSearch();
@@ -1197,7 +1297,6 @@
                 }, 150);
             });
 
-            // Step 4 — focus Advance Paid
             Livewire.on('focus-step-4', () => {
                 setTimeout(() => {
                     const el = document.querySelector('input[wire\\:model\\.lazy="advancePaid"]');
@@ -1245,13 +1344,67 @@
                     }
                 }, 100);
             });
+
+            setupStepEnterNav();
         });
 
         document.addEventListener('livewire:updated', () => {
             if (document.getElementById('rental_product_search')) {
                 setupRentalSearch();
             }
+            setupStepEnterNav();
         });
+
+        // ── Item 1: Enter-on-last-input-of-step → nextStep (delegated, survives DOM morph) ──
+        function setupStepEnterNav() {
+            if (document._stepEnterBound) return;
+            document._stepEnterBound = true;
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key !== 'Enter') return;
+
+                // Step 1 / Step 2 "last input" → next step
+                if (e.target.closest('[data-step-last]')) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    e.stopPropagation();
+                    @this.call('nextStep');
+                    return;
+                }
+
+                // Customer search → select first match, then go to step 2
+                if (e.target.id === 'customer_search_input') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    e.stopPropagation();
+
+                    const val = e.target.value ?? '';
+                    if (val.trim() === '') return;
+
+                    const trySelect = (attempts) => {
+                        const dd = document.querySelector('.customer-search-item')?.closest(
+                            '.product-search-dropdown');
+                        const items = dd ? Array.from(dd.querySelectorAll('.customer-search-item')) : [];
+                        if (items.length > 0) {
+                            const id = items[0].dataset.customerId;
+                            if (id) {
+                                @this.call('selectCustomer', parseInt(id)).then(() => {
+                                    @this.call('nextStep');
+                                });
+                            }
+                        } else if (attempts > 0) {
+                            setTimeout(() => trySelect(attempts - 1), 80);
+                        }
+                    };
+
+                    @this.set('customerSearch', val).then(() => {
+                        @this.call('searchCustomers').then(() => {
+                            trySelect(5);
+                        });
+                    });
+                }
+            }, true);
+        }
 
         let _saleHighlight = -1;
 
@@ -1302,7 +1455,14 @@
                 e.stopPropagation();
 
                 const searchEl = document.getElementById('rental_product_search');
-                const currentVal = searchEl?.value;
+                const currentVal = searchEl?.value ?? '';
+
+                // Item 1: empty Product Code + Enter → go to next step
+                if (currentVal.trim() === '') {
+                    @this.call('nextStep');
+                    return;
+                }
+
                 clearTimeout(rentalSearchTimer);
 
                 const trySelect = (attempts) => {
@@ -1385,7 +1545,6 @@
                 priceInput.addEventListener('keydown', rentalPriceKeydown, true);
             }
 
-            // ── Sale product search ────────────────────────────────
             const saleSearchInput = document.getElementById('sale_product_search');
             const saleQtyInput = document.getElementById('sale_new_qty');
             const salePriceInput = document.getElementById('sale_new_price');

@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AccountService;
 use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -139,8 +140,8 @@ class RentalCreate extends Component
     public function mount(?Rental $rental = null): void
     {
         $this->bookingDate = now()->format('Y-m-d');
-        $this->pickupDate = now()->addDays(2)->format('Y-m-d');
-        $this->returnDate = now()->addDays(5)->format('Y-m-d');
+        $this->pickupDate = '';
+        $this->returnDate = '';
         $defaultAccount = Account::where('is_default', true)->first()
             ?? Account::where('is_active', true)->first();
         $this->advanceAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
@@ -168,8 +169,8 @@ class RentalCreate extends Component
 
             $this->billRef = $rental->bill_ref ?? '';
             $this->bookingDate = Carbon::parse($rental->booking_date)->format('Y-m-d');
-            $this->pickupDate = Carbon::parse($rental->pickup_date)->format('Y-m-d');
-            $this->returnDate = Carbon::parse($rental->return_date)->format('Y-m-d');
+            $this->pickupDate = $rental->pickup_date ? Carbon::parse($rental->pickup_date)->format('Y-m-d') : '';
+            $this->returnDate = $rental->return_date ? Carbon::parse($rental->return_date)->format('Y-m-d') : '';
             $this->employeeId = (string) ($rental->employee_id ?? auth()->id());
             $this->notes = $rental->notes ?? '';
 
@@ -346,7 +347,7 @@ class RentalCreate extends Component
                     ->orWhere('cnic', 'like', "%{$this->customerSearch}%");
             })
             ->limit(6)
-            ->get(['id', 'name', 'phone1', 'cnic', 'city'])
+            ->get(['id', 'name', 'phone1', 'cnic', 'city', 'address'])
             ->toArray();
     }
 
@@ -360,7 +361,6 @@ class RentalCreate extends Component
         $this->customerWhatsapp = $customer->whatsapp ?? '';
         $this->customerCity = $customer->city ?? '';
         $this->customerCnic = $customer->cnic ?? '';
-        $this->city = $customer->city ?? '';
         $this->deliveryAddress = $customer->address ?? '';
         $this->customerSearch = $customer->name;
         $this->foundCustomers = null;
@@ -385,7 +385,6 @@ class RentalCreate extends Component
         $this->validate($rules, [
             'customerName.required' => 'Customer name is required.',
             'customerPhone1.required' => 'Phone number is required.',
-            'customerCnic.nullable' => 'CNIC is required for rental customers.',
         ]);
     }
 
@@ -394,8 +393,8 @@ class RentalCreate extends Component
     {
         $rules = [
             'bookingDate' => 'required|date',
-            'pickupDate' => 'required|date',
-            'returnDate' => 'required|date|after:pickupDate',
+            'pickupDate' => 'nullable|date',
+            'returnDate' => 'nullable|date',
         ];
 
         if ($this->billRef !== '') {
@@ -405,11 +404,14 @@ class RentalCreate extends Component
         }
 
         $this->validate($rules, [
-            'pickupDate.required' => 'Pickup date is required to check availability.',
-            'returnDate.required' => 'Return date is required to check availability.',
-            'returnDate.after' => 'Return date must be after pickup date.',
             'billRef.unique' => 'This Bill Ref is already used in another rental.',
         ]);
+
+        if ($this->pickupDate && $this->returnDate && $this->returnDate <= $this->pickupDate) {
+            throw ValidationException::withMessages([
+                'returnDate' => 'Return date must be after pickup date.',
+            ]);
+        }
     }
 
     public function selectProductForPrice(int $productId): void
@@ -431,10 +433,13 @@ class RentalCreate extends Component
             return;
         }
 
-        $isBooked = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-            ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
-            ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate])
-        )->where('product_id', $this->pendingProductId)->exists();
+        $isBooked = false;
+        if ($this->pickupDate && $this->returnDate) {
+            $isBooked = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
+                ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate])
+            )->where('product_id', $this->pendingProductId)->exists();
+        }
 
         $product = Product::with('category')->findOrFail($this->pendingProductId);
 
@@ -473,11 +478,16 @@ class RentalCreate extends Component
             return;
         }
 
+        $hasDates = $this->pickupDate && $this->returnDate;
+
         $alreadyAdded = collect($this->items)->pluck('product_id')->toArray();
-        $bookedProductIds = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-            ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
-            ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate])
-        )->pluck('product_id')->toArray();
+        $bookedProductIds = [];
+        if ($hasDates) {
+            $bookedProductIds = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
+                ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate])
+            )->pluck('product_id')->toArray();
+        }
 
         $this->searchResults = Product::with('category')
             ->where('is_active', true)
@@ -495,41 +505,12 @@ class RentalCreate extends Component
                 'color' => $p->color,
                 'photo' => $p->photo,
                 'category' => $p->category->name ?? '',
-                'available' => ! in_array($p->id, $bookedProductIds),
+                'available' => $hasDates ? ! in_array($p->id, $bookedProductIds) : true,
             ])
             ->sortByDesc('available')
             ->values()
             ->toArray();
     }
-
-    // public function addItem(int $productId): void
-    // {
-    //     $isBooked = RentalItem::whereHas('rental', function ($q) {
-    //         $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-    //             ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
-    //             ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate]);
-    //     })->where('product_id', $productId)->exists();
-
-    //     $product = Product::with('category')->findOrFail($productId);
-
-    //     $this->items[] = [
-    //         'product_id' => $product->id,
-    //         'code' => $product->code,
-    //         'name' => $product->name,
-    //         'category' => $product->category->name ?? '',
-    //         'size' => $product->size ?? '',
-    //         'color' => $product->color ?? '',
-    //         'photo' => $product->photo,
-    //         'rental_price' => (string) $product->rental_price,
-    //         'note' => '',
-    //         'addons' => [],
-    //         'double_booked' => $isBooked, // flag for warning display
-    //     ];
-
-    //     $this->productSearch = '';
-    //     $this->searchResults = [];
-    //     $this->recalcTotal();
-    // }
 
     public function removeItem(int $index): void
     {
@@ -629,8 +610,8 @@ class RentalCreate extends Component
                 'phone2_gender' => $this->phone2Gender,
                 'whatsapp_gender' => $this->whatsappGender,
                 'booking_date' => Carbon::parse($this->bookingDate)->toDateString(),
-                'pickup_date' => Carbon::parse($this->pickupDate)->toDateString(),
-                'return_date' => Carbon::parse($this->returnDate)->toDateString(),
+                'pickup_date' => $this->pickupDate ? Carbon::parse($this->pickupDate)->toDateString() : null,
+                'return_date' => $this->returnDate ? Carbon::parse($this->returnDate)->toDateString() : null,
                 'stitching_date' => $this->stitchingDate ? Carbon::parse($this->stitchingDate)->toDateString() : null,
                 'stitching_instructions' => $this->stitchingInstructions ?: null,
                 'total_amount' => $total,
@@ -782,8 +763,8 @@ class RentalCreate extends Component
             'discount_amount' => (float) $this->discountAmount,
             'whatsapp_gender' => $this->whatsappGender,
             'booking_date' => Carbon::parse($this->bookingDate)->toDateString(),
-            'pickup_date' => Carbon::parse($this->pickupDate)->toDateString(),
-            'return_date' => Carbon::parse($this->returnDate)->toDateString(),
+            'pickup_date' => $this->pickupDate ? Carbon::parse($this->pickupDate)->toDateString() : null,
+            'return_date' => $this->returnDate ? Carbon::parse($this->returnDate)->toDateString() : null,
             'stitching_date' => $this->stitchingDate ? Carbon::parse($this->stitchingDate)->toDateString() : null,
             'stitching_instructions' => $this->stitchingInstructions ?: null,
             'status' => 'booked',
@@ -948,46 +929,13 @@ class RentalCreate extends Component
 
     public function searchSaleProducts(): void
     {
-        \Log::info('[SALE SEARCH] searchSaleProducts called', [
-            'query' => $this->saleProductSearch,
-            'length' => strlen($this->saleProductSearch),
-        ]);
-
         if (strlen($this->saleProductSearch) < 2) {
             $this->saleSearchResults = [];
-            \Log::info('[SALE SEARCH] Query too short, cleared results');
 
             return;
         }
 
         $alreadyAdded = collect($this->saleItems)->pluck('product_id')->filter()->toArray();
-
-        // Debug: check what products exist at all
-        $totalProducts = Product::count();
-        $saleProducts = Product::whereIn('type', ['sale', 'both'])->count();
-        $activeProducts = Product::whereIn('type', ['sale', 'both'])->where('is_active', true)->count();
-        $withStock = Product::whereIn('type', ['sale', 'both'])->where('is_active', true)->where('stock_qty', '>', 0)->count();
-
-        \Log::info('[SALE SEARCH] Product counts', [
-            'total' => $totalProducts,
-            'sale_type' => $saleProducts,
-            'active_sale_type' => $activeProducts,
-            'with_stock' => $withStock,
-        ]);
-
-        // Debug: search without stock filter
-        $withoutStockFilter = Product::whereIn('type', ['sale', 'both'])
-            ->where('is_active', true)
-            ->where(function ($q) {
-                $q->where('code', $this->saleProductSearch)
-                    ->orWhere('name', 'like', "%{$this->saleProductSearch}%");
-            })
-            ->get(['id', 'code', 'name', 'type', 'stock_qty', 'is_active', 'is_abandoned']);
-
-        \Log::info('[SALE SEARCH] Without stock filter', [
-            'count' => $withoutStockFilter->count(),
-            'items' => $withoutStockFilter->toArray(),
-        ]);
 
         $this->saleSearchResults = Product::with('category')
             ->where('is_active', true)
@@ -1010,8 +958,6 @@ class RentalCreate extends Component
                 'category' => $p->category->name ?? '',
             ])
             ->toArray();
-
-        \Log::info('[SALE SEARCH] Results count:', ['count' => count($this->saleSearchResults)]);
     }
 
     public function selectSaleProduct(int $productId): void
