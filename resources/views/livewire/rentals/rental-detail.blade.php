@@ -405,6 +405,31 @@
                                             </div>
                                         @endif
                                     @endif
+
+                                    @if ($item->pickup_status !== 'pending')
+                                        @php $fineTask = $item->tasks->firstWhere('type', 'fine'); @endphp
+                                        <div
+                                            style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
+                                            @if ($fineTask)
+                                                <div
+                                                    style="font-size:11px; font-weight:700; color:#c53030; margin-bottom:4px;">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                    Fine: Rs. {{ number_format($fineTask->cost, 0) }}
+                                                </div>
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-danger action-btn"
+                                                    wire:click="openFineModal({{ $item->id }})">
+                                                    <i class="bi bi-pencil me-1"></i> Edit Fine
+                                                </button>
+                                            @else
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-danger action-btn"
+                                                    wire:click="openFineModal({{ $item->id }})">
+                                                    <i class="bi bi-exclamation-triangle me-1"></i> Fine
+                                                </button>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -631,7 +656,17 @@
                     <span class="s-label">Total Amount</span>
                     <span class="s-value">Rs. {{ number_format($rental->total_amount, 0) }}</span>
                 </div>
-                <div class="summary-row">
+                @if ($totalFines > 0)
+                    <div class="summary-row">
+                        <span class="s-label" style="color:#fc8181;">Fine (Jurmana)</span>
+                        <span class="s-value" style="color:#fc8181;">+ Rs. {{ number_format($totalFines, 0) }}</span>
+                    </div>
+                    <div class="summary-row" style="border-top:1px solid rgba(255,255,255,0.1); padding-top:6px;">
+                        <span class="s-label">Grand Total</span>
+                        <span class="s-value">Rs. {{ number_format($grandTotal, 0) }}</span>
+                    </div>
+                @endif
+                <div class="summary-row" style="margin-top:6px;">
                     <span class="s-label">Total Paid</span>
                     <span class="s-value">Rs. {{ number_format($totalPaid, 0) }}</span>
                 </div>
@@ -650,11 +685,17 @@
                     <span class="s-value {{ $remaining > 0 ? 'gold' : '' }}"
                         style="{{ $remaining <= 0 ? 'color:#68d391;' : '' }}">
                         Rs. {{ number_format($remaining, 0) }}
-                        @if ($remaining <= 0)
+                        @if ($remaining <= 0 && $overpaid <= 0)
                             <span style="font-size:10px; font-weight:400; margin-left:4px;">✓ Paid</span>
                         @endif
                     </span>
                 </div>
+                @if ($overpaid > 0)
+                    <div class="summary-row">
+                        <span class="s-label" style="color:#68d391;">Overpaid</span>
+                        <span class="s-value" style="color:#68d391;">Rs. {{ number_format($overpaid, 0) }}</span>
+                    </div>
+                @endif
                 @if ($rental->refund_amount > 0)
                     <div class="summary-row" style="margin-top:6px;">
                         <span class="s-label" style="color:#fc8181;">Refunded</span>
@@ -698,8 +739,7 @@
                         <i class="bi bi-cash me-1"></i> Payments
                     </div>
                     @if (!in_array($rental->status, ['cancelled', 'abandoned']))
-                        <button class="btn btn-sm btn-outline-success action-btn"
-                            wire:click="$set('showPaymentForm', true)">
+                        <button class="btn btn-sm btn-outline-success action-btn" wire:click="openPaymentForm">
                             <i class="bi bi-plus me-1"></i> Add Payment
                         </button>
                     @endif
@@ -711,7 +751,7 @@
                         <div class="row g-2">
                             <div class="col-6">
                                 <label class="form-label">Amount (Rs.) <span class="text-danger">*</span></label>
-                                <input type="number" wire:model="paymentAmount"
+                                <input type="number" id="payment_amount_input" wire:model="paymentAmount"
                                     class="form-control form-control-sm @error('paymentAmount') is-invalid @enderror"
                                     placeholder="{{ $remaining }}" min="1">
                                 @error('paymentAmount')
@@ -739,7 +779,7 @@
                                     <div style="color:#e53e3e; font-size:12px; margin-top:4px;">{{ $message }}</div>
                                 @enderror
                             </div>
-                             <div class="col-12">
+                            <div class="col-12">
                                 <label class="form-label">Note</label>
                                 <input type="text" wire:model="paymentNote" wire:keydown.enter="addPayment"
                                     class="form-control form-control-sm"
@@ -900,258 +940,345 @@
             @endif
 
         </div>
-    </div>
 
-    {{-- Pickup Modal --}}
-    @if ($showPickupModal)
-        <div class="confirm-modal-overlay">
-            <div class="confirm-modal-box" style="max-width:420px;">
-                <div class="confirm-title">
-                    <i class="bi bi-box-arrow-up me-2" style="color:#276749;"></i>
-                    Mark Item as Picked Up
-                </div>
-                <div class="confirm-subtitle">
-                    Select the employee who gave this item to the customer.
-                </div>
-                <div class="mb-4">
-                    <label class="form-label">Given By <span class="text-danger">*</span></label>
-                    <select wire:model="pickupGivenBy"
-                        class="form-select @error('pickupGivenBy') is-invalid @enderror">
-                        <option value="">Select employee...</option>
-                        @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
-                            <option value="{{ $emp->id }}">{{ $emp->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('pickupGivenBy')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-                <div class="confirm-actions">
-                    <button class="btn btn-sm btn-outline-secondary"
-                        wire:click="$set('showPickupModal', false)">Cancel</button>
-                    <button class="btn btn-sm btn-success" wire:click="confirmItemPickedUp"
-                        wire:loading.attr="disabled">
-                        <span wire:loading wire:target="confirmItemPickedUp">
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        </span>
-                        Confirm Pickup
-                    </button>
+        {{-- Fine Modal --}}
+        @if ($showFineModal)
+            <div class="confirm-modal-overlay">
+                <div class="confirm-modal-box" style="max-width:420px;">
+                    <div class="confirm-title">
+                        <i class="bi bi-exclamation-triangle me-2" style="color:#c53030;"></i>
+                        {{ $fineTaskId ? 'Edit Fine (Jurmana)' : 'Add Fine (Jurmana)' }}
+                    </div>
+                    <div class="confirm-subtitle">
+                        Record a penalty amount, e.g. for late return. Tracked separately from rental payments and
+                        credited directly to the selected account.
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Fine Amount (Rs.) <span class="text-danger">*</span></label>
+                            <input type="number" id="fine_amount_input" wire:model="fineAmount"
+                                class="form-control @error('fineAmount') is-invalid @enderror" min="1">
+                            @error('fineAmount')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Receive Into Account <span class="text-danger">*</span></label>
+                            <select wire:model="fineAccountId"
+                                class="form-select @error('fineAccountId') is-invalid @enderror">
+                                <option value="">Select account...</option>
+                                @foreach ($accounts as $acc)
+                                    <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('fineAccountId')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reason / Note</label>
+                            <input type="text" wire:model="fineNote" wire:keydown.enter="saveFine"
+                                class="form-control" placeholder="e.g. Returned 6 days late">
+                        </div>
+                    </div>
+
+                    <div class="confirm-actions">
+                        <button class="btn btn-sm btn-outline-secondary"
+                            wire:click="$set('showFineModal', false)">Cancel</button>
+                        <button class="btn btn-sm btn-danger" wire:click="saveFine" wire:loading.attr="disabled">
+                            <span wire:loading wire:target="saveFine">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            Save Fine
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    @endif
+        @endif
 
-    {{-- Cancel with Hold Form --}}
-    @if ($showCancelHoldForm)
-        <div class="confirm-modal-overlay">
-            <div class="confirm-modal-box" style="max-width:480px;">
-                <div class="confirm-title">
-                    <i class="bi bi-cash-coin me-2" style="color:#b7791f;"></i>
-                    Cancellation — Hold Amount
-                </div>
-                <div class="confirm-subtitle">
-                    Before cancelling, record any amount you are holding from this customer
-                    (e.g. dry clean cost, stitching already done, preparation expenses).
-                    This is optional — leave blank if nothing to hold.
-                </div>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-5">
-                        <label class="form-label">
-                            Hold Amount (Rs.)
-                            <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
-                        </label>
-                        <input type="number" wire:model="holdAmount"
-                            class="form-control @error('holdAmount') is-invalid @enderror" placeholder="e.g. 500"
-                            min="0">
-                        @error('holdAmount')
+        {{-- Pickup Modal --}}
+        @if ($showPickupModal)
+            <div class="confirm-modal-overlay">
+                <div class="confirm-modal-box" style="max-width:420px;">
+                    <div class="confirm-title">
+                        <i class="bi bi-box-arrow-up me-2" style="color:#276749;"></i>
+                        Mark Item as Picked Up
+                    </div>
+                    <div class="confirm-subtitle">
+                        Select the employee who gave this item to the customer.
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Given By <span class="text-danger">*</span></label>
+                        <select wire:model="pickupGivenBy"
+                            class="form-select @error('pickupGivenBy') is-invalid @enderror">
+                            <option value="">Select employee...</option>
+                            @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
+                                <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('pickupGivenBy')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-7">
-                        <label class="form-label">
-                            Description
-                            <span style="font-weight:400; color:var(--text-muted);">(what is this for)</span>
-                        </label>
-                        <input type="text" wire:model="holdNote" class="form-control"
-                            placeholder="e.g. Dry clean done, Stitching completed">
+                    <div class="confirm-actions">
+                        <button class="btn btn-sm btn-outline-secondary"
+                            wire:click="$set('showPickupModal', false)">Cancel</button>
+                        <button class="btn btn-sm btn-success" wire:click="confirmItemPickedUp"
+                            wire:loading.attr="disabled">
+                            <span wire:loading wire:target="confirmItemPickedUp">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            Confirm Pickup
+                        </button>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label">
-                            Customer Reason for Cancel
-                            <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
-                        </label>
-                        <input type="text" wire:model="holdReason" class="form-control"
-                            placeholder="e.g. Changed mind, Found cheaper elsewhere">
-                    </div>
-                </div>
-
-                {{-- Preview --}}
-                @if (!empty($holdAmount) && (float) $holdAmount > 0)
-                    <div
-                        style="background:#fffff0; border:1px solid #f6e05e; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:12px; color:#b7791f;">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Rs. <strong>{{ number_format((float) $holdAmount, 0) }}</strong> will be recorded as company
-                        hold
-                        @if (!empty($holdNote))
-                            for "{{ $holdNote }}"
-                        @endif.
-                        This will appear in the rental history.
-                    </div>
-                @endif
-
-                <div class="confirm-actions">
-                    <button class="btn btn-sm btn-outline-secondary" wire:click="skipHoldAndCancel">
-                        Skip & Cancel
-                    </button>
-                    <button class="btn btn-sm btn-warning" wire:click="processCancelWithHold"
-                        wire:loading.attr="disabled" style="color:#fff;">
-                        <span wire:loading wire:target="processCancelWithHold">
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        </span>
-                        @if (!empty($holdAmount) && (float) $holdAmount > 0)
-                            Hold Rs. {{ number_format((float) $holdAmount, 0) }} & Cancel
-                        @else
-                            Confirm Cancel
-                        @endif
-                    </button>
                 </div>
             </div>
-        </div>
-    @endif
-    {{-- Password Confirm Modal --}}
-    @if ($showCancelConfirm)
-        <div class="confirm-modal-overlay">
-            <div class="confirm-modal-box">
-                <div class="confirm-title">
-                    <i class="bi bi-shield-lock me-2" style="color:#e53e3e;"></i>
-                    @if ($pendingAction === 'cancel')
-                        Cancel Rental
-                    @else
-                        Mark as Abandoned
-                    @endif
-                </div>
-                <div class="confirm-subtitle">
-                    This action cannot be undone. Please enter your password to confirm.
-                </div>
+        @endif
 
-                <div class="mb-3">
-                    <label class="form-label">Your Password <span class="text-danger">*</span></label>
-                    <input type="password" wire:model="cancelPassword" wire:keydown.enter="confirmWithPassword"
-                        class="form-control" placeholder="Enter your password">
-                    @if ($cancelPasswordError)
-                        <div style="color:#e53e3e; font-size:12px; margin-top:5px;">
-                            <i class="bi bi-exclamation-circle me-1"></i>
-                            {{ $cancelPasswordError }}
+        {{-- Cancel with Hold Form --}}
+        @if ($showCancelHoldForm)
+            <div class="confirm-modal-overlay">
+                <div class="confirm-modal-box" style="max-width:480px;">
+                    <div class="confirm-title">
+                        <i class="bi bi-cash-coin me-2" style="color:#b7791f;"></i>
+                        Cancellation — Hold Amount
+                    </div>
+                    <div class="confirm-subtitle">
+                        Before cancelling, record any amount you are holding from this customer
+                        (e.g. dry clean cost, stitching already done, preparation expenses).
+                        This is optional — leave blank if nothing to hold.
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-5">
+                            <label class="form-label">
+                                Hold Amount (Rs.)
+                                <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
+                            </label>
+                            <input type="number" wire:model="holdAmount"
+                                class="form-control @error('holdAmount') is-invalid @enderror" placeholder="e.g. 500"
+                                min="0">
+                            @error('holdAmount')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-7">
+                            <label class="form-label">
+                                Description
+                                <span style="font-weight:400; color:var(--text-muted);">(what is this for)</span>
+                            </label>
+                            <input type="text" wire:model="holdNote" class="form-control"
+                                placeholder="e.g. Dry clean done, Stitching completed">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">
+                                Customer Reason for Cancel
+                                <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
+                            </label>
+                            <input type="text" wire:model="holdReason" class="form-control"
+                                placeholder="e.g. Changed mind, Found cheaper elsewhere">
+                        </div>
+                    </div>
+
+                    {{-- Preview --}}
+                    @if (!empty($holdAmount) && (float) $holdAmount > 0)
+                        <div
+                            style="background:#fffff0; border:1px solid #f6e05e; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:12px; color:#b7791f;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Rs. <strong>{{ number_format((float) $holdAmount, 0) }}</strong> will be recorded as
+                            company
+                            hold
+                            @if (!empty($holdNote))
+                                for "{{ $holdNote }}"
+                            @endif.
+                            This will appear in the rental history.
                         </div>
                     @endif
-                </div>
 
-                <div class="confirm-actions">
-                    <button class="btn btn-sm btn-outline-secondary" wire:click="$set('showCancelConfirm', false)">
-                        Cancel
-                    </button>
-                    <button class="btn btn-sm btn-danger" wire:click="confirmWithPassword"
-                        wire:loading.attr="disabled">
-                        <span wire:loading wire:target="confirmWithPassword">
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        </span>
+                    <div class="confirm-actions">
+                        <button class="btn btn-sm btn-outline-secondary" wire:click="skipHoldAndCancel">
+                            Skip & Cancel
+                        </button>
+                        <button class="btn btn-sm btn-warning" wire:click="processCancelWithHold"
+                            wire:loading.attr="disabled" style="color:#fff;">
+                            <span wire:loading wire:target="processCancelWithHold">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            @if (!empty($holdAmount) && (float) $holdAmount > 0)
+                                Hold Rs. {{ number_format((float) $holdAmount, 0) }} & Cancel
+                            @else
+                                Confirm Cancel
+                            @endif
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+        {{-- Password Confirm Modal --}}
+        @if ($showCancelConfirm)
+            <div class="confirm-modal-overlay">
+                <div class="confirm-modal-box">
+                    <div class="confirm-title">
+                        <i class="bi bi-shield-lock me-2" style="color:#e53e3e;"></i>
                         @if ($pendingAction === 'cancel')
-                            Yes, Cancel Rental
+                            Cancel Rental
                         @else
-                            Yes, Mark Abandoned
+                            Mark as Abandoned
                         @endif
-                    </button>
-                </div>
-            </div>
-        </div>
-    @endif
+                    </div>
+                    <div class="confirm-subtitle">
+                        This action cannot be undone. Please enter your password to confirm.
+                    </div>
 
-    {{-- Return Item Modal --}}
-    @if ($showReturnModal)
-        <div class="confirm-modal-overlay">
-            <div class="confirm-modal-box" style="max-width:420px;">
-                <div class="confirm-title">
-                    <i class="bi bi-box-arrow-in-down me-2" style="color:#3182ce;"></i>
-                    Mark Item as Returned
-                </div>
-                <div class="confirm-subtitle">
-                    Select the employee who received this item back in the shop.
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label">Received By <span class="text-danger">*</span></label>
-                    <select wire:model="returnReceivedBy"
-                        class="form-select @error('returnReceivedBy') is-invalid @enderror">
-                        <option value="">Select employee...</option>
-                        @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
-                            <option value="{{ $emp->id }}">{{ $emp->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('returnReceivedBy')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="confirm-actions">
-                    <button class="btn btn-sm btn-outline-secondary" wire:click="$set('showReturnModal', false)">
-                        Cancel
-                    </button>
-                    <button class="btn btn-sm btn-primary" wire:click="confirmItemReturned"
-                        wire:loading.attr="disabled">
-                        <span wire:loading wire:target="confirmItemReturned">
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        </span>
-                        Confirm Return
-                    </button>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    {{-- Delete Rental Modal --}}
-    @if ($showDeleteConfirm)
-        <div class="confirm-modal-overlay">
-            <div class="confirm-modal-box" style="max-width:440px;">
-                <div class="confirm-title">
-                    <i class="bi bi-trash me-2" style="color:#e53e3e;"></i>
-                    Delete Rental Permanently
-                </div>
-                <div class="confirm-subtitle">
-                    <span style="color:#e53e3e; font-weight:600;">This cannot be undone.</span>
-                    The following will be permanently removed:
-                    <ul style="margin:8px 0 0 16px; font-size:12px; color:var(--text-muted); line-height:1.9;">
-                        <li>All rental items & tasks</li>
-                        <li>All payments & account transactions</li>
-                        <li>All security deposits</li>
-                        @if ($rental->linkedSale)
-                            <li>Linked sale #{{ $rental->linkedSale->id }} & its items (stock will be restored)</li>
+                    <div class="mb-3">
+                        <label class="form-label">Your Password <span class="text-danger">*</span></label>
+                        <input type="password" wire:model="cancelPassword" wire:keydown.enter="confirmWithPassword"
+                            class="form-control" placeholder="Enter your password">
+                        @if ($cancelPasswordError)
+                            <div style="color:#e53e3e; font-size:12px; margin-top:5px;">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                {{ $cancelPasswordError }}
+                            </div>
                         @endif
-                    </ul>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Your Password <span class="text-danger">*</span></label>
-                    <input type="password" wire:model="deletePassword" wire:keydown.enter="executeDelete"
-                        class="form-control" placeholder="Enter your password" autocomplete="new-password">
-                    @if ($deletePasswordError)
-                        <div style="color:#e53e3e; font-size:12px; margin-top:5px;">
-                            <i class="bi bi-exclamation-circle me-1"></i>
-                            {{ $deletePasswordError }}
-                        </div>
-                    @endif
-                </div>
-                <div class="confirm-actions">
-                    <button class="btn btn-sm btn-outline-secondary" wire:click="$set('showDeleteConfirm', false)">
-                        Cancel
-                    </button>
-                    <button class="btn btn-sm btn-danger" wire:click="executeDelete" wire:loading.attr="disabled">
-                        <span wire:loading wire:target="executeDelete">
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        </span>
-                        Delete Permanently
-                    </button>
+                    </div>
+
+                    <div class="confirm-actions">
+                        <button class="btn btn-sm btn-outline-secondary"
+                            wire:click="$set('showCancelConfirm', false)">
+                            Cancel
+                        </button>
+                        <button class="btn btn-sm btn-danger" wire:click="confirmWithPassword"
+                            wire:loading.attr="disabled">
+                            <span wire:loading wire:target="confirmWithPassword">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            @if ($pendingAction === 'cancel')
+                                Yes, Cancel Rental
+                            @else
+                                Yes, Mark Abandoned
+                            @endif
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    @endif
+        @endif
+
+        {{-- Return Item Modal --}}
+        @if ($showReturnModal)
+            <div class="confirm-modal-overlay">
+                <div class="confirm-modal-box" style="max-width:420px;">
+                    <div class="confirm-title">
+                        <i class="bi bi-box-arrow-in-down me-2" style="color:#3182ce;"></i>
+                        Mark Item as Returned
+                    </div>
+                    <div class="confirm-subtitle">
+                        Select the employee who received this item back in the shop.
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Received By <span class="text-danger">*</span></label>
+                        <select wire:model="returnReceivedBy"
+                            class="form-select @error('returnReceivedBy') is-invalid @enderror">
+                            <option value="">Select employee...</option>
+                            @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
+                                <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('returnReceivedBy')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="confirm-actions">
+                        <button class="btn btn-sm btn-outline-secondary" wire:click="$set('showReturnModal', false)">
+                            Cancel
+                        </button>
+                        <button class="btn btn-sm btn-primary" wire:click="confirmItemReturned"
+                            wire:loading.attr="disabled">
+                            <span wire:loading wire:target="confirmItemReturned">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            Confirm Return
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- Delete Rental Modal --}}
+        @if ($showDeleteConfirm)
+            <div class="confirm-modal-overlay">
+                <div class="confirm-modal-box" style="max-width:440px;">
+                    <div class="confirm-title">
+                        <i class="bi bi-trash me-2" style="color:#e53e3e;"></i>
+                        Delete Rental Permanently
+                    </div>
+                    <div class="confirm-subtitle">
+                        <span style="color:#e53e3e; font-weight:600;">This cannot be undone.</span>
+                        The following will be permanently removed:
+                        <ul style="margin:8px 0 0 16px; font-size:12px; color:var(--text-muted); line-height:1.9;">
+                            <li>All rental items & tasks</li>
+                            <li>All payments & account transactions</li>
+                            <li>All security deposits</li>
+                            @if ($rental->linkedSale)
+                                <li>Linked sale #{{ $rental->linkedSale->id }} & its items (stock will be restored)
+                                </li>
+                            @endif
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Your Password <span class="text-danger">*</span></label>
+                        <input type="password" wire:model="deletePassword" wire:keydown.enter="executeDelete"
+                            class="form-control" placeholder="Enter your password" autocomplete="new-password">
+                        @if ($deletePasswordError)
+                            <div style="color:#e53e3e; font-size:12px; margin-top:5px;">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                {{ $deletePasswordError }}
+                            </div>
+                        @endif
+                    </div>
+                    <div class="confirm-actions">
+                        <button class="btn btn-sm btn-outline-secondary"
+                            wire:click="$set('showDeleteConfirm', false)">
+                            Cancel
+                        </button>
+                        <button class="btn btn-sm btn-danger" wire:click="executeDelete"
+                            wire:loading.attr="disabled">
+                            <span wire:loading wire:target="executeDelete">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            Delete Permanently
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @push('scripts')
+            <script>
+                document.addEventListener('livewire:initialized', function() {
+                    Livewire.on('focus-payment-amount', () => {
+                        setTimeout(() => {
+                            const el = document.getElementById('payment_amount_input');
+                            if (el) {
+                                el.focus();
+                                el.select();
+                            }
+                        }, 100);
+                    });
+
+                    Livewire.on('focus-fine-amount', () => {
+                        setTimeout(() => {
+                            const el = document.getElementById('fine_amount_input');
+                            if (el) {
+                                el.focus();
+                                el.select();
+                            }
+                        }, 100);
+                    });
+                });
+            </script>
+        @endpush
+    </div>
 </div>

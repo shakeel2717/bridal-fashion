@@ -87,6 +87,19 @@ class RentalDetail extends Component
 
     public string $refundNote = '';
 
+    // ── Fine (Jurmana) ─────────────────────────────────────
+    public bool $showFineModal = false;
+
+    public ?int $fineItemId = null;
+
+    public ?int $fineTaskId = null;
+
+    public string $fineAmount = '';
+
+    public string $fineAccountId = '';
+
+    public string $fineNote = '';
+
     public function mount(Rental $rental): void
     {
         $this->rental = $rental;
@@ -99,11 +112,18 @@ class RentalDetail extends Component
         $defaultAccount = Account::where('is_default', true)->first()
     ?? Account::where('is_active', true)->first();
         $this->paymentMethod = $defaultAccount ? (string) $defaultAccount->id : '';
+        $this->fineAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
 
         // Auto-show refund form if cancelled and no refund recorded yet
         if ($rental->status === 'cancelled' && ! $rental->refund_type) {
             $this->showRefundForm = true;
         }
+    }
+
+    public function openPaymentForm(): void
+    {
+        $this->showPaymentForm = true;
+        $this->dispatch('focus-payment-amount');
     }
 
     // ── Tasks ─────────────────────────────────────────────
@@ -233,6 +253,21 @@ class RentalDetail extends Component
             }
         }
 
+        // 1b. Reverse account balances for all fine credits
+        foreach ($rental->tasks()->where('type', 'fine')->get() as $fineTask) {
+            $fineTxn = Transaction::where('referenceable_type', RentalTask::class)
+                ->where('referenceable_id', $fineTask->id)
+                ->first();
+            if ($fineTxn) {
+                $fineAccount = Account::find($fineTxn->account_id);
+                if ($fineAccount) {
+                    $fineAccount->debit($fineTxn->amount);
+                    $fineAccount->save();
+                }
+                $fineTxn->delete();
+            }
+        }
+
         // 2. Delete all transactions referencing this rental
         Transaction::where('referenceable_type', Rental::class)
             ->where('referenceable_id', $rental->id)
@@ -344,6 +379,101 @@ class RentalDetail extends Component
 
         $this->rental->refresh();
         session()->flash('success', 'Deposit updated.');
+    }
+
+    // ── Fine (Jurmana) ─────────────────────────────────────
+    public function openFineModal(int $itemId): void
+    {
+        $this->fineItemId = $itemId;
+
+        $existing = RentalItem::find($itemId)?->tasks->firstWhere('type', 'fine');
+
+        if ($existing) {
+            $this->fineTaskId = $existing->id;
+            $this->fineAmount = (string) $existing->cost;
+            $this->fineNote = $existing->note ?? '';
+
+            $txn = Transaction::where('referenceable_type', RentalTask::class)
+                ->where('referenceable_id', $existing->id)
+                ->first();
+            $this->fineAccountId = $txn ? (string) $txn->account_id : $this->fineAccountId;
+        } else {
+            $this->fineTaskId = null;
+            $this->fineAmount = '';
+            $this->fineNote = '';
+            $defaultAccount = Account::where('is_default', true)->first()
+                ?? Account::where('is_active', true)->first();
+            $this->fineAccountId = $defaultAccount ? (string) $defaultAccount->id : '';
+        }
+
+        $this->showFineModal = true;
+        $this->dispatch('focus-fine-amount');
+    }
+
+    public function saveFine(): void
+    {
+        $this->validate([
+            'fineAmount' => 'required|numeric|min:1',
+            'fineAccountId' => 'required|exists:accounts,id',
+            'fineNote' => 'nullable|string|max:500',
+        ]);
+
+        $item = RentalItem::findOrFail($this->fineItemId);
+
+        if ($this->fineTaskId) {
+            $task = RentalTask::findOrFail($this->fineTaskId);
+
+            // Reverse the previous account credit before re-applying
+            $oldTxn = Transaction::where('referenceable_type', RentalTask::class)
+                ->where('referenceable_id', $task->id)
+                ->first();
+            if ($oldTxn) {
+                $oldAccount = Account::find($oldTxn->account_id);
+                if ($oldAccount) {
+                    $oldAccount->debit($oldTxn->amount);
+                    $oldAccount->save();
+                }
+                $oldTxn->delete();
+            }
+
+            $task->update([
+                'title' => 'Late Return Fine',
+                'cost' => (float) $this->fineAmount,
+                'note' => $this->fineNote ?: null,
+                'actioned_by' => auth()->id(),
+                'actioned_at' => now(),
+            ]);
+        } else {
+            $task = RentalTask::create([
+                'rental_id' => $this->rental->id,
+                'rental_item_id' => $item->id,
+                'type' => 'fine',
+                'title' => 'Late Return Fine',
+                'cost' => (float) $this->fineAmount,
+                'status' => 'done',
+                'note' => $this->fineNote ?: null,
+                'actioned_by' => auth()->id(),
+                'actioned_at' => now(),
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        AccountService::credit(
+            (int) $this->fineAccountId,
+            (float) $this->fineAmount,
+            'rental_fine',
+            "Rental fine — {$this->rental->customer_name} (#{$this->rental->id})",
+            now()->toDateString(),
+            $task,
+        );
+
+        $this->showFineModal = false;
+        $this->fineItemId = null;
+        $this->fineTaskId = null;
+        $this->fineAmount = '';
+        $this->fineNote = '';
+        $this->rental->refresh();
+        session()->flash('success', 'Fine recorded.');
     }
 
     // ── Cancel / Abandon ──────────────────────────────────
@@ -510,7 +640,7 @@ class RentalDetail extends Component
             'items.tasks.createdBy',
             'items.pickedUpBy',
             'items.receivedBy',
-            'linkedSale.items',        // ← add this
+            'linkedSale.items',
             'customer',
             'employee',
             'payments.createdBy',
@@ -531,12 +661,18 @@ class RentalDetail extends Component
         // All pending tasks count (blocks pickup)
         $pendingTasksCount = $this->rental->tasks()
             ->where('status', 'pending')
+            ->where('type', '!=', 'fine')
             ->count();
 
         // Payments
         $payments = $this->rental->payments;
         $totalPaid = $payments->sum('amount');
-        $remaining = max(0, $this->rental->total_amount - $totalPaid);
+
+        // Fines — tracked separately from rental total/payments
+        $totalFines = $this->rental->tasks()->where('type', 'fine')->sum('cost');
+        $grandTotal = $this->rental->total_amount + $totalFines;
+        $remaining = max(0, $grandTotal - $totalPaid);
+        $overpaid = max(0, $totalPaid - $grandTotal);
 
         $accounts = Account::where('is_active', true)
             ->orderByDesc('is_default')
@@ -545,6 +681,7 @@ class RentalDetail extends Component
 
         return view('livewire.rentals.rental-detail',
             compact('stitchingTask', 'pendingTasksCount', 'payments',
-                'totalPaid', 'remaining', 'cancellationHolds', 'totalHeld', 'accounts'));
+                'totalPaid', 'remaining', 'overpaid', 'totalFines', 'grandTotal',
+                'cancellationHolds', 'totalHeld', 'accounts'));
     }
 }
