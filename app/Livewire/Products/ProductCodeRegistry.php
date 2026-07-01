@@ -3,37 +3,56 @@
 namespace App\Livewire\Products;
 
 use App\Models\Product;
+use App\Models\ProductCodeFavourite;
 use Livewire\Component;
 
 class ProductCodeRegistry extends Component
 {
     public string $search = '';
-    public string $filterStatus = ''; // '', 'used', 'missing' — only applies to numeric section
+    public string $filterStatus = '';   // '', 'used', 'missing' — numeric section only
+    public string $activeTab = 'all';   // 'all', 'favourites'
+
+    public function toggleFavourite(string $code): void
+    {
+        $code = strtoupper(trim($code));
+
+        $existing = ProductCodeFavourite::where('code', $code)->first();
+
+        if ($existing) {
+            $existing->delete();
+        } else {
+            ProductCodeFavourite::create([
+                'code'       => $code,
+                'created_by' => auth()->id(),
+            ]);
+        }
+    }
 
     public function render()
     {
         $allProducts = Product::whereNotNull('code')
             ->get(['id', 'code', 'name', 'type', 'color', 'is_active', 'is_abandoned']);
 
-        $numericRows  = [];   // int → Product|null
-        $prefixedRows = [];   // 'BL' => [Product, ...]
+        // All favourite codes as a flat set for O(1) lookup
+        $favouriteCodes = ProductCodeFavourite::pluck('code')->map(fn($c) => strtoupper($c))->flip()->toArray();
 
-        $maxNumeric = 0;
+        $numericRows  = [];
+        $prefixedRows = [];
+        $maxNumeric   = 0;
 
         foreach ($allProducts as $product) {
             $code = trim($product->code);
 
             if (preg_match('/^([A-Z]+)-(\d+)$/i', $code, $m)) {
-                // Prefixed: BL-001
                 $prefix = strtoupper($m[1]);
                 $prefixedRows[$prefix][] = $product;
-            } elseif (is_numeric($code) && (int)$code > 0) {
-                // Plain integer code
-                $n = (int)$code;
+            } elseif (is_numeric($code) && (int) $code > 0) {
+                $n = (int) $code;
                 $numericRows[$n] = $product;
-                if ($n > $maxNumeric) $maxNumeric = $n;
+                if ($n > $maxNumeric) {
+                    $maxNumeric = $n;
+                }
             }
-            // anything else (e.g. SVC-X, free text) — ignored
         }
 
         // Build full numeric range 1 → max
@@ -44,36 +63,40 @@ class ProductCodeRegistry extends Component
             }
         }
 
-        // Apply search to numeric range
+        // ── Favourites tab ──
+        if ($this->activeTab === 'favourites') {
+            // Numeric favourites (only those within range)
+            $numericRange = array_filter($numericRange, function ($product, $number) use ($favouriteCodes) {
+                $code = str_pad($number, 4, '0', STR_PAD_LEFT);
+                // Also check plain integer string
+                return isset($favouriteCodes[(string) $number])
+                    || isset($favouriteCodes[$code]);
+            }, ARRAY_FILTER_USE_BOTH);
+
+            // Prefixed favourites
+            foreach ($prefixedRows as $prefix => &$products) {
+                $products = array_values(array_filter($products, fn($p) => isset($favouriteCodes[strtoupper($p->code)])));
+            }
+            unset($products);
+            $prefixedRows = array_filter($prefixedRows, fn($p) => count($p) > 0);
+
+            // Reset status filter — not relevant in favourites tab
+            $this->filterStatus = '';
+        }
+
+        // ── Search ──
         if ($this->search) {
             $s = strtolower($this->search);
+
             $numericRange = array_filter($numericRange, function ($product, $number) use ($s) {
-                if (str_contains((string)$number, $s)) return true;
+                if (str_contains((string) $number, $s)) return true;
                 if ($product && str_contains(strtolower($product->name), $s)) return true;
                 if ($product && str_contains(strtolower($product->color ?? ''), $s)) return true;
                 return false;
             }, ARRAY_FILTER_USE_BOTH);
-        }
 
-        // Apply status filter to numeric range
-        if ($this->filterStatus === 'used') {
-            $numericRange = array_filter($numericRange, fn($p) => $p !== null);
-        } elseif ($this->filterStatus === 'missing') {
-            $numericRange = array_filter($numericRange, fn($p) => $p === null);
-        }
-
-        // Stats
-        $numericUsed    = count(array_filter($numericRange, fn($p) => $p !== null));
-        $numericMissing = count(array_filter($numericRange, fn($p) => $p === null));
-
-        // Sort prefixed alphabetically
-        ksort($prefixedRows);
-
-        // Apply search to prefixed section
-        if ($this->search) {
-            $s = strtolower($this->search);
             foreach ($prefixedRows as $prefix => &$products) {
-                $products = array_values(array_filter($products, function ($product) use ($s, $prefix) {
+                $products = array_values(array_filter($products, function ($product) use ($s) {
                     return str_contains(strtolower($product->code), $s)
                         || str_contains(strtolower($product->name), $s)
                         || str_contains(strtolower($product->color ?? ''), $s);
@@ -83,9 +106,23 @@ class ProductCodeRegistry extends Component
             $prefixedRows = array_filter($prefixedRows, fn($p) => count($p) > 0);
         }
 
+        // ── Status filter (numeric only, all tab only) ──
+        if ($this->activeTab === 'all' && $this->filterStatus === 'used') {
+            $numericRange = array_filter($numericRange, fn($p) => $p !== null);
+        } elseif ($this->activeTab === 'all' && $this->filterStatus === 'missing') {
+            $numericRange = array_filter($numericRange, fn($p) => $p === null);
+        }
+
+        $numericUsed    = count(array_filter($numericRange, fn($p) => $p !== null));
+        $numericMissing = count(array_filter($numericRange, fn($p) => $p === null));
+
+        ksort($prefixedRows);
+
+        $totalFavourites = count($favouriteCodes);
+
         return view('livewire.products.product-code-registry', compact(
             'numericRange', 'numericUsed', 'numericMissing', 'maxNumeric',
-            'prefixedRows'
+            'prefixedRows', 'favouriteCodes', 'totalFavourites'
         ));
     }
 }
