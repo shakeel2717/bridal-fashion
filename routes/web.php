@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
 
     // Placeholder routes (we'll build each module next)
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
+    Route::get('/products/code-registry', [App\Http\Controllers\ProductCodeRegistryController::class, 'index'])->name('products.code-registry');
     Route::get('/rentals', [RentalsController::class, 'index'])->name('rentals.index');
     Route::get('/rentals/create', [RentalsController::class, 'create'])->name('rentals.create');
     Route::get('/rentals/{rental}', [RentalsController::class, 'show'])->name('rentals.show');
