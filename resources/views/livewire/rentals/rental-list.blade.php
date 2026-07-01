@@ -15,19 +15,38 @@
         </a>
     </div>
 
-    {{-- Status Counts --}}
+    {{-- Duplicate Bookings Warning --}}
+    @if ($duplicateBookings->count() > 0)
+        <div style="background:#fff5f5; border:1.5px solid #fc8181; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+            <div style="font-size:12px; font-weight:700; color:#c53030; margin-bottom:10px;">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Duplicate Bookings Detected — {{ $duplicateBookings->count() }} item(s) booked multiple times
+            </div>
+            @foreach ($duplicateBookings as $productId => $group)
+                <div style="font-size:11px; color:#c53030; padding:3px 0; border-bottom:1px solid #fed7d7;">
+                    <strong>{{ $group->first()->product?->code }}</strong>
+                    — {{ $group->first()->product?->name }}
+                    — booked {{ $group->count() }} times concurrently
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+    {{-- Status + Special Filters (single combined row) --}}
     <div class="d-flex gap-2 mb-3 flex-wrap">
         @foreach ([
-        'booked' => ['label' => 'Booked', 'color' => '#2c5282', 'bg' => '#ebf4ff'],
-        'ready' => ['label' => 'Ready', 'color' => '#b7791f', 'bg' => '#fffaf0'],
-        'picked_up' => ['label' => 'Picked Up', 'color' => '#553c9a', 'bg' => '#f5f0ff'],
-        'partially_picked_up' => ['label' => 'Partial', 'color' => '#c05621', 'bg' => '#fffaf0'],
-        'returned' => ['label' => 'Returned', 'color' => '#276749', 'bg' => '#f0fff4'],
-        'overdue' => ['label' => 'Overdue', 'color' => '#c53030', 'bg' => '#fff5f5'],
-        'overpaid' => ['label' => 'Overpaid', 'color' => '#e53e3e', 'bg' => '#fff5f5'],
-        'late_pickup' => ['label' => 'Late Pickup', 'color' => '#b7791f', 'bg' => '#fffaf0'],
-        'late_return' => ['label' => 'Late Return', 'color' => '#c53030', 'bg' => '#fff5f5'],
-    ] as $key => $info)
+            'booked'               => ['label' => 'Booked',        'color' => '#2c5282', 'bg' => '#ebf4ff'],
+            'ready'                => ['label' => 'Ready',         'color' => '#b7791f', 'bg' => '#fffaf0'],
+            'picked_up'            => ['label' => 'Picked Up',     'color' => '#553c9a', 'bg' => '#f5f0ff'],
+            'partially_picked_up'  => ['label' => 'Partial',       'color' => '#c05621', 'bg' => '#fffaf0'],
+            'returned'             => ['label' => 'Returned',      'color' => '#276749', 'bg' => '#f0fff4'],
+            'cancelled'            => ['label' => 'Cancelled',     'color' => '#718096', 'bg' => '#f7fafc'],
+            'due'                  => ['label' => 'Due',           'color' => '#c53030', 'bg' => '#fff5f5'],
+            'overpaid'             => ['label' => 'Overpaid',      'color' => '#e53e3e', 'bg' => '#fff5f5'],
+            'late_pickup'          => ['label' => 'Late Pickup',   'color' => '#b7791f', 'bg' => '#fffaf0'],
+            'late_return'          => ['label' => 'Late Return',   'color' => '#c53030', 'bg' => '#fff5f5'],
+            'no_dates'             => ['label' => 'No Dates Set',  'color' => '#718096', 'bg' => '#f7fafc'],
+        ] as $key => $info)
             @php $isActive = $activeFilter === $key; @endphp
             <div style="background:{{ $isActive ? $info['bg'] : '#fff' }}; border-radius:7px; padding:7px 14px; font-size:12px; border:1px solid {{ $isActive ? $info['color'] : 'var(--border)' }}; cursor:pointer; {{ $isActive ? 'box-shadow:0 0 0 1px ' . $info['color'] . ';' : '' }}"
                 wire:click="setActiveFilter('{{ $key }}')">
@@ -46,25 +65,14 @@
 
     <div class="table-card">
         <div class="table-card-header" style="flex-wrap:wrap; gap:10px;">
-            <div class="d-flex gap-2 align-items-center flex-wrap">
-                <div class="tab-pills" style="margin-bottom:0;">
-                    <button class="tab-pill {{ $activeFilter === '' ? 'active' : '' }}"
-                        wire:click="clearFilter">All</button>
-                    <button class="tab-pill {{ $activeFilter === 'booked' ? 'active' : '' }}"
-                        wire:click="setActiveFilter('booked')">Booked</button>
-                    <button class="tab-pill {{ $activeFilter === 'ready' ? 'active' : '' }}"
-                        wire:click="setActiveFilter('ready')">Ready</button>
-                    <button class="tab-pill {{ $activeFilter === 'picked_up' ? 'active' : '' }}"
-                        wire:click="setActiveFilter('picked_up')">Picked Up</button>
-                    <button class="tab-pill {{ $activeFilter === 'returned' ? 'active' : '' }}"
-                        wire:click="setActiveFilter('returned')">Returned</button>
-                    <button class="tab-pill {{ $activeFilter === 'cancelled' ? 'active' : '' }}"
-                        wire:click="setActiveFilter('cancelled')">Cancelled</button>
-                </div>
-            </div>
             <div style="width:250px;">
                 <input type="text" wire:model.live.debounce.400ms="search" class="form-control form-control-sm"
                     placeholder="Search name, phone, CNIC, bill ref...">
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="date" wire:model.live="dateFrom" class="form-control form-control-sm" style="width:140px;">
+                <span style="font-size:12px; color:var(--text-muted);">to</span>
+                <input type="date" wire:model.live="dateTo" class="form-control form-control-sm" style="width:140px;">
             </div>
         </div>
 
@@ -105,7 +113,7 @@
                         <td>
                             <div style="font-size:12px;">
                                 @foreach ($rental->items->take(2) as $item)
-                                    <span class="badge badge-primary bg-primary" style="font-size:15px;">
+                                    <span class="badge badge-primary bg-primary" style="font-size:11px;">
                                         {{ $item->product_code }}
                                     </span>
                                 @endforeach
@@ -123,7 +131,7 @@
                                     <span class="badge-status ready ms-1">Today</span>
                                 @endif
                             @else
-                                <span style="color:var(--text-muted);">—</span>
+                                <span style="color:#e53e3e; font-size:11px; font-weight:600;">Not Set</span>
                             @endif
                         </td>
                         <td style="font-size:12px;">
@@ -131,11 +139,11 @@
                                 {{ \Carbon\Carbon::parse($rental->return_date)->format('d/m/Y') }}
                                 @if (
                                     \Carbon\Carbon::parse($rental->return_date)->isPast() &&
-                                        !in_array($rental->status, ['returned', 'cancelled', 'abandoned']))
+                                    !in_array($rental->status, ['returned', 'cancelled', 'abandoned']))
                                     <span class="badge-status overdue ms-1">Late</span>
                                 @endif
                             @else
-                                <span style="color:var(--text-muted);">—</span>
+                                <span style="color:#e53e3e; font-size:11px; font-weight:600;">Not Set</span>
                             @endif
                         </td>
                         <td style="font-size:13px; font-weight:600;">
@@ -147,14 +155,15 @@
                             @endif
                         </td>
                         @php
-                            $paid = (float) ($rental->payments_sum_amount ?? 0);
+                            $paid    = (float) ($rental->payments_sum_amount ?? 0);
                             $balance = $rental->total_amount - $paid;
                         @endphp
-                        <td
-                            style="font-size:13px; font-weight:700; color:{{ $balance > 0 ? '#e53e3e' : ($balance < 0 ? '#38a169' : '#38a169') }};">
+                        <td style="font-size:13px; font-weight:700; color:{{ $balance > 0 ? '#e53e3e' : ($balance < 0 ? '#38a169' : '#38a169') }};">
                             @if ($balance < 0)
                                 − Rs. {{ number_format(abs($balance), 0) }}
                                 <div style="font-size:9px; color:#38a169; font-weight:600;">Overpaid</div>
+                            @elseif ($balance == 0)
+                                <span style="color:#38a169;">Paid</span>
                             @else
                                 Rs. {{ number_format($balance, 0) }}
                             @endif
@@ -198,8 +207,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9"
-                            style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
+                        <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
                             <i class="bi bi-box-seam" style="font-size:32px; display:block; margin-bottom:8px;"></i>
                             No rentals found
                         </td>

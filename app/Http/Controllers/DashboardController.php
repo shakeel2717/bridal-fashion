@@ -8,7 +8,6 @@ use App\Models\Expense;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Rental;
-use App\Models\RentalItem;
 use App\Models\RentalPayment;
 use App\Models\Sale;
 use Illuminate\Support\Carbon;
@@ -79,18 +78,9 @@ class DashboardController extends Controller
             ->get(['id', 'name', 'type', 'current_balance']);
 
         // Duplicate bookings — same product booked in overlapping date ranges
-        $duplicateBookings = RentalItem::select('product_id')
-            ->with(['product:id,name,code', 'rental:id,customer_name,pickup_date,return_date,status'])
-            ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-            )
-            ->get()
-            ->groupBy('product_id')
-            ->filter(fn ($group) => $group->count() > 1)
-            ->take(5);
-
         return view('dashboard', compact(
             'stats', 'overdue', 'pickupToday', 'returnTomorrow',
-            'accounts', 'duplicateBookings'
+            'accounts'
         ));
     }
 }
