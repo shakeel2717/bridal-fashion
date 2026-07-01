@@ -47,27 +47,28 @@
         'late_pickup' => ['label' => 'Late Pickup', 'icon' => 'bi-clock-history', 'color' => '#b7791f', 'bg' => '#fffaf0'],
         'late_return' => ['label' => 'Late Return', 'icon' => 'bi-alarm', 'color' => '#c53030', 'bg' => '#fff5f5'],
         'no_dates' => ['label' => 'No Dates', 'icon' => 'bi-calendar-x', 'color' => '#718096', 'bg' => '#f7fafc'],
+        'fined' => ['label' => 'Fined', 'icon' => 'bi-exclamation-triangle', 'color' => '#c53030', 'bg' => '#fff5f5'],
     ] as $key => $info)
             @php $isActive = $activeFilter === $key; @endphp
             <div wire:click="setActiveFilter('{{ $key }}')"
-                style="background:{{ $isActive ? $info['bg'] : '#fff' }};
+                style="background:{{ $isActive ? 'var(--navy)' : '#fff' }};
                        border-radius:9px;
                        padding:8px 14px;
                        font-size:12px;
-                       border:1.5px solid {{ $isActive ? $info['color'] : 'var(--border)' }};
+                       border:1.5px solid {{ $isActive ? 'var(--navy)' : 'var(--border)' }};
                        cursor:pointer;
                        text-align:center;
                        min-width:80px;
-                       {{ $isActive ? 'box-shadow:0 0 0 1px ' . $info['color'] . ';' : '' }}">
+                       {{ $isActive ? 'box-shadow:0 2px 8px rgba(0,0,0,0.15);' : '' }}">
                 <div style="margin-bottom:4px;">
                     <i class="bi {{ $info['icon'] }}"
-                        style="font-size:16px; color:{{ $isActive ? $info['color'] : '#a0aec0' }};"></i>
+                        style="font-size:16px; color:{{ $isActive ? '#fff' : '#a0aec0' }};"></i>
                 </div>
-                <div
-                    style="color:{{ $isActive ? $info['color'] : 'var(--text-muted)' }}; font-weight:500; line-height:1.2;">
+                <div style="color:{{ $isActive ? '#fff' : 'var(--text-muted)' }}; font-weight:500; line-height:1.2;">
                     {{ $info['label'] }}
                 </div>
-                <div style="font-weight:800; color:{{ $info['color'] }}; font-size:13px; margin-top:2px;">
+                <div
+                    style="font-weight:800; color:{{ $isActive ? '#fff' : $info['color'] }}; font-size:13px; margin-top:2px;">
                     {{ $counts[$key] }}
                 </div>
             </div>
@@ -135,17 +136,12 @@
                             @endif
                         </td>
                         <td>
-                            <div style="font-size:12px;">
-                                @foreach ($rental->items->take(2) as $item)
+                            <div style="font-size:12px; display:flex; flex-wrap:wrap; gap:3px;">
+                                @foreach ($rental->items as $item)
                                     <span class="badge badge-primary bg-primary" style="font-size:11px;">
                                         {{ $item->product_code }}
                                     </span>
                                 @endforeach
-                                @if ($rental->items->count() > 2)
-                                    <span style="font-size:10px; color:var(--text-muted);">
-                                        +{{ $rental->items->count() - 2 }} more
-                                    </span>
-                                @endif
                             </div>
                         </td>
                         <td style="font-size:12px;">

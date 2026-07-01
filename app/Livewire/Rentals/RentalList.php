@@ -18,9 +18,11 @@ class RentalList extends Component
     public string $activeFilter = '';
 
     public string $dateFrom = '';
+
     public string $dateTo = '';
 
     public ?int $quickStatusId = null;
+
     public string $newStatus = '';
 
     public function updatedSearch(): void
@@ -120,37 +122,41 @@ class RentalList extends Component
                         $q->whereNull('pickup_date')->orWhereNull('return_date');
                     });
             })
+            ->when($this->activeFilter === 'fined', function ($q) {
+                $q->whereHas('tasks', fn ($q) => $q->where('type', 'fine'));
+            })
             ->when(
-                $this->activeFilter && !in_array($this->activeFilter, ['due', 'overpaid', 'late_pickup', 'late_return', 'no_dates']),
+                $this->activeFilter && !in_array($this->activeFilter, ['due', 'overpaid', 'late_pickup', 'late_return', 'no_dates', 'fined']),
                 fn ($q) => $q->where('status', $this->activeFilter)
             )
             ->latest()
             ->paginate(15);
 
         $counts = [
-            'booked'              => Rental::where('status', 'booked')->count(),
-            'ready'               => Rental::where('status', 'ready')->count(),
-            'picked_up'           => Rental::where('status', 'picked_up')->count(),
+            'booked' => Rental::where('status', 'booked')->count(),
+            'ready' => Rental::where('status', 'ready')->count(),
+            'picked_up' => Rental::where('status', 'picked_up')->count(),
             'partially_picked_up' => Rental::where('status', 'partially_picked_up')->count(),
-            'returned'            => Rental::where('status', 'returned')->count(),
-            'cancelled'           => Rental::where('status', 'cancelled')->count(),
-            'due'                 => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            'returned' => Rental::where('status', 'returned')->count(),
+            'cancelled' => Rental::where('status', 'cancelled')->count(),
+            'due' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) < rentals.total_amount - 1')
                 ->count(),
-            'overpaid'            => Rental::whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount')->count(),
-            'late_pickup'         => Rental::whereNotNull('pickup_date')
+            'overpaid' => Rental::whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount')->count(),
+            'late_pickup' => Rental::whereNotNull('pickup_date')
                 ->where('pickup_date', '<', $today)
                 ->whereIn('status', ['booked', 'ready'])
                 ->count(),
-            'late_return'         => Rental::whereNotNull('return_date')
+            'late_return' => Rental::whereNotNull('return_date')
                 ->where('return_date', '<', $today)
                 ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->count(),
-            'no_dates'            => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            'no_dates' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->where(function ($q) {
                     $q->whereNull('pickup_date')->orWhereNull('return_date');
                 })
                 ->count(),
+            'fined' => Rental::whereHas('tasks', fn ($q) => $q->where('type', 'fine'))->count(),
         ];
 
         // Duplicate bookings: same product active in multiple rentals
