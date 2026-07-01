@@ -126,37 +126,39 @@ class RentalList extends Component
                 $q->whereHas('tasks', fn ($q) => $q->where('type', 'fine'));
             })
             ->when(
-                $this->activeFilter && !in_array($this->activeFilter, ['due', 'overpaid', 'late_pickup', 'late_return', 'no_dates', 'fined']),
+                $this->activeFilter && ! in_array($this->activeFilter, ['due', 'overpaid', 'late_pickup', 'late_return', 'no_dates', 'fined']),
                 fn ($q) => $q->where('status', $this->activeFilter)
             )
             ->latest()
             ->paginate(15);
 
         $counts = [
-            'booked' => Rental::where('status', 'booked')->count(),
-            'ready' => Rental::where('status', 'ready')->count(),
-            'picked_up' => Rental::where('status', 'picked_up')->count(),
-            'partially_picked_up' => Rental::where('status', 'partially_picked_up')->count(),
-            'returned' => Rental::where('status', 'returned')->count(),
-            'cancelled' => Rental::where('status', 'cancelled')->count(),
+            'booked' => Rental::where('status', 'booked')->withCount('items')->get()->sum('items_count'),
+            'ready' => Rental::where('status', 'ready')->withCount('items')->get()->sum('items_count'),
+            'picked_up' => Rental::where('status', 'picked_up')->withCount('items')->get()->sum('items_count'),
+            'partially_picked_up' => Rental::where('status', 'partially_picked_up')->withCount('items')->get()->sum('items_count'),
+            'returned' => Rental::where('status', 'returned')->withCount('items')->get()->sum('items_count'),
+            'cancelled' => Rental::where('status', 'cancelled')->withCount('items')->get()->sum('items_count'),
             'due' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) < rentals.total_amount - 1')
-                ->count(),
-            'overpaid' => Rental::whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount')->count(),
+                ->withCount('items')->get()->sum('items_count'),
+            'overpaid' => Rental::whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount')
+                ->withCount('items')->get()->sum('items_count'),
             'late_pickup' => Rental::whereNotNull('pickup_date')
                 ->where('pickup_date', '<', $today)
                 ->whereIn('status', ['booked', 'ready'])
-                ->count(),
+                ->withCount('items')->get()->sum('items_count'),
             'late_return' => Rental::whereNotNull('return_date')
                 ->where('return_date', '<', $today)
                 ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->count(),
+                ->withCount('items')->get()->sum('items_count'),
             'no_dates' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->where(function ($q) {
                     $q->whereNull('pickup_date')->orWhereNull('return_date');
                 })
-                ->count(),
-            'fined' => Rental::whereHas('tasks', fn ($q) => $q->where('type', 'fine'))->count(),
+                ->withCount('items')->get()->sum('items_count'),
+            'fined' => Rental::whereHas('tasks', fn ($q) => $q->where('type', 'fine'))
+                ->withCount('items')->get()->sum('items_count'),
         ];
 
         // Duplicate bookings: same product active in multiple rentals
