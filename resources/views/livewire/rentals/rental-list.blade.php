@@ -154,7 +154,7 @@
                                 @if (\Carbon\Carbon::parse($rental->pickup_date)->isToday())
                                     <span class="badge-status ready ms-1">Today</span>
                                 @elseif (in_array($rental->status, ['booked', 'ready']) && \Carbon\Carbon::parse($rental->pickup_date)->isPast())
-                                    @php $daysLate = \Carbon\Carbon::parse($rental->pickup_date)->diffInDays(now()); @endphp
+                                    @php $daysLate = (int) \Carbon\Carbon::parse($rental->pickup_date)->diffInDays(now()); @endphp
                                     <div style="font-size:10px; color:#b7791f; font-weight:700; margin-top:2px;">
                                         <i class="bi bi-clock-history" style="font-size:10px;"></i>
                                         {{ $daysLate }}d late
@@ -170,7 +170,7 @@
                                 @if (
                                     !in_array($rental->status, ['returned', 'cancelled', 'abandoned']) &&
                                         \Carbon\Carbon::parse($rental->return_date)->isPast())
-                                    @php $daysLate = \Carbon\Carbon::parse($rental->return_date)->diffInDays(now()); @endphp
+                                    @php $daysLate = (int) \Carbon\Carbon::parse($rental->return_date)->diffInDays(now()); @endphp
                                     <div style="font-size:10px; color:#c53030; font-weight:700; margin-top:2px;">
                                         <i class="bi bi-alarm" style="font-size:10px;"></i>
                                         {{ $daysLate }}d late
