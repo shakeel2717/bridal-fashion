@@ -5,7 +5,7 @@
         </div>
     @endif
 
-    <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="d-flex align-items-center justify-content-between mb-2">
         <div>
             <div class="page-title">Rentals</div>
             <div class="page-subtitle">All rental bookings</div>
@@ -13,6 +13,72 @@
         <a href="{{ route('rentals.create') }}" class="btn btn-primary btn-sm d-flex align-items-center gap-2">
             <i class="bi bi-plus-lg"></i> New Rental
         </a>
+    </div>
+
+    {{-- Filter Toggle --}}
+    <div x-data="{ open: false }" class="mb-3">
+
+        <div class="text-center mb-2">
+            <button @click="open = !open"
+                style="background:none; border:none; cursor:pointer; padding:4px 16px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;">
+                <i class="bi" :class="open ? 'bi-chevron-up' : 'bi-chevron-down'"
+                    style="font-size:22px; font-weight:900; color:var(--navy);"></i>
+            </button>
+        </div>
+
+        <div x-show="open" x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0" x-cloak>
+            <div class="d-flex gap-2 flex-wrap justify-content-center">
+                @foreach ([
+        'booked' => ['label' => 'Booked', 'icon' => 'bi-journal-bookmark', 'color' => '#2c5282'],
+        'ready' => ['label' => 'Ready', 'icon' => 'bi-check2-circle', 'color' => '#b7791f'],
+        'picked_up' => ['label' => 'Picked Up', 'icon' => 'bi-box-arrow-up', 'color' => '#553c9a'],
+        'partially_picked_up' => ['label' => 'Partial', 'icon' => 'bi-box-arrow-in-up', 'color' => '#c05621'],
+        'returned' => ['label' => 'Returned', 'icon' => 'bi-box-arrow-in-down', 'color' => '#276749'],
+        'cancelled' => ['label' => 'Cancelled', 'icon' => 'bi-x-circle', 'color' => '#718096'],
+        'due' => ['label' => 'Due', 'icon' => 'bi-cash-coin', 'color' => '#c53030'],
+        'overpaid' => ['label' => 'Overpaid', 'icon' => 'bi-arrow-up-circle', 'color' => '#e53e3e'],
+        'late_pickup' => ['label' => 'Late Pickup', 'icon' => 'bi-clock-history', 'color' => '#b7791f'],
+        'late_return' => ['label' => 'Late Return', 'icon' => 'bi-alarm', 'color' => '#c53030'],
+        'no_dates' => ['label' => 'No Dates', 'icon' => 'bi-calendar-x', 'color' => '#718096'],
+        'fined' => ['label' => 'Fined', 'icon' => 'bi-exclamation-triangle', 'color' => '#c53030'],
+    ] as $key => $info)
+                    @php $isActive = $activeFilter === $key; @endphp
+                    <div wire:click="setActiveFilter('{{ $key }}')"
+                        style="background:{{ $isActive ? 'var(--navy)' : '#fff' }};
+                               border-radius:9px; padding:8px 14px; font-size:12px;
+                               border:1.5px solid {{ $isActive ? 'var(--navy)' : 'var(--border)' }};
+                               cursor:pointer; text-align:center; min-width:80px;
+                               {{ $isActive ? 'box-shadow:0 2px 8px rgba(0,0,0,0.15);' : '' }}">
+                        <div style="margin-bottom:4px;">
+                            <i class="bi {{ $info['icon'] }}"
+                                style="font-size:16px; color:{{ $isActive ? '#fff' : '#a0aec0' }};"></i>
+                        </div>
+                        <div
+                            style="color:{{ $isActive ? '#fff' : 'var(--text-muted)' }}; font-weight:500; line-height:1.2;">
+                            {{ $info['label'] }}
+                        </div>
+                        <div
+                            style="font-weight:800; color:{{ $isActive ? '#fff' : $info['color'] }}; font-size:13px; margin-top:2px;">
+                            {{ $counts[$key] }}
+                        </div>
+                    </div>
+                @endforeach
+
+                @if ($activeFilter)
+                    <div wire:click="clearFilter"
+                        style="background:#fff; border-radius:9px; padding:8px 14px; font-size:12px;
+                               border:1.5px solid var(--border); cursor:pointer; text-align:center;
+                               min-width:80px; color:var(--text-muted); display:flex; flex-direction:column;
+                               align-items:center; justify-content:center; gap:4px;">
+                        <i class="bi bi-x-circle" style="font-size:16px;"></i>
+                        <div>Clear</div>
+                    </div>
+                @endif
+            </div>
+        </div>
     </div>
 
     {{-- Duplicate Bookings Warning --}}
@@ -32,59 +98,6 @@
             @endforeach
         </div>
     @endif
-
-    {{-- Status + Special Filters (single combined row) --}}
-    <div class="d-flex gap-2 mb-3 flex-wrap">
-        @foreach ([
-        'booked' => ['label' => 'Booked', 'icon' => 'bi-journal-bookmark', 'color' => '#2c5282', 'bg' => '#ebf4ff'],
-        'ready' => ['label' => 'Ready', 'icon' => 'bi-check2-circle', 'color' => '#b7791f', 'bg' => '#fffaf0'],
-        'picked_up' => ['label' => 'Picked Up', 'icon' => 'bi-box-arrow-up', 'color' => '#553c9a', 'bg' => '#f5f0ff'],
-        'partially_picked_up' => ['label' => 'Partial', 'icon' => 'bi-box-arrow-in-up', 'color' => '#c05621', 'bg' => '#fffaf0'],
-        'returned' => ['label' => 'Returned', 'icon' => 'bi-box-arrow-in-down', 'color' => '#276749', 'bg' => '#f0fff4'],
-        'cancelled' => ['label' => 'Cancelled', 'icon' => 'bi-x-circle', 'color' => '#718096', 'bg' => '#f7fafc'],
-        'due' => ['label' => 'Due', 'icon' => 'bi-cash-coin', 'color' => '#c53030', 'bg' => '#fff5f5'],
-        'overpaid' => ['label' => 'Overpaid', 'icon' => 'bi-arrow-up-circle', 'color' => '#e53e3e', 'bg' => '#fff5f5'],
-        'late_pickup' => ['label' => 'Late Pickup', 'icon' => 'bi-clock-history', 'color' => '#b7791f', 'bg' => '#fffaf0'],
-        'late_return' => ['label' => 'Late Return', 'icon' => 'bi-alarm', 'color' => '#c53030', 'bg' => '#fff5f5'],
-        'no_dates' => ['label' => 'No Dates', 'icon' => 'bi-calendar-x', 'color' => '#718096', 'bg' => '#f7fafc'],
-        'fined' => ['label' => 'Fined', 'icon' => 'bi-exclamation-triangle', 'color' => '#c53030', 'bg' => '#fff5f5'],
-    ] as $key => $info)
-            @php $isActive = $activeFilter === $key; @endphp
-            <div wire:click="setActiveFilter('{{ $key }}')"
-                style="background:{{ $isActive ? 'var(--navy)' : '#fff' }};
-                       border-radius:9px;
-                       padding:8px 14px;
-                       font-size:12px;
-                       border:1.5px solid {{ $isActive ? 'var(--navy)' : 'var(--border)' }};
-                       cursor:pointer;
-                       text-align:center;
-                       min-width:80px;
-                       {{ $isActive ? 'box-shadow:0 2px 8px rgba(0,0,0,0.15);' : '' }}">
-                <div style="margin-bottom:4px;">
-                    <i class="bi {{ $info['icon'] }}"
-                        style="font-size:16px; color:{{ $isActive ? '#fff' : '#a0aec0' }};"></i>
-                </div>
-                <div style="color:{{ $isActive ? '#fff' : 'var(--text-muted)' }}; font-weight:500; line-height:1.2;">
-                    {{ $info['label'] }}
-                </div>
-                <div
-                    style="font-weight:800; color:{{ $isActive ? '#fff' : $info['color'] }}; font-size:13px; margin-top:2px;">
-                    {{ $counts[$key] }}
-                </div>
-            </div>
-        @endforeach
-
-        @if ($activeFilter)
-            <div wire:click="clearFilter"
-                style="background:#fff; border-radius:9px; padding:8px 14px; font-size:12px;
-                       border:1.5px solid var(--border); cursor:pointer; text-align:center;
-                       min-width:80px; color:var(--text-muted); display:flex; flex-direction:column;
-                       align-items:center; justify-content:center; gap:4px;">
-                <i class="bi bi-x-circle" style="font-size:16px;"></i>
-                <div>Clear</div>
-            </div>
-        @endif
-    </div>
 
     <div class="table-card">
         <div class="table-card-header" style="flex-wrap:wrap; gap:10px;">
