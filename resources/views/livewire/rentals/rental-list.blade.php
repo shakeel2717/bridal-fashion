@@ -17,7 +17,8 @@
 
     {{-- Duplicate Bookings Warning --}}
     @if ($duplicateBookings->count() > 0)
-        <div style="background:#fff5f5; border:1.5px solid #fc8181; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+        <div
+            style="background:#fff5f5; border:1.5px solid #fc8181; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
             <div style="font-size:12px; font-weight:700; color:#c53030; margin-bottom:10px;">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 Duplicate Bookings Detected — {{ $duplicateBookings->count() }} item(s) booked multiple times
@@ -35,30 +36,51 @@
     {{-- Status + Special Filters (single combined row) --}}
     <div class="d-flex gap-2 mb-3 flex-wrap">
         @foreach ([
-            'booked'               => ['label' => 'Booked',        'color' => '#2c5282', 'bg' => '#ebf4ff'],
-            'ready'                => ['label' => 'Ready',         'color' => '#b7791f', 'bg' => '#fffaf0'],
-            'picked_up'            => ['label' => 'Picked Up',     'color' => '#553c9a', 'bg' => '#f5f0ff'],
-            'partially_picked_up'  => ['label' => 'Partial',       'color' => '#c05621', 'bg' => '#fffaf0'],
-            'returned'             => ['label' => 'Returned',      'color' => '#276749', 'bg' => '#f0fff4'],
-            'cancelled'            => ['label' => 'Cancelled',     'color' => '#718096', 'bg' => '#f7fafc'],
-            'due'                  => ['label' => 'Due',           'color' => '#c53030', 'bg' => '#fff5f5'],
-            'overpaid'             => ['label' => 'Overpaid',      'color' => '#e53e3e', 'bg' => '#fff5f5'],
-            'late_pickup'          => ['label' => 'Late Pickup',   'color' => '#b7791f', 'bg' => '#fffaf0'],
-            'late_return'          => ['label' => 'Late Return',   'color' => '#c53030', 'bg' => '#fff5f5'],
-            'no_dates'             => ['label' => 'No Dates Set',  'color' => '#718096', 'bg' => '#f7fafc'],
-        ] as $key => $info)
+        'booked' => ['label' => 'Booked', 'icon' => 'bi-journal-bookmark', 'color' => '#2c5282', 'bg' => '#ebf4ff'],
+        'ready' => ['label' => 'Ready', 'icon' => 'bi-check2-circle', 'color' => '#b7791f', 'bg' => '#fffaf0'],
+        'picked_up' => ['label' => 'Picked Up', 'icon' => 'bi-box-arrow-up', 'color' => '#553c9a', 'bg' => '#f5f0ff'],
+        'partially_picked_up' => ['label' => 'Partial', 'icon' => 'bi-box-arrow-in-up', 'color' => '#c05621', 'bg' => '#fffaf0'],
+        'returned' => ['label' => 'Returned', 'icon' => 'bi-box-arrow-in-down', 'color' => '#276749', 'bg' => '#f0fff4'],
+        'cancelled' => ['label' => 'Cancelled', 'icon' => 'bi-x-circle', 'color' => '#718096', 'bg' => '#f7fafc'],
+        'due' => ['label' => 'Due', 'icon' => 'bi-cash-coin', 'color' => '#c53030', 'bg' => '#fff5f5'],
+        'overpaid' => ['label' => 'Overpaid', 'icon' => 'bi-arrow-up-circle', 'color' => '#e53e3e', 'bg' => '#fff5f5'],
+        'late_pickup' => ['label' => 'Late Pickup', 'icon' => 'bi-clock-history', 'color' => '#b7791f', 'bg' => '#fffaf0'],
+        'late_return' => ['label' => 'Late Return', 'icon' => 'bi-alarm', 'color' => '#c53030', 'bg' => '#fff5f5'],
+        'no_dates' => ['label' => 'No Dates', 'icon' => 'bi-calendar-x', 'color' => '#718096', 'bg' => '#f7fafc'],
+    ] as $key => $info)
             @php $isActive = $activeFilter === $key; @endphp
-            <div style="background:{{ $isActive ? $info['bg'] : '#fff' }}; border-radius:7px; padding:7px 14px; font-size:12px; border:1px solid {{ $isActive ? $info['color'] : 'var(--border)' }}; cursor:pointer; {{ $isActive ? 'box-shadow:0 0 0 1px ' . $info['color'] . ';' : '' }}"
-                wire:click="setActiveFilter('{{ $key }}')">
-                <span style="color:{{ $isActive ? $info['color'] : 'var(--text-muted)' }};">{{ $info['label'] }}</span>
-                <span class="ms-2 fw-700" style="color:{{ $info['color'] }};">{{ $counts[$key] }}</span>
+            <div wire:click="setActiveFilter('{{ $key }}')"
+                style="background:{{ $isActive ? $info['bg'] : '#fff' }};
+                       border-radius:9px;
+                       padding:8px 14px;
+                       font-size:12px;
+                       border:1.5px solid {{ $isActive ? $info['color'] : 'var(--border)' }};
+                       cursor:pointer;
+                       text-align:center;
+                       min-width:80px;
+                       {{ $isActive ? 'box-shadow:0 0 0 1px ' . $info['color'] . ';' : '' }}">
+                <div style="margin-bottom:4px;">
+                    <i class="bi {{ $info['icon'] }}"
+                        style="font-size:16px; color:{{ $isActive ? $info['color'] : '#a0aec0' }};"></i>
+                </div>
+                <div
+                    style="color:{{ $isActive ? $info['color'] : 'var(--text-muted)' }}; font-weight:500; line-height:1.2;">
+                    {{ $info['label'] }}
+                </div>
+                <div style="font-weight:800; color:{{ $info['color'] }}; font-size:13px; margin-top:2px;">
+                    {{ $counts[$key] }}
+                </div>
             </div>
         @endforeach
 
         @if ($activeFilter)
-            <div style="background:#fff; border-radius:7px; padding:7px 14px; font-size:12px; border:1px solid var(--border); cursor:pointer; color:var(--text-muted);"
-                wire:click="clearFilter">
-                <i class="bi bi-x-circle me-1"></i> Clear
+            <div wire:click="clearFilter"
+                style="background:#fff; border-radius:9px; padding:8px 14px; font-size:12px;
+                       border:1.5px solid var(--border); cursor:pointer; text-align:center;
+                       min-width:80px; color:var(--text-muted); display:flex; flex-direction:column;
+                       align-items:center; justify-content:center; gap:4px;">
+                <i class="bi bi-x-circle" style="font-size:16px;"></i>
+                <div>Clear</div>
             </div>
         @endif
     </div>
@@ -70,9 +92,11 @@
                     placeholder="Search name, phone, CNIC, bill ref...">
             </div>
             <div class="d-flex gap-2 align-items-center">
-                <input type="date" wire:model.live="dateFrom" class="form-control form-control-sm" style="width:140px;">
+                <input type="date" wire:model.live="dateFrom" class="form-control form-control-sm"
+                    style="width:140px;">
                 <span style="font-size:12px; color:var(--text-muted);">to</span>
-                <input type="date" wire:model.live="dateTo" class="form-control form-control-sm" style="width:140px;">
+                <input type="date" wire:model.live="dateTo" class="form-control form-control-sm"
+                    style="width:140px;">
             </div>
         </div>
 
@@ -129,6 +153,12 @@
                                 {{ \Carbon\Carbon::parse($rental->pickup_date)->format('d/m/Y') }}
                                 @if (\Carbon\Carbon::parse($rental->pickup_date)->isToday())
                                     <span class="badge-status ready ms-1">Today</span>
+                                @elseif (in_array($rental->status, ['booked', 'ready']) && \Carbon\Carbon::parse($rental->pickup_date)->isPast())
+                                    @php $daysLate = \Carbon\Carbon::parse($rental->pickup_date)->diffInDays(now()); @endphp
+                                    <div style="font-size:10px; color:#b7791f; font-weight:700; margin-top:2px;">
+                                        <i class="bi bi-clock-history" style="font-size:10px;"></i>
+                                        {{ $daysLate }}d late
+                                    </div>
                                 @endif
                             @else
                                 <span style="color:#e53e3e; font-size:11px; font-weight:600;">Not Set</span>
@@ -138,9 +168,13 @@
                             @if ($rental->return_date)
                                 {{ \Carbon\Carbon::parse($rental->return_date)->format('d/m/Y') }}
                                 @if (
-                                    \Carbon\Carbon::parse($rental->return_date)->isPast() &&
-                                    !in_array($rental->status, ['returned', 'cancelled', 'abandoned']))
-                                    <span class="badge-status overdue ms-1">Late</span>
+                                    !in_array($rental->status, ['returned', 'cancelled', 'abandoned']) &&
+                                        \Carbon\Carbon::parse($rental->return_date)->isPast())
+                                    @php $daysLate = \Carbon\Carbon::parse($rental->return_date)->diffInDays(now()); @endphp
+                                    <div style="font-size:10px; color:#c53030; font-weight:700; margin-top:2px;">
+                                        <i class="bi bi-alarm" style="font-size:10px;"></i>
+                                        {{ $daysLate }}d late
+                                    </div>
                                 @endif
                             @else
                                 <span style="color:#e53e3e; font-size:11px; font-weight:600;">Not Set</span>
@@ -155,10 +189,11 @@
                             @endif
                         </td>
                         @php
-                            $paid    = (float) ($rental->payments_sum_amount ?? 0);
+                            $paid = (float) ($rental->payments_sum_amount ?? 0);
                             $balance = $rental->total_amount - $paid;
                         @endphp
-                        <td style="font-size:13px; font-weight:700; color:{{ $balance > 0 ? '#e53e3e' : ($balance < 0 ? '#38a169' : '#38a169') }};">
+                        <td
+                            style="font-size:13px; font-weight:700; color:{{ $balance > 0 ? '#e53e3e' : ($balance < 0 ? '#38a169' : '#38a169') }};">
                             @if ($balance < 0)
                                 − Rs. {{ number_format(abs($balance), 0) }}
                                 <div style="font-size:9px; color:#38a169; font-weight:600;">Overpaid</div>
@@ -207,7 +242,8 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
+                        <td colspan="9"
+                            style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
                             <i class="bi bi-box-seam" style="font-size:32px; display:block; margin-bottom:8px;"></i>
                             No rentals found
                         </td>
