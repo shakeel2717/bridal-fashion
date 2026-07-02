@@ -1,4 +1,5 @@
 <?php
+
 // app/Http/Controllers/RentalsController.php
 
 namespace App\Http\Controllers;
@@ -15,6 +16,11 @@ class RentalsController extends Controller
     public function create()
     {
         return view('rentals.create');
+    }
+
+    public function calendar()
+    {
+        return view('rentals.calendar');
     }
 
     public function show(Rental $rental)

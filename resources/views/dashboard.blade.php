@@ -155,6 +155,13 @@
                         </a>
                     </div>
                 @endif
+                <div class="col-2">
+                    <a href="{{ route('rentals.calendar') }}" class="module-card">
+                        <div class="mod-icon-wrap blue"><i class="bi bi-calendar3"
+                                style="font-size:22px; color:#3182ce;"></i></div>
+                        <div class="mod-name">Calendar</div>
+                    </a>
+                </div>
                 @if (auth()->user()->canAccess('sales'))
                     <div class="col-2">
                         <a href="{{ route('sales.index') }}" class="module-card">

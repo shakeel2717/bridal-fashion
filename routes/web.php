@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
     Route::get('/products/code-registry', [App\Http\Controllers\ProductCodeRegistryController::class, 'index'])->name('products.code-registry');
     Route::get('/rentals', [RentalsController::class, 'index'])->name('rentals.index');
+    Route::get('/rentals/calendar', [RentalsController::class, 'calendar'])->name('rentals.calendar');
     Route::get('/rentals/create', [RentalsController::class, 'create'])->name('rentals.create');
     Route::get('/rentals/{rental}', [RentalsController::class, 'show'])->name('rentals.show');
     Route::get('/rentals/{rental}/edit', [RentalsController::class, 'edit'])->name('rentals.edit');
