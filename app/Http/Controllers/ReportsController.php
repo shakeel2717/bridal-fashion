@@ -16,7 +16,7 @@ class ReportsController extends Controller
 
     public function allItems()
     {
-        return view('reports.all-items');
+        return view('reports.stock');
     }
 
     public function topItems()
