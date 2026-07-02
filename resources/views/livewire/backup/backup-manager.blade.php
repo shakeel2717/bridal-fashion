@@ -79,6 +79,54 @@
                     </div>
                 </div>
             </div>
+            {{-- Upload & Restore --}}
+            <div class="table-card mt-3" style="padding:20px;">
+                <div
+                    style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:14px;">
+                    <i class="bi bi-upload me-1"></i> Upload & Restore Backup
+                </div>
+
+                @if ($uploadError)
+                    <div class="alert alert-danger py-2 mb-3" style="font-size:12px;">
+                        <i class="bi bi-exclamation-circle me-1"></i> {{ $uploadError }}
+                    </div>
+                @endif
+
+                <div class="mb-3">
+                    <label class="form-label">Select .sqlite Backup File</label>
+                    <input type="file" wire:model="uploadedBackup" class="form-control" accept=".sqlite">
+                    @error('uploadedBackup')
+                        <div style="font-size:11px; color:red; margin-top:4px;">{{ $message }}</div>
+                    @enderror
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                        Only .sqlite files exported from this system.
+                    </div>
+                </div>
+
+                @if ($uploadedBackup)
+                    <div
+                        style="background:#f0fff4; border:1px solid #9ae6b4; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:12px;">
+                        <i class="bi bi-file-earmark-check me-1 text-success"></i>
+                        <strong>{{ $uploadedBackup->getClientOriginalName() }}</strong>
+                        <span style="color:var(--text-muted);"> — {{ round($uploadedBackup->getSize() / 1024, 1) }}
+                            KB</span>
+                    </div>
+
+                    <button wire:click="uploadAndRestore" wire:loading.attr="disabled" class="btn btn-warning w-100"
+                        style="height:44px; font-weight:700;">
+                        <span wire:loading wire:target="uploadAndRestore">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        </span>
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>
+                        Restore This Backup
+                    </button>
+                @else
+                    <button class="btn btn-outline-secondary w-100 disabled" style="height:44px;">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>
+                        Select a file first
+                    </button>
+                @endif
+            </div>
         </div>
 
         {{-- Backup List --}}

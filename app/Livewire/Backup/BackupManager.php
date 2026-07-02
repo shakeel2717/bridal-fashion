@@ -4,13 +4,21 @@ namespace App\Livewire\Backup;
 
 use Carbon\Carbon;
 use Livewire\Component;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Livewire\WithFileUploads;
 
 class BackupManager extends Component
 {
+    use WithFileUploads;
+
     public string $note = '';
 
     public bool $showRestore = false;
+
+    public $uploadedBackup = null;
+
+    public bool $showUploadRestore = false;
+
+    public string $uploadError = '';
 
     public string $restoreFile = '';
 
@@ -47,6 +55,56 @@ class BackupManager extends Component
 
         $this->note = '';
         session()->flash('success', "Backup created: {$filename}");
+    }
+
+    public function uploadAndRestore(): void
+    {
+        $this->uploadError = '';
+
+        if (! $this->uploadedBackup) {
+            $this->uploadError = 'Please select a backup file.';
+
+            return;
+        }
+
+        // Validate it's a sqlite file
+        $originalName = $this->uploadedBackup->getClientOriginalName();
+        $ext = strtolower($this->uploadedBackup->getClientOriginalExtension());
+
+        if ($ext !== 'sqlite') {
+            $this->uploadError = 'Only .sqlite backup files are allowed.';
+
+            return;
+        }
+
+        $dbPath = database_path('database.sqlite');
+        $backupDir = storage_path('app/backups');
+
+        if (! is_dir($backupDir)) {
+            mkdir($backupDir, 0755, true);
+        }
+
+        // Auto-backup current before restoring uploaded
+        $autoName = 'pre_upload_restore_'.now()->format('Y-m-d_H-i-s').'.sqlite';
+        copy($dbPath, $backupDir.DIRECTORY_SEPARATOR.$autoName);
+        file_put_contents(
+            $backupDir.DIRECTORY_SEPARATOR.$autoName.'.note.txt',
+            'Auto-backup before uploaded restore on '.now()->format('d/m/Y H:i')
+        );
+
+        // Replace lines 95-100 with:
+        $savedName = 'uploaded_'.now()->format('Y-m-d_H-i-s').'_'.$originalName;
+        $tempPath = $this->uploadedBackup->getRealPath();
+
+        // Copy to backups folder for history
+        copy($tempPath, $backupDir.DIRECTORY_SEPARATOR.$savedName);
+
+        // Restore directly from temp path
+        copy($tempPath, $dbPath);
+
+        $this->uploadedBackup = null;
+        $this->showUploadRestore = false;
+        session()->flash('success', 'Backup uploaded and restored successfully. Auto-backup saved before restoring.');
     }
 
     public function confirmRestore(string $filename): void
