@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AccountsController;
-use App\Http\Controllers\LoansController;
 use App\Http\Controllers\AdvancesController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BackupController;
@@ -11,7 +10,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeesController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\FeatureTogglesController;
+use App\Http\Controllers\LoansController;
 use App\Http\Controllers\NotificationsController;
+use App\Http\Controllers\ProductCodeRegistryController;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\PurchaseOrdersController;
 use App\Http\Controllers\RentalsController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\VendorsController;
+use App\Livewire\License\ActivationScreen;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -26,7 +28,7 @@ Route::middleware('auth')->group(function () {
 
     // Placeholder routes (we'll build each module next)
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
-    Route::get('/products/code-registry', [App\Http\Controllers\ProductCodeRegistryController::class, 'index'])->name('products.code-registry');
+    Route::get('/products/code-registry', [ProductCodeRegistryController::class, 'index'])->name('products.code-registry');
     Route::get('/rentals', [RentalsController::class, 'index'])->name('rentals.index');
     Route::get('/rentals/calendar', [RentalsController::class, 'calendar'])->name('rentals.calendar');
     Route::get('/rentals/create', [RentalsController::class, 'create'])->name('rentals.create');
@@ -64,6 +66,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/backup/download/{filename}', [BackupController::class, 'download'])->name('backup.download');
 
     Route::get('/feature-toggles', [FeatureTogglesController::class, 'index'])->name('feature-toggles.index');
+});
+
+Route::prefix('license')->name('license.')->group(function () {
+    Route::get('/activate', fn () => view('license.activate', [
+        'installationCode' => app(\App\Services\LicenseService::class)->getStoredInstallationCode()
+            ?? app(\App\Services\LicenseService::class)->firstBoot(),
+        'error' => session('license_error'),
+    ]))->name('activation');
+
+    Route::post('/activate', function (\Illuminate\Http\Request $request) {
+        $license = app(\App\Services\LicenseService::class);
+        $clean   = strtoupper(preg_replace('/[^A-Z0-9]/', '', $request->input('activation_code', '')));
+
+        if (strlen($clean) !== 20) {
+            return back()->with('license_error', 'Invalid code format.');
+        }
+
+        if ($license->activate($clean)) {
+            return redirect()->route('dashboard');
+        }
+
+        return back()->with('license_error', 'Invalid activation code. Please contact your vendor.');
+    })->name('activation.submit');
+
+    Route::get('/locked', fn () => view('license.locked'))->name('locked');
 });
 
 require __DIR__.'/auth.php';
