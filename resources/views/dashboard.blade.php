@@ -5,128 +5,151 @@
 
     <div class="section-label">آج کا خلاصہ — Today's Overview</div>
 
-    {{-- Single Stats Row: Operational first, financial after --}}
-    <div class="row g-2 mb-2">
-        @if (auth()->user()->canAccess('stat_active_rentals'))
-            <div class="col-2">
-                <div class="stat-card stat-green">
-                    <div class="stat-label">Active Rentals</div>
-                    <div class="stat-value">{{ $stats['active_rentals'] }}</div>
-                    <div class="stat-sub">Currently out</div>
-                </div>
-            </div>
-        @endif
-        @if (auth()->user()->canAccess('stat_pickup_today'))
-            <div class="col-2">
-                <div class="stat-card stat-purple">
-                    <div class="stat-label">Pickup Today</div>
-                    <div class="stat-value">{{ $stats['pickup_today'] }}</div>
-                    <div class="stat-sub">Customers arriving</div>
-                </div>
-            </div>
-        @endif
-        @if (auth()->user()->canAccess('stat_pickup_tomorrow'))
-            <div class="col-2">
-                <div class="stat-card stat-teal">
-                    <div class="stat-label">Pickup Tomorrow</div>
-                    <div class="stat-value">{{ $stats['pickup_tomorrow'] }}</div>
-                    <div class="stat-sub">Arriving tomorrow</div>
-                </div>
-            </div>
-        @endif
-        @if (auth()->user()->canAccess('stat_overdue'))
-            <div class="col-2">
-                <div class="stat-card stat-red">
-                    <div class="stat-label">Overdue Returns</div>
-                    <div class="stat-value">{{ $stats['overdue'] }}</div>
-                    <div class="stat-sub">Action needed</div>
-                </div>
-            </div>
-        @endif
-        @if (auth()->user()->canAccess('stat_pending_balance'))
-            <div class="col-2">
-                <div class="stat-card stat-gold">
-                    <div class="stat-label">Pending Balance</div>
-                    <div class="stat-value" style="font-size:15px;">Rs. {{ number_format($stats['pending_balance'], 0) }}
-                    </div>
-                    <div class="stat-sub">From active rentals</div>
-                </div>
-            </div>
-        @endif
-        @if (auth()->user()->canAccess('stat_monthly_revenue'))
-            <div class="col-2">
-                <div class="stat-card stat-gold">
-                    <div class="stat-label">Monthly Revenue</div>
-                    <div class="stat-value" style="font-size:15px;">Rs. {{ number_format($stats['monthly_revenue'], 0) }}
-                    </div>
-                    <div class="stat-sub">{{ now()->format('F Y') }}</div>
-                </div>
-            </div>
-        @endif
-    </div>
+    {{-- Stats Toggle --}}
+    <div x-data="{ open: false }" class="mb-2">
 
-    {{-- Admin Stats Row --}}
-    @if (auth()->user()->isAdmin())
-        <div class="row g-2 mb-2">
-            @if (auth()->user()->canAccess('stat_total_customers'))
-                <div class="col-2">
-                    <div class="stat-card stat-blue">
-                        <div class="stat-label">Customers</div>
-                        <div class="stat-value">{{ $stats['total_customers'] }}</div>
-                        <div class="stat-sub">Registered</div>
-                    </div>
-                </div>
-            @endif
-            @if (auth()->user()->canAccess('stat_total_products'))
-                <div class="col-2">
-                    <div class="stat-card stat-blue">
-                        <div class="stat-label">Products</div>
-                        <div class="stat-value">{{ $stats['total_products'] }}</div>
-                        <div class="stat-sub">In inventory</div>
-                    </div>
-                </div>
-            @endif
-            @if (auth()->user()->canAccess('stat_total_sales'))
-                <div class="col-2">
-                    <div class="stat-card stat-blue">
-                        <div class="stat-label">Sales This Month</div>
-                        <div class="stat-value">{{ $stats['total_sales'] }}</div>
-                        <div class="stat-sub">Completed</div>
-                    </div>
-                </div>
-            @endif
-            @if (auth()->user()->canAccess('stat_total_cash'))
-                <div class="col-2">
-                    <div class="stat-card stat-green">
-                        <div class="stat-label">Cash & Bank</div>
-                        <div class="stat-value" style="font-size:15px;">Rs. {{ number_format($stats['total_cash'], 0) }}
-                        </div>
-                        <div class="stat-sub">All accounts</div>
-                    </div>
-                </div>
-            @endif
-            @if (auth()->user()->canAccess('stat_expenses'))
-                <div class="col-2">
-                    <div class="stat-card stat-red">
-                        <div class="stat-label">Expenses</div>
-                        <div class="stat-value" style="font-size:15px;">Rs.
-                            {{ number_format($stats['total_expenses'], 0) }}</div>
-                        <div class="stat-sub">{{ now()->format('F Y') }}</div>
-                    </div>
-                </div>
-            @endif
-            @if (auth()->user()->canAccess('stat_pending_po'))
-                <div class="col-2">
-                    <div class="stat-card stat-purple">
-                        <div class="stat-label">PO Balance Due</div>
-                        <div class="stat-value" style="font-size:15px;">Rs. {{ number_format($stats['pending_po'], 0) }}
-                        </div>
-                        <div class="stat-sub">Vendor payments</div>
-                    </div>
-                </div>
-            @endif
+        <div class="text-center mb-2">
+            <button @click="open = !open"
+                style="background:none; border:none; cursor:pointer; padding:4px 16px; display:inline-flex; flex-direction:column; align-items:center; gap:2px;">
+                <i class="bi" :class="open ? 'bi-chevron-up' : 'bi-chevron-down'"
+                    style="font-size:22px; font-weight:900; color:var(--navy);"></i>
+            </button>
         </div>
-    @endif
+
+        <div x-show="open" x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0" x-cloak>
+
+            {{-- Single Stats Row: Operational first, financial after --}}
+            <div class="row g-2 mb-2">
+                @if (auth()->user()->canAccess('stat_active_rentals'))
+                    <div class="col-2">
+                        <div class="stat-card stat-green">
+                            <div class="stat-label">Active Rentals</div>
+                            <div class="stat-value">{{ $stats['active_rentals'] }}</div>
+                            <div class="stat-sub">Currently out</div>
+                        </div>
+                    </div>
+                @endif
+                @if (auth()->user()->canAccess('stat_pickup_today'))
+                    <div class="col-2">
+                        <div class="stat-card stat-purple">
+                            <div class="stat-label">Pickup Today</div>
+                            <div class="stat-value">{{ $stats['pickup_today'] }}</div>
+                            <div class="stat-sub">Customers arriving</div>
+                        </div>
+                    </div>
+                @endif
+                @if (auth()->user()->canAccess('stat_pickup_tomorrow'))
+                    <div class="col-2">
+                        <div class="stat-card stat-teal">
+                            <div class="stat-label">Pickup Tomorrow</div>
+                            <div class="stat-value">{{ $stats['pickup_tomorrow'] }}</div>
+                            <div class="stat-sub">Arriving tomorrow</div>
+                        </div>
+                    </div>
+                @endif
+                @if (auth()->user()->canAccess('stat_overdue'))
+                    <div class="col-2">
+                        <div class="stat-card stat-red">
+                            <div class="stat-label">Overdue Returns</div>
+                            <div class="stat-value">{{ $stats['overdue'] }}</div>
+                            <div class="stat-sub">Action needed</div>
+                        </div>
+                    </div>
+                @endif
+                @if (auth()->user()->canAccess('stat_pending_balance'))
+                    <div class="col-2">
+                        <div class="stat-card stat-gold">
+                            <div class="stat-label">Pending Balance</div>
+                            <div class="stat-value" style="font-size:15px;">Rs.
+                                {{ number_format($stats['pending_balance'], 0) }}
+                            </div>
+                            <div class="stat-sub">From active rentals</div>
+                        </div>
+                    </div>
+                @endif
+                @if (auth()->user()->canAccess('stat_monthly_revenue'))
+                    <div class="col-2">
+                        <div class="stat-card stat-gold">
+                            <div class="stat-label">Monthly Revenue</div>
+                            <div class="stat-value" style="font-size:15px;">Rs.
+                                {{ number_format($stats['monthly_revenue'], 0) }}
+                            </div>
+                            <div class="stat-sub">{{ now()->format('F Y') }}</div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            {{-- Admin Stats Row --}}
+            @if (auth()->user()->isAdmin())
+                <div class="row g-2 mb-2">
+                    @if (auth()->user()->canAccess('stat_total_customers'))
+                        <div class="col-2">
+                            <div class="stat-card stat-blue">
+                                <div class="stat-label">Customers</div>
+                                <div class="stat-value">{{ $stats['total_customers'] }}</div>
+                                <div class="stat-sub">Registered</div>
+                            </div>
+                        </div>
+                    @endif
+                    @if (auth()->user()->canAccess('stat_total_products'))
+                        <div class="col-2">
+                            <div class="stat-card stat-blue">
+                                <div class="stat-label">Products</div>
+                                <div class="stat-value">{{ $stats['total_products'] }}</div>
+                                <div class="stat-sub">In inventory</div>
+                            </div>
+                        </div>
+                    @endif
+                    @if (auth()->user()->canAccess('stat_total_sales'))
+                        <div class="col-2">
+                            <div class="stat-card stat-blue">
+                                <div class="stat-label">Sales This Month</div>
+                                <div class="stat-value">{{ $stats['total_sales'] }}</div>
+                                <div class="stat-sub">Completed</div>
+                            </div>
+                        </div>
+                    @endif
+                    @if (auth()->user()->canAccess('stat_total_cash'))
+                        <div class="col-2">
+                            <div class="stat-card stat-green">
+                                <div class="stat-label">Cash & Bank</div>
+                                <div class="stat-value" style="font-size:15px;">Rs.
+                                    {{ number_format($stats['total_cash'], 0) }}
+                                </div>
+                                <div class="stat-sub">All accounts</div>
+                            </div>
+                        </div>
+                    @endif
+                    @if (auth()->user()->canAccess('stat_expenses'))
+                        <div class="col-2">
+                            <div class="stat-card stat-red">
+                                <div class="stat-label">Expenses</div>
+                                <div class="stat-value" style="font-size:15px;">Rs.
+                                    {{ number_format($stats['total_expenses'], 0) }}</div>
+                                <div class="stat-sub">{{ now()->format('F Y') }}</div>
+                            </div>
+                        </div>
+                    @endif
+                    @if (auth()->user()->canAccess('stat_pending_po'))
+                        <div class="col-2">
+                            <div class="stat-card stat-purple">
+                                <div class="stat-label">PO Balance Due</div>
+                                <div class="stat-value" style="font-size:15px;">Rs.
+                                    {{ number_format($stats['pending_po'], 0) }}
+                                </div>
+                                <div class="stat-sub">Vendor payments</div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+        </div>
+    </div>
 
     {{-- Main Content: Modules + Activity --}}
     <div class="row g-3">
