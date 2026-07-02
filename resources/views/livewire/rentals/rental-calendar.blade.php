@@ -62,12 +62,17 @@
             @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
                 <div
                     style="text-align:center; padding:4px 2px; font-size:11px; font-weight:700;
-            color:{{ $day === 'Fri' ? '#c53030' : 'var(--text-muted)' }};
-            background:{{ $day === 'Fri' ? '#fff5f5' : '#f8f9fa' }}; border-right:1px solid var(--border);">
+        color:{{ $day === 'Fri' ? '#c53030' : 'var(--text-muted)' }};
+        background:{{ $day === 'Fri' ? 'rgba(254,215,215,0.85)' : 'rgba(135, 207, 245, 0.9)' }};
+        border-right:1px solid var(--border);">
                     {{ $day }}
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-top:2px;">
-                        <div style="font-size:9px; font-weight:600; color:#3182ce; text-align:center;">Pickup</div>
-                        <div style="font-size:9px; font-weight:600; color:#38a169; text-align:center;">Return</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-top:3px;">
+                        <div style="font-size:9px; font-weight:600; color:#000; text-align:center;">
+                            <i class="bi bi-box-arrow-up" style="font-size:9px;"></i> Pickup
+                        </div>
+                        <div style="font-size:9px; font-weight:600; color:#000; text-align:center;">
+                            <i class="bi bi-box-arrow-in-down" style="font-size:9px;"></i> Return
+                        </div>
                     </div>
                 </div>
             @endforeach
@@ -132,22 +137,24 @@
                                 </div>
 
                                 {{-- RIGHT: Returns --}}
-                                <div style="padding-left:2px;">
+                                <div
+                                    style="padding-left:2px; display:flex; flex-direction:column; align-items:flex-end;">
                                     @foreach (array_slice($cell['returns'], 0, $maxShow) as $r)
-                                        <div style="margin-bottom:2px;">
+                                        <div
+                                            style="margin-bottom:2px; width:100%; display:flex; justify-content:flex-end;">
                                             <span
                                                 style="display:inline-block; font-size:9px; font-weight:700;
-                                                color:{{ $r['color'] }}; background:transparent;
-                                                border:1.5px solid {{ $r['color'] }};
-                                                border-radius:4px; padding:1px 4px; line-height:1.4;
-                                                max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                color:#fff; background:{{ $r['color'] }};
+                border-radius:4px; padding:1px 4px; line-height:1.4;
+                max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
                                                 title="↓ {{ $r['code'] }} — {{ $r['customer'] }}">
                                                 ↓ {{ $r['code'] }}
                                             </span>
                                         </div>
                                     @endforeach
                                     @if ($overflowR > 0)
-                                        <div style="font-size:9px; color:#e53e3e; font-weight:700; margin-top:1px;">
+                                        <div
+                                            style="font-size:9px; color:#e53e3e; font-weight:700; margin-top:1px; text-align:right;">
                                             +{{ $overflowR }}
                                         </div>
                                     @endif
@@ -205,10 +212,11 @@
                 <div class="modal-content">
                     <div class="modal-header py-2">
                         <div>
-                            <div style="font-size:15px; font-weight:700; color:var(--navy);">
-                                <i class="bi bi-calendar3 me-2"></i>{{ $displayDate }}
+                            <div style="font-size:15px; font-weight:700; color:white">
+                                <i class="bi bi-calendar3 me-2"></i>
+                                {{ \Carbon\Carbon::createFromFormat('Y-m-d', $selectedDate)->format('d F Y, l') }}
                             </div>
-                            <div style="font-size:11px; color:var(--text-muted);">
+                            <div style="font-size:11px; color:white;">
                                 {{ count($pickups) }} pickup{{ count($pickups) != 1 ? 's' : '' }},
                                 {{ count($returns) }} return{{ count($returns) != 1 ? 's' : '' }}
                             </div>
@@ -296,54 +304,26 @@
                                     <div style="padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
                                         @foreach ($returns as $r)
                                             <div
-                                                style="border-left:4px solid {{ $r['color'] }};
-                                                background:#fafafa; border-radius:0 8px 8px 0;
-                                                padding:10px 12px; border:1px solid #eee;
-                                                border-left:4px solid {{ $r['color'] }};">
-
-                                                {{-- Code Badge --}}
-                                                <div style="margin-bottom:5px;">
-                                                    <span
-                                                        style="display:inline-block; font-size:12px; font-weight:800;
-                                                        color:{{ $r['color'] }}; background:transparent;
-                                                        border:2px solid {{ $r['color'] }};
-                                                        border-radius:6px; padding:2px 10px; letter-spacing:0.3px;">
-                                                        ↓ {{ $r['code'] }}
-                                                    </span>
-                                                </div>
-
-                                                @if ($r['name'])
-                                                    <div style="font-size:11px; color:#4a5568; margin-bottom:3px;">
-                                                        {{ $r['name'] }}
-                                                    </div>
-                                                @endif
-                                                <div style="font-size:12px; font-weight:600; color:#2d3748;">
-                                                    {{ $r['customer'] }}
-                                                </div>
-                                                @if ($r['phone'])
-                                                    <div style="font-size:11px; color:var(--text-muted);">
-                                                        {{ $r['phone'] }}
-                                                    </div>
-                                                @endif
-                                                <div
-                                                    style="display:flex; align-items:center; justify-content:space-between; margin-top:5px;">
-                                                    <a href="{{ route('rentals.show', $r['rental_id']) }}"
-                                                        style="font-size:11px; font-family:monospace; font-weight:700;
-                                                        color:var(--navy); text-decoration:none;"
-                                                        target="_blank">{{ $r['bill_ref'] }}</a>
-                                                    <div style="display:flex; align-items:center; gap:5px;">
-                                                        @if ($r['pickup_date'])
-                                                            <span style="font-size:10px; color:var(--text-muted);">
-                                                                Picked:
-                                                                {{ \Carbon\Carbon::parse($r['pickup_date'])->format('d/m/Y') }}
-                                                            </span>
-                                                        @endif
-                                                        <span class="rental-status-badge {{ $r['status'] }}"
-                                                            style="font-size:9px; padding:1px 6px;">
-                                                            {{ ucfirst(str_replace('_', ' ', $r['status'])) }}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                style="display:flex; align-items:center; gap:8px; padding:7px 10px;
+        background:#fafafa; border-radius:7px; border:1px solid #eee;
+        border-left:4px solid {{ $r['color'] }};">
+                                                <span
+                                                    style="display:inline-block; font-size:12px; font-weight:800;
+            color:{{ $r['color'] }}; background:transparent;
+            border:2px solid {{ $r['color'] }};
+            border-radius:5px; padding:2px 9px; white-space:nowrap;">
+                                                    ↓ {{ $r['code'] }}
+                                                </span>
+                                                <a href="{{ route('rentals.show', $r['rental_id']) }}"
+                                                    style="font-size:11px; font-family:monospace; font-weight:700;
+            color:var(--navy); text-decoration:none; flex:1;"
+                                                    target="_blank">
+                                                    {{ $r['bill_ref'] }}
+                                                </a>
+                                                <span class="rental-status-badge {{ $r['status'] }}"
+                                                    style="font-size:9px; padding:1px 6px; white-space:nowrap;">
+                                                    {{ ucfirst(str_replace('_', ' ', $r['status'])) }}
+                                                </span>
                                             </div>
                                         @endforeach
                                     </div>
