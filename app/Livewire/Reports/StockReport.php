@@ -5,7 +5,6 @@ namespace App\Livewire\Reports;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\RentalItem;
-use App\Models\SaleItem;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -13,92 +12,255 @@ class StockReport extends Component
 {
     use WithPagination;
 
-    public string $activeView    = 'stock';   // stock | movement | abandoned
-    public string $search        = '';
-    public string $filterType    = '';
+    public string $activeReport   = '';
+    public string $search         = '';
+    public string $filterType     = '';
     public string $filterCategory = '';
-    public string $filterStatus  = 'active';  // active | inactive | abandoned | all
+    public string $filterStatus   = 'active';
+    public string $sortBy         = 'code';
+    public string $sortDir        = 'asc';
 
-    public function updatedSearch(): void        { $this->resetPage(); }
-    public function updatedFilterType(): void    { $this->resetPage(); }
+    public function updatedSearch(): void         { $this->resetPage(); }
+    public function updatedFilterType(): void     { $this->resetPage(); }
     public function updatedFilterCategory(): void { $this->resetPage(); }
-    public function updatedFilterStatus(): void  { $this->resetPage(); }
-    public function setView(string $view): void  { $this->activeView = $view; $this->resetPage(); }
+    public function updatedFilterStatus(): void   { $this->resetPage(); }
 
-    private function baseQuery()
+    public function getReportMenu(): array
     {
-        return Product::with(['category', 'group'])
-            ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->where('name', 'like', "%{$this->search}%")
-                  ->orWhere('code', 'like', "%{$this->search}%");
-            }))
-            ->when($this->filterType, fn ($q) => $q->where('type', $this->filterType))
-            ->when($this->filterCategory, fn ($q) => $q->where('category_id', $this->filterCategory))
-            ->when($this->filterStatus === 'active',    fn ($q) => $q->where('is_active', true)->where('is_abandoned', false))
-            ->when($this->filterStatus === 'inactive',  fn ($q) => $q->where('is_active', false))
-            ->when($this->filterStatus === 'abandoned', fn ($q) => $q->where('is_abandoned', true));
+        return [
+            'inventory' => [
+                'label' => 'Inventory',
+                'icon'  => 'bi-tags',
+                'items' => [
+                    'stock_list'    => ['label' => 'Full Stock List',    'icon' => 'bi-list-ul'],
+                    'zero_stock'    => ['label' => 'Zero Stock Items',   'icon' => 'bi-exclamation-circle'],
+                    'low_stock'     => ['label' => 'Low Stock (≤ 2)',    'icon' => 'bi-arrow-down-circle'],
+                    'by_category'   => ['label' => 'By Category',        'icon' => 'bi-folder'],
+                    'by_type'       => ['label' => 'By Type',            'icon' => 'bi-grid-3x3'],
+                ],
+            ],
+            'rental_stock' => [
+                'label' => 'Rental Items',
+                'icon'  => 'bi-box-seam',
+                'items' => [
+                    'most_rented'   => ['label' => 'Most Rented',        'icon' => 'bi-trophy'],
+                    'never_rented'  => ['label' => 'Never Rented',       'icon' => 'bi-slash-circle'],
+                ],
+            ],
+            'write_offs' => [
+                'label' => 'Write-offs',
+                'icon'  => 'bi-x-circle',
+                'items' => [
+                    'abandoned'     => ['label' => 'Abandoned Items',    'icon' => 'bi-x-circle'],
+                    'inactive'      => ['label' => 'Inactive Items',     'icon' => 'bi-pause-circle'],
+                ],
+            ],
+        ];
+    }
+
+    public function selectReport(string $report): void
+    {
+        $this->activeReport   = $report;
+        $this->search         = '';
+        $this->filterType     = '';
+        $this->filterCategory = '';
+        $this->filterStatus   = 'active';
+        $this->sortBy         = 'code';
+        $this->sortDir        = 'asc';
+        $this->resetPage();
+    }
+
+    public function sortByColumn(string $col): void
+    {
+        $this->sortDir = $this->sortBy === $col && $this->sortDir === 'asc' ? 'desc' : 'asc';
+        $this->sortBy  = $col;
+        $this->resetPage();
+    }
+
+    // ─── Summary (always shown) ───────────────────────────────────────────────
+
+    public function getSummary(): array
+    {
+        return [
+            'total'     => Product::count(),
+            'active'    => Product::where('is_active', true)->where('is_abandoned', false)->count(),
+            'abandoned' => Product::where('is_abandoned', true)->count(),
+            'zero_stock'=> Product::whereNotIn('type', ['fabric','service'])->where('stock_qty', 0)->where('is_abandoned', false)->count(),
+            'rental'    => Product::whereIn('type', ['rental','both'])->count(),
+            'sale'      => Product::whereIn('type', ['sale','both'])->count(),
+        ];
+    }
+
+    // ─── Report builders ──────────────────────────────────────────────────────
+
+    private function baseProducts()
+    {
+        $allowed = ['code','name','type','stock_qty','rental_price','sale_price'];
+        $col     = in_array($this->sortBy, $allowed) ? $this->sortBy : 'code';
+
+        return Product::with(['category','group'])
+            ->when($this->search, fn($q) => $q->where(fn($q) =>
+                $q->where('name','like',"%{$this->search}%")
+                  ->orWhere('code','like',"%{$this->search}%")
+            ))
+            ->when($this->filterType,     fn($q) => $q->where('type', $this->filterType))
+            ->when($this->filterCategory, fn($q) => $q->where('category_id', $this->filterCategory))
+            ->orderBy($col, $this->sortDir);
+    }
+
+    private function reportStockList(): array
+    {
+        return [
+            'type'  => 'product_list',
+            'title' => 'Full Stock List',
+            'data'  => $this->baseProducts()
+                ->where('is_abandoned', false)
+                ->when($this->filterStatus === 'active',   fn($q) => $q->where('is_active', true))
+                ->when($this->filterStatus === 'inactive', fn($q) => $q->where('is_active', false))
+                ->paginate(25),
+            'show_filters' => true,
+        ];
+    }
+
+    private function reportZeroStock(): array
+    {
+        return [
+            'type'  => 'product_list',
+            'title' => 'Zero Stock Items',
+            'data'  => $this->baseProducts()
+                ->where('is_abandoned', false)
+                ->where('is_active', true)
+                ->whereNotIn('type', ['fabric','service'])
+                ->where('stock_qty', 0)
+                ->paginate(25),
+            'show_filters' => false,
+        ];
+    }
+
+    private function reportLowStock(): array
+    {
+        return [
+            'type'  => 'product_list',
+            'title' => 'Low Stock (≤ 2 units)',
+            'data'  => $this->baseProducts()
+                ->where('is_abandoned', false)
+                ->where('is_active', true)
+                ->whereNotIn('type', ['fabric','service'])
+                ->where('stock_qty', '<=', 2)
+                ->where('stock_qty', '>', 0)
+                ->paginate(25),
+            'show_filters' => false,
+        ];
+    }
+
+    private function reportByCategory(): array
+    {
+        return [
+            'type'  => 'category_breakdown',
+            'title' => 'Stock by Category',
+            'data'  => Product::with('category:id,name,code')
+                ->selectRaw('category_id, type, COUNT(*) as count, SUM(rental_price) as rental_value, SUM(sale_price) as sale_value, SUM(stock_qty) as total_stock')
+                ->where('is_abandoned', false)
+                ->where('is_active', true)
+                ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
+                ->groupBy('category_id','type')
+                ->orderBy('category_id')
+                ->paginate(30),
+        ];
+    }
+
+    private function reportByType(): array
+    {
+        return [
+            'type'  => 'type_breakdown',
+            'title' => 'Stock by Type',
+            'data'  => Product::selectRaw('type, COUNT(*) as count, SUM(rental_price) as rental_value, SUM(sale_price) as sale_value, SUM(stock_qty) as total_stock')
+                ->where('is_abandoned', false)
+                ->where('is_active', true)
+                ->groupBy('type')
+                ->orderByDesc('count')
+                ->get(),
+        ];
+    }
+
+    private function reportMostRented(): array
+    {
+        return [
+            'type'  => 'most_rented',
+            'title' => 'Most Rented Items (All Time)',
+            'data'  => Product::withCount(['rentalItems as times_rented'])
+                ->with('category')
+                ->whereIn('type', ['rental','both'])
+                ->where('is_abandoned', false)
+                ->when($this->search, fn($q) => $q->where(fn($q) =>
+                    $q->where('name','like',"%{$this->search}%")
+                      ->orWhere('code','like',"%{$this->search}%")
+                ))
+                ->when($this->filterCategory, fn($q) => $q->where('category_id', $this->filterCategory))
+                ->orderByDesc('times_rented')
+                ->paginate(25),
+        ];
+    }
+
+    private function reportNeverRented(): array
+    {
+        return [
+            'type'  => 'product_list',
+            'title' => 'Never Rented (Active Rental Items)',
+            'data'  => $this->baseProducts()
+                ->whereIn('type', ['rental','both'])
+                ->where('is_active', true)
+                ->where('is_abandoned', false)
+                ->whereDoesntHave('rentalItems')
+                ->paginate(25),
+            'show_filters' => false,
+        ];
+    }
+
+    private function reportAbandoned(): array
+    {
+        return [
+            'type'  => 'abandoned_list',
+            'title' => 'Abandoned / Written-off Items',
+            'data'  => Product::with('category')
+                ->where('is_abandoned', true)
+                ->when($this->search, fn($q) => $q->where(fn($q) =>
+                    $q->where('name','like',"%{$this->search}%")
+                      ->orWhere('code','like',"%{$this->search}%")
+                ))
+                ->orderBy('code')
+                ->paginate(25),
+            'total_writeoff' => Product::where('is_abandoned', true)->sum('abandoned_price'),
+        ];
+    }
+
+    private function reportInactive(): array
+    {
+        return [
+            'type'  => 'product_list',
+            'title' => 'Inactive Items',
+            'data'  => $this->baseProducts()
+                ->where('is_active', false)
+                ->where('is_abandoned', false)
+                ->paginate(25),
+            'show_filters' => false,
+        ];
     }
 
     public function render()
     {
-        $categories = Category::active()->orderBy('name')->get();
+        $menu       = $this->getReportMenu();
+        $summary    = $this->getSummary();
+        $categories = Category::orderBy('name')->get(['id','name','code']);
+        $report     = null;
 
-        // ── Stock View ─────────────────────────────────────
-        $products = $this->baseQuery()
-            ->when($this->activeView === 'abandoned', fn ($q) => $q->where('is_abandoned', true))
-            ->orderBy('code')
-            ->paginate(25);
+        if ($this->activeReport) {
+            $method = 'report' . str()->studly($this->activeReport);
+            if (method_exists($this, $method)) {
+                $report = $this->$method();
+            }
+        }
 
-        $all = $this->baseQuery()->get();
-
-        $summary = [
-            'total_products'  => Product::count(),
-            'active'          => Product::where('is_active', true)->where('is_abandoned', false)->count(),
-            'abandoned'       => Product::where('is_abandoned', true)->count(),
-            'zero_stock'      => Product::where(function ($q) {
-                                    $q->whereNotIn('type', ['fabric', 'service'])->where('stock_qty', 0);
-                                 })->orWhere(function ($q) {
-                                    $q->where('type', 'fabric')->where('stock_decimal', 0);
-                                 })->count(),
-            'rental_items'    => Product::whereIn('type', ['rental', 'both'])->count(),
-            'sale_items'      => Product::whereIn('type', ['sale', 'both'])->count(),
-            'total_abandoned_value' => Product::where('is_abandoned', true)->sum('abandoned_price'),
-            'total_rental_value'    => Product::whereIn('type', ['rental', 'both'])->sum('rental_price'),
-        ];
-
-        // ── Movement: most / least rented ─────────────────
-        $mostRented = Product::withCount(['rentalItems as times_rented'])
-            ->whereIn('type', ['rental', 'both'])
-            ->where('is_abandoned', false)
-            ->orderByDesc('times_rented')
-            ->limit(10)
-            ->get();
-
-        $neverRented = Product::whereDoesntHave('rentalItems')
-            ->whereIn('type', ['rental', 'both'])
-            ->where('is_active', true)
-            ->where('is_abandoned', false)
-            ->orderBy('code')
-            ->limit(10)
-            ->get();
-
-        // ── Category breakdown ─────────────────────────────
-        $categoryBreakdown = Product::selectRaw('category_id, COUNT(*) as count, SUM(rental_price) as total_rental_value')
-            ->with('category:id,name,code')
-            ->where('is_abandoned', false)
-            ->where('is_active', true)
-            ->groupBy('category_id')
-            ->orderByDesc('count')
-            ->get();
-
-        // ── Type breakdown ─────────────────────────────────
-        $typeBreakdown = Product::selectRaw('type, COUNT(*) as count')
-            ->groupBy('type')
-            ->orderByDesc('count')
-            ->get();
-
-        return view('livewire.reports.stock-report',
-            compact('products', 'summary', 'categories', 'mostRented',
-                    'neverRented', 'categoryBreakdown', 'typeBreakdown'));
+        return view('livewire.reports.stock-report', compact('menu', 'summary', 'categories', 'report'));
     }
 }
