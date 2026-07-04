@@ -4,22 +4,19 @@
 @section('content')
 
     {{-- Reports Topbar --}}
-    <div
-        style="background:var(--navy); border-radius:10px; padding:10px 16px; margin-bottom:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <span
-            style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:.5px; margin-right:4px;">Reports</span>
-        @foreach ([['label' => 'Sales', 'icon' => 'bi-cart-check-fill', 'route' => 'reports.index', 'color' => '#68d391'], ['label' => 'Purchase', 'icon' => 'bi-bag-check-fill', 'route' => 'reports.purchase-sale', 'color' => '#f6ad55'], ['label' => 'Rentals', 'icon' => 'bi-box-seam-fill', 'route' => 'reports.item', 'color' => '#76e4f7'], ['label' => 'Stock', 'icon' => 'bi-tags-fill', 'route' => 'reports.all-items', 'color' => '#b794f4'], ['label' => 'Customers', 'icon' => 'bi-people-fill', 'route' => 'reports.customer-vendor', 'color' => '#fbb6ce'], ['label' => 'Top Items', 'icon' => 'bi-trophy-fill', 'route' => 'reports.top-items', 'color' => '#f6e05e']] as $rep)
-            <a href="{{ route($rep['route']) }}"
-                style="display:inline-flex; align-items:center; gap:6px; padding:6px 14px;
-                background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
-                border-radius:8px; text-decoration:none; font-size:12px; font-weight:600;
-                color:{{ $rep['color'] }}; transition:background .15s;"
-                onmouseover="this.style.background='rgba(255,255,255,0.18)'"
-                onmouseout="this.style.background='rgba(255,255,255,0.08)'">
-                <i class="bi {{ $rep['icon'] }}" style="font-size:14px;"></i>
-                {{ $rep['label'] }}
-            </a>
-        @endforeach
+    <div class="table-card mb-3" style="padding:10px 14px;">
+        <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+            @foreach ([['label' => 'Sales', 'icon' => 'bi-cart-check-fill', 'route' => 'reports.index', 'color' => '#38a169'], ['label' => 'Purchase', 'icon' => 'bi-bag-check-fill', 'route' => 'reports.purchase-sale', 'color' => '#c9963a'], ['label' => 'Rentals', 'icon' => 'bi-box-seam-fill', 'route' => 'reports.item', 'color' => '#3182ce'], ['label' => 'Stock', 'icon' => 'bi-tags-fill', 'route' => 'reports.all-items', 'color' => '#805ad5'], ['label' => 'Customers & Vendors', 'icon' => 'bi-people-fill', 'route' => 'reports.customer-vendor', 'color' => '#319795']] as $rep)
+                <a href="{{ route($rep['route']) }}"
+                    style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px;
+                    background:#f8fafc; border:1.5px solid var(--border);
+                    border-radius:7px; text-decoration:none; font-size:12px; font-weight:600;
+                    color:{{ $rep['color'] }};">
+                    <i class="bi {{ $rep['icon'] }}" style="font-size:13px;"></i>
+                    {{ $rep['label'] }}
+                </a>
+            @endforeach
+        </div>
     </div>
 
     <div class="section-label">آج کا خلاصہ — Today's Overview</div>
