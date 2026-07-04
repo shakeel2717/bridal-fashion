@@ -1,0 +1,118 @@
+// ── Date pills ─────────────────────────────────────────────────────
+.rpt-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    color: var(--text-muted);
+    background: #fff;
+    transition: all .15s;
+    white-space: nowrap;
+    user-select: none;
+
+    &:hover { border-color: var(--navy); color: var(--navy); }
+
+    &.active {
+        background: var(--navy);
+        border-color: var(--navy);
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(26,54,93,.2);
+    }
+
+    &.custom {
+        border-color: var(--gold);
+        color: #92400e;
+        border-style: dashed;
+        &.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+    }
+}
+
+// ── Left sidebar menu ──────────────────────────────────────────────
+.rpt-sidebar {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.rpt-group {
+    border-bottom: 1px solid var(--border);
+
+    &:last-child { border-bottom: none; }
+}
+
+.rpt-group-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--navy);
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+
+    i { font-size: 13px; color: var(--gold); }
+}
+
+.rpt-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px 8px 18px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all .12s;
+    border-left: 3px solid transparent;
+    user-select: none;
+
+    i { font-size: 13px; color: var(--text-muted); transition: color .12s; flex-shrink: 0; }
+
+    &:hover {
+        background: #f0f4ff;
+        color: var(--navy);
+        i { color: var(--navy); }
+    }
+
+    &.active {
+        background: #ebf2ff;
+        color: var(--navy);
+        font-weight: 700;
+        border-left-color: var(--navy);
+        i { color: var(--navy); }
+    }
+}
+
+// ── Table footer ───────────────────────────────────────────────────
+.rpt-tfoot td {
+    background: var(--navy);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 7px 12px;
+}
+
+// ── Sort headers ───────────────────────────────────────────────────
+.rpt-sort {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    &:hover { background: #f0f4ff; color: var(--navy); }
+    &::after { content: ' ↕'; font-size: 9px; opacity: .4; }
+}
+
+// ── Empty row ──────────────────────────────────────────────────────
+.rpt-empty {
+    text-align: center;
+    padding: 40px 20px !important;
+    color: var(--text-muted);
+    font-size: 13px;
+}
