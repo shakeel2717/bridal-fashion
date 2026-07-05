@@ -97,7 +97,7 @@
                 {{-- Product Search Row --}}
                 <div
                     style="background:#f0fff4; border:1.5px solid #9ae6b4; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
-                    <div style="display:grid; grid-template-columns: 1fr 80px 120px; gap:8px; align-items:end;">
+                    <div style="display:grid; grid-template-columns: 1fr 80px 120px 130px; gap:8px; align-items:end;">
 
                         {{-- Design # Search --}}
                         <div style="position:relative;">
@@ -178,6 +178,16 @@
                                 class="form-control form-control-sm" min="0" style="text-align:right;"
                                 placeholder="0">
                         </div>
+
+                        {{-- Pickup Date --}}
+                        <div>
+                            <label
+                                style="font-size:10px; font-weight:700; text-transform:uppercase; color:#276749; margin-bottom:4px; display:block;">
+                                Pickup Date
+                            </label>
+                            <input type="date" id="sale_new_pickup_date" wire:model="pendingPickupDate"
+                                class="form-control form-control-sm">
+                        </div>
                     </div>
                 </div>
 
@@ -194,6 +204,7 @@
                             <th>Item Name</th>
                             <th style="width:80px; text-align:center;">Qty</th>
                             <th style="width:110px; text-align:right;">Unit Price</th>
+                            <th style="width:110px;">Pickup Date</th>
                             <th style="width:110px; text-align:right;">Total</th>
                             <th style="width:40px;"></th>
                         </tr>
@@ -260,6 +271,11 @@
                                             wire:change="recalcItems" class="form-control form-control-sm"
                                             min="1" style="text-align:center; background:transparent;">
                                     @endif
+                                </td>
+                                <td style="{{ $tdStyle }}">
+                                    <input type="date" wire:model="items.{{ $index }}.pickup_date"
+                                        class="form-control form-control-sm"
+                                        style="background:transparent; font-size:11px;">
                                 </td>
                                 <td style="{{ $tdStyle }}">
                                     <input type="number" wire:model.lazy="items.{{ $index }}.unit_price"

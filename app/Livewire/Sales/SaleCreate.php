@@ -18,6 +18,8 @@ class SaleCreate extends Component
     // ── Customer ──────────────────────────────────────────
     public ?int $customerId = null;
 
+    public string $pendingPickupDate = '';
+
     public string $customerSearch = '';
 
     public ?array $foundCustomers = null;
@@ -64,6 +66,8 @@ class SaleCreate extends Component
     {
         $this->saleDate = now()->format('Y-m-d');
         $this->paymentDate = now()->format('Y-m-d');
+
+        $this->pendingPickupDate = now()->format('Y-m-d');
 
         // Auto-select Walk-in Customer
         $walkin = Customer::where('is_walkin', true)->first();
@@ -119,6 +123,7 @@ class SaleCreate extends Component
         $product = Product::findOrFail($productId);
 
         $this->pendingProductId = $product->id;
+        $this->pendingPickupDate = now()->format('Y-m-d');
         $this->pendingProductName = $product->name;
         $this->pendingProductCode = $product->code;
         $this->pendingProductType = $product->type;
@@ -137,6 +142,7 @@ class SaleCreate extends Component
 
         $isFabric = $this->pendingProductType === 'fabric';
         $isService = $this->pendingProductType === 'service';
+        $this->pendingPickupDate = now()->format('Y-m-d');
 
         // Fabric supports decimal qty (e.g. 3.5 meters)
         $qty = $isFabric
@@ -154,6 +160,7 @@ class SaleCreate extends Component
             'qty' => $qty,
             'unit_price' => (string) $price,
             'total_price' => (string) ($qty * $price),
+            'pickup_date' => $this->pendingPickupDate ?: now()->format('Y-m-d'),
         ]);
 
         $this->productSearch = '';
@@ -332,6 +339,7 @@ class SaleCreate extends Component
                 'product_name' => $item['item_name'],
                 'product_code' => $item['item_code'],
                 'sale_price' => (float) $item['unit_price'],
+                'pickup_date' => $item['pickup_date'] ?: now()->toDateString(),
                 'qty' => $qty,
             ]);
 

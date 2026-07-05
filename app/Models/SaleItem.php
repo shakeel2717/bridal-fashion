@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SaleItem extends Model
 {
     protected $fillable = [
-        'sale_id', 'product_id', 'product_name', 'product_code', 'pickup_status', 'taken_at',
+        'sale_id', 'product_id', 'product_name', 'product_code', 'pickup_status', 'taken_at', 'pickup_date',
         'sale_price', 'qty', 'custom_option_label', 'custom_option_price', 'notes',
     ];
 

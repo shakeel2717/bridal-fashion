@@ -680,16 +680,25 @@
                         {{ ucfirst(str_replace('_', ' ', $rental->advance_payment_method ?? 'cash')) }}
                     </span>
                 </div>
-                <div class="summary-row total-row">
-                    <span class="s-label">Remaining</span>
-                    <span class="s-value {{ $remaining > 0 ? 'gold' : '' }}"
-                        style="{{ $remaining <= 0 ? 'color:#68d391;' : '' }}">
-                        Rs. {{ number_format($remaining, 0) }}
-                        @if ($remaining <= 0 && $overpaid <= 0)
-                            <span style="font-size:10px; font-weight:400; margin-left:4px;">✓ Paid</span>
-                        @endif
-                    </span>
-                </div>
+                @if (!in_array($rental->status, ['cancelled', 'abandoned']))
+                    <div class="summary-row total-row">
+                        <span class="s-label">Remaining</span>
+                        <span class="s-value {{ $remaining > 0 ? 'gold' : '' }}"
+                            style="{{ $remaining <= 0 ? 'color:#68d391;' : '' }}">
+                            Rs. {{ number_format($remaining, 0) }}
+                            @if ($remaining <= 0 && $overpaid <= 0)
+                                <span style="font-size:10px; font-weight:400; margin-left:4px;">✓ Paid</span>
+                            @endif
+                        </span>
+                    </div>
+                @else
+                    <div class="summary-row total-row">
+                        <span class="s-label">Status</span>
+                        <span class="s-value" style="color:#fc8181;">
+                            {{ ucfirst(str_replace('_', ' ', $rental->status)) }} — no balance due
+                        </span>
+                    </div>
+                @endif
                 @if ($overpaid > 0)
                     <div class="summary-row">
                         <span class="s-label" style="color:#68d391;">Overpaid</span>
