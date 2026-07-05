@@ -1,11 +1,11 @@
 <div>
     {{-- Flash Messages --}}
-    @if(session('success'))
+    @if (session('success'))
         <div class="alert alert-success py-2 mb-3" style="font-size:13px;">
             <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
         </div>
     @endif
-    @if(session('error'))
+    @if (session('error'))
         <div class="alert alert-danger py-2 mb-3" style="font-size:13px;">
             <i class="bi bi-exclamation-circle me-1"></i> {{ session('error') }}
         </div>
@@ -18,8 +18,7 @@
             <div class="page-subtitle">Manage registered customers</div>
         </div>
         <button class="btn btn-primary btn-sm d-flex align-items-center gap-2"
-                wire:click="$dispatch('open-customer-modal')"
-                onclick="Livewire.dispatch('open-create-customer')">
+            wire:click="$dispatch('open-customer-modal')" onclick="Livewire.dispatch('open-create-customer')">
             <i class="bi bi-plus-lg"></i> Add Customer
         </button>
     </div>
@@ -29,26 +28,24 @@
         <div class="table-card-header">
             <div class="d-flex align-items-center gap-3">
                 <button wire:click="$set('filter','regular')"
-                        class="btn btn-sm {{ $filter === 'regular' ? 'btn-primary' : 'btn-outline-secondary' }}">
+                    class="btn btn-sm {{ $filter === 'regular' ? 'btn-primary' : 'btn-outline-secondary' }}">
                     Regular
                     <span class="ms-1" style="font-size:10px;">({{ $counts['regular'] }})</span>
                 </button>
                 <button wire:click="$set('filter','walkin')"
-                        class="btn btn-sm {{ $filter === 'walkin' ? 'btn-primary' : 'btn-outline-secondary' }}">
+                    class="btn btn-sm {{ $filter === 'walkin' ? 'btn-primary' : 'btn-outline-secondary' }}">
                     Walk-in
                     <span class="ms-1" style="font-size:10px;">({{ $counts['walkin'] }})</span>
                 </button>
                 <button wire:click="$set('filter','all')"
-                        class="btn btn-sm {{ $filter === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}">
+                    class="btn btn-sm {{ $filter === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}">
                     All
                     <span class="ms-1" style="font-size:10px;">({{ $counts['all'] }})</span>
                 </button>
             </div>
             <div style="width:260px;">
-                <input type="text"
-                       wire:model.live.debounce.400ms="search"
-                       class="form-control form-control-sm"
-                       placeholder="Search name, phone, CNIC...">
+                <input type="text" wire:model.live.debounce.400ms="search" class="form-control form-control-sm"
+                    placeholder="Search name, phone, CNIC...">
             </div>
         </div>
 
@@ -60,6 +57,7 @@
                     <th>Phone</th>
                     <th>WhatsApp</th>
                     <th>CNIC</th>
+                    <th>Attachments</th>
                     <th>Type</th>
                     <th>Rentals</th>
                     <th>Sales</th>
@@ -68,106 +66,137 @@
             </thead>
             <tbody>
                 @forelse($customers as $customer)
-                <tr>
-                    <td style="color:var(--text-muted); font-size:11px;">{{ $customer->id }}</td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            @if($customer->photo)
-                                <img src="{{ Storage::url($customer->photo) }}"
-                                     class="customer-photo" alt="">
-                            @else
-                                <div class="customer-avatar">
-                                    {{ strtoupper(substr($customer->name, 0, 2)) }}
-                                </div>
-                            @endif
-                            <div>
-                                <div style="font-weight:600; font-size:13px;">{{ $customer->name }}</div>
-                                @if($customer->address)
-                                    <div style="font-size:11px; color:var(--text-muted);">
-                                        {{ Str::limit($customer->address, 30) }}
+                    <tr>
+                        <td style="color:var(--text-muted); font-size:11px;">{{ $customer->id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                @if ($customer->photo)
+                                    <img src="{{ Storage::url($customer->photo) }}" class="customer-photo"
+                                        alt="">
+                                @else
+                                    <div class="customer-avatar">
+                                        {{ strtoupper(substr($customer->name, 0, 2)) }}
                                     </div>
                                 @endif
+                                <div>
+                                    <div style="font-weight:600; font-size:13px;">{{ $customer->name }}</div>
+                                    @if ($customer->address)
+                                        <div style="font-size:11px; color:var(--text-muted);">
+                                            {{ Str::limit($customer->address, 30) }}
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                    <td style="font-size:13px;">
-                        {{ $customer->phone1 }}
-                        @if($customer->phone2)
-                            <div style="font-size:11px; color:var(--text-muted);">{{ $customer->phone2 }}</div>
-                        @endif
-                    </td>
-                    <td style="font-size:13px;">{{ $customer->whatsapp ?? '—' }}</td>
-                    <td style="font-size:13px; font-family:monospace;">{{ $customer->cnic ?? '—' }}</td>
-                    <td>
-                        @if($customer->is_walkin)
-                            <span class="customer-badge-walkin">Walk-in</span>
-                        @else
-                            <span class="customer-badge-regular">Regular</span>
-                        @endif
-                    </td>
-                    <td style="font-size:13px; font-weight:600;">
-                        {{ $customer->rentals_count }}
-                    </td>
-                    <td style="font-size:13px; font-weight:600;">
-                        {{ $customer->sales_count }}
-                    </td>
-                    <td>
-                        <div class="d-flex gap-1">
-                            @if(!$customer->is_walkin)
-                            <button class="btn btn-sm btn-outline-secondary"
-                                    style="padding:3px 8px;"
-                                    wire:click="$dispatch('open-edit-customer', { id: {{ $customer->id }} })"
-                                    title="Edit">
-                                <i class="bi bi-pencil" style="font-size:12px;"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger"
-                                    style="padding:3px 8px;"
-                                    wire:click="confirmDelete({{ $customer->id }})"
-                                    title="Delete">
-                                <i class="bi bi-trash" style="font-size:12px;"></i>
-                            </button>
+                        </td>
+                        <td style="font-size:13px;">
+                            {{ $customer->phone1 }}
+                            @if ($customer->phone2)
+                                <div style="font-size:11px; color:var(--text-muted);">{{ $customer->phone2 }}</div>
                             @endif
-                        </div>
-                    </td>
-                </tr>
+                        </td>
+                        <td style="font-size:13px;">{{ $customer->whatsapp ?? '—' }}</td>
+                        <td style="font-size:13px; font-family:monospace;">{{ $customer->cnic ?? '—' }}</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                @if ($customer->photo)
+                                    <a href="{{ Storage::url($customer->photo) }}" target="_blank"
+                                        title="Profile Photo"
+                                        style="display:inline-flex; align-items:center; justify-content:center;
+                       width:28px; height:28px; border-radius:6px; background:#ebf8ff;
+                       border:1px solid #bee3f8; text-decoration:none;">
+                                        <i class="bi bi-person-fill" style="font-size:13px; color:#2b6cb0;"></i>
+                                    </a>
+                                @endif
+                                @if ($customer->cnic_front)
+                                    <a href="{{ Storage::url($customer->cnic_front) }}" target="_blank"
+                                        title="CNIC Front"
+                                        style="display:inline-flex; align-items:center; justify-content:center;
+                       width:28px; height:28px; border-radius:6px; background:#f0fff4;
+                       border:1px solid #9ae6b4; text-decoration:none;">
+                                        <i class="bi bi-card-image" style="font-size:13px; color:#276749;"></i>
+                                    </a>
+                                @endif
+                                @if ($customer->cnic_back)
+                                    <a href="{{ Storage::url($customer->cnic_back) }}" target="_blank"
+                                        title="CNIC Back"
+                                        style="display:inline-flex; align-items:center; justify-content:center;
+                       width:28px; height:28px; border-radius:6px; background:#fffff0;
+                       border:1px solid #f6e05e; text-decoration:none;">
+                                        <i class="bi bi-card-back" style="font-size:13px; color:#b7791f;"></i>
+                                    </a>
+                                @endif
+                                @if (!$customer->photo && !$customer->cnic_front && !$customer->cnic_back)
+                                    <span style="font-size:11px; color:var(--text-muted);">—</span>
+                                @endif
+                            </div>
+                        </td>
+                        <td>
+                            @if ($customer->is_walkin)
+                                <span class="customer-badge-walkin">Walk-in</span>
+                            @else
+                                <span class="customer-badge-regular">Regular</span>
+                            @endif
+                        </td>
+                        <td style="font-size:13px; font-weight:600;">
+                            {{ $customer->rentals_count }}
+                        </td>
+                        <td style="font-size:13px; font-weight:600;">
+                            {{ $customer->sales_count }}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                @if (!$customer->is_walkin)
+                                    <button class="btn btn-sm btn-outline-secondary" style="padding:3px 8px;"
+                                        wire:click="$dispatch('open-edit-customer', { id: {{ $customer->id }} })"
+                                        title="Edit">
+                                        <i class="bi bi-pencil" style="font-size:12px;"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" style="padding:3px 8px;"
+                                        wire:click="confirmDelete({{ $customer->id }})" title="Delete">
+                                        <i class="bi bi-trash" style="font-size:12px;"></i>
+                                    </button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
                 @empty
-                <tr>
-                    <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
-                        <i class="bi bi-people" style="font-size:32px; display:block; margin-bottom:8px;"></i>
-                        No customers found
-                    </td>
-                </tr>
+                    <tr>
+                        <td colspan="9"
+                            style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
+                            <i class="bi bi-people" style="font-size:32px; display:block; margin-bottom:8px;"></i>
+                            No customers found
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
 
-        @if($customers->hasPages())
-        <div style="padding:12px 16px; border-top:1px solid var(--border);">
-            {{ $customers->links('vendor.pagination.simple-bootstrap-5') }}
-        </div>
+        @if ($customers->hasPages())
+            <div style="padding:12px 16px; border-top:1px solid var(--border);">
+                {{ $customers->links('vendor.pagination.simple-bootstrap-5') }}
+            </div>
         @endif
     </div>
 
     {{-- Delete Confirm Modal --}}
-    @if($deleteId)
-    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Confirm Delete</h6>
-                </div>
-                <div class="modal-body" style="font-size:13px;">
-                    Are you sure you want to delete this customer? This action cannot be undone.
-                </div>
-                <div class="modal-footer gap-2">
-                    <button class="btn btn-sm btn-outline-secondary"
+    @if ($deleteId)
+        <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title">Confirm Delete</h6>
+                    </div>
+                    <div class="modal-body" style="font-size:13px;">
+                        Are you sure you want to delete this customer? This action cannot be undone.
+                    </div>
+                    <div class="modal-footer gap-2">
+                        <button class="btn btn-sm btn-outline-secondary"
                             wire:click="$set('deleteId', null)">Cancel</button>
-                    <button class="btn btn-sm btn-danger"
-                            wire:click="delete()">Yes, Delete</button>
+                        <button class="btn btn-sm btn-danger" wire:click="delete()">Yes, Delete</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     @endif
 
     {{-- Customer Form Modal --}}
