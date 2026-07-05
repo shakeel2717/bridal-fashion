@@ -226,6 +226,13 @@
                         <div class="mod-name">Code Registry</div>
                     </a>
                 </div>
+                <div class="col-2">
+                    <a href="{{ route('bill-books.index') }}" class="module-card">
+                        <div class="mod-icon-wrap teal"><i class="bi bi-journal-bookmark-fill"
+                                style="font-size:22px; color:#319795;"></i></div>
+                        <div class="mod-name">Bill Books</div>
+                    </a>
+                </div>
                 @if (auth()->user()->canAccess('notifications'))
                     <div class="col-2">
                         <a href="{{ route('notifications.index') }}" class="module-card">

@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\AdvancesController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\BillBookController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\DashboardController;
@@ -29,6 +30,8 @@ Route::middleware('auth')->group(function () {
     // Placeholder routes (we'll build each module next)
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
     Route::get('/products/code-registry', [ProductCodeRegistryController::class, 'index'])->name('products.code-registry');
+    Route::get('/bill-books', [BillBookController::class, 'index'])->name('bill-books.index');
+    Route::get('/bill-books/{billBook}', [BillBookController::class, 'show'])->name('bill-books.show');
     Route::get('/rentals', [RentalsController::class, 'index'])->name('rentals.index');
     Route::get('/rentals/calendar', [RentalsController::class, 'calendar'])->name('rentals.calendar');
     Route::get('/rentals/create', [RentalsController::class, 'create'])->name('rentals.create');
