@@ -24,6 +24,31 @@
         </div>
     </div>
 
+    {{-- Pending Only Toggle --}}
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <div wire:click="$toggle('showPendingOnly')"
+            style="display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+               background:{{ $showPendingOnly ? '#ebf8ff' : '#f7fafc' }};
+               border:1.5px solid {{ $showPendingOnly ? '#3182ce' : 'var(--border)' }};
+               border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600;
+               color:{{ $showPendingOnly ? '#2b6cb0' : 'var(--text-muted)' }};
+               transition:all .15s;">
+            <span
+                style="width:32px; height:18px; border-radius:99px; position:relative;
+                     background:{{ $showPendingOnly ? '#3182ce' : '#cbd5e0' }};
+                     transition:background .15s; flex-shrink:0;">
+                <span
+                    style="position:absolute; top:3px; left:{{ $showPendingOnly ? '17px' : '3px' }};
+                         width:12px; height:12px; border-radius:50%; background:#fff;
+                         transition:left .15s;"></span>
+            </span>
+            Pending Only
+            <span style="font-size:10px; font-weight:400; color:var(--text-muted);">
+                {{ $showPendingOnly ? '(not picked up / not returned)' : '(showing all)' }}
+            </span>
+        </div>
+    </div>
+
     {{-- Calendar Card --}}
     <div class="table-card mb-4" style="overflow:hidden;">
 

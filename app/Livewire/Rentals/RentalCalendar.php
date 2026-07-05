@@ -15,6 +15,8 @@ class RentalCalendar extends Component
 
     public string $search = '';
 
+    public bool $showPendingOnly = false;
+
     public ?string $selectedDate = null;
 
     public function mount(): void
@@ -54,6 +56,7 @@ class RentalCalendar extends Component
         return RentalItem::with(['rental:id,customer_name,customer_phone1,bill_ref,status,pickup_date,return_date,booking_date'])
             ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['cancelled', 'abandoned']))
             ->when($this->search, fn ($q) => $q->where('product_code', 'like', "%{$this->search}%"))
+            ->when($this->showPendingOnly, fn ($q) => $q->where('pickup_status', 'pending'))
             ->whereNotNull('rental_id')
             ->get();
     }
