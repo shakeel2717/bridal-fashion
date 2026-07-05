@@ -716,7 +716,8 @@
 
                     <div
                         style="background:#f0f4ff; border:1.5px solid #a3bffa; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
-                        <div style="display:grid; grid-template-columns:1fr 80px 120px; gap:8px; align-items:end;">
+                        <div
+                            style="display:grid; grid-template-columns:1fr 80px 120px 130px; gap:8px; align-items:end;">
 
                             <div style="position:relative;">
                                 <label
@@ -768,6 +769,14 @@
                                     class="form-control form-control-sm" min="0" style="text-align:right;"
                                     placeholder="0">
                             </div>
+
+                            <div>
+                                <label
+                                    style="font-size:10px; font-weight:700; text-transform:uppercase; color:#3c4f9e; margin-bottom:4px; display:block;">Pickup
+                                    Date</label>
+                                <input type="date" id="sale_item_pickup_date" wire:model="saleNewItemPickupDate"
+                                    class="form-control form-control-sm">
+                            </div>
                         </div>
                     </div>
 
@@ -780,6 +789,7 @@
                                     <th>Item</th>
                                     <th style="width:70px; text-align:center;">Qty</th>
                                     <th style="width:110px; text-align:right;">Price (Rs.)</th>
+                                    <th style="width:110px;">Pickup Date</th>
                                     <th style="width:110px; text-align:right;">Total</th>
                                     <th style="width:36px;"></th>
                                 </tr>
@@ -805,6 +815,12 @@
                                                 wire:change="recalcSaleItems" class="form-control form-control-sm"
                                                 style="text-align:right;" min="0">
                                         </td>
+                                        <td>
+                                            <input type="date"
+                                                wire:model="saleItems.{{ $index }}.pickup_date"
+                                                class="form-control form-control-sm"
+                                                style="background:transparent; font-size:11px;">
+                                        </td>
                                         <td style="text-align:right; font-weight:700; color:var(--navy);">
                                             Rs. {{ number_format((float) ($item['total_price'] ?? 0), 0) }}
                                         </td>
@@ -819,7 +835,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="5"
+                                    <td colspan="6"
                                         style="text-align:right; font-size:12px; color:var(--text-muted); padding-top:8px;">
                                         Subtotal
                                     </td>
@@ -829,7 +845,7 @@
                                     <td></td>
                                 </tr>
                                 <tr>
-                                    <td colspan="4"
+                                    <td colspan="5"
                                         style="text-align:right; font-size:12px; color:var(--text-muted);">
                                         Discount (Rs.)
                                     </td>
@@ -841,7 +857,7 @@
                                     <td></td>
                                 </tr>
                                 <tr>
-                                    <td colspan="5"
+                                    <td colspan="6"
                                         style="text-align:right; font-size:12px; font-weight:700; color:var(--navy); padding-top:4px;">
                                         Sale Total
                                     </td>
@@ -1573,8 +1589,23 @@
                     if (e.key !== 'Enter') return;
                     e.preventDefault();
                     e.stopImmediatePropagation();
-                    @this.call('addSaleItem');
+                    const pd = document.getElementById('sale_item_pickup_date');
+                    if (pd) {
+                        pd.focus();
+                        pd.select();
+                    }
                 });
+            }
+
+            const salePickupEl = document.getElementById('sale_item_pickup_date');
+            if (salePickupEl && !salePickupEl._bound) {
+                salePickupEl._bound = true;
+                salePickupEl.addEventListener('keydown', function(e) {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    @this.call('addSaleItem');
+                }, true);
             }
         }
 

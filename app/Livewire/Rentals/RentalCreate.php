@@ -12,7 +12,6 @@ use App\Models\RentalSecurityDeposit;
 use App\Models\RentalTask;
 use App\Models\Sale;
 use App\Models\SaleItem;
-use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AccountService;
 use Carbon\Carbon;
@@ -128,6 +127,8 @@ class RentalCreate extends Component
 
     public string $saleNewItemPrice = '0';
 
+    public string $saleNewItemPickupDate = '';
+
     public string $saleDiscount = '0';
 
     // ── Step 4: Payment ───────────────────────────────────
@@ -140,6 +141,7 @@ class RentalCreate extends Component
     public function mount(?Rental $rental = null): void
     {
         $this->bookingDate = now()->format('Y-m-d');
+        $this->saleNewItemPickupDate = now()->format('Y-m-d');
         $this->pickupDate = '';
         $this->returnDate = '';
         $defaultAccount = Account::where('is_default', true)->first()
@@ -903,6 +905,7 @@ class RentalCreate extends Component
                     'product_code' => $item['item_code'],
                     'sale_price' => (float) $item['unit_price'],
                     'qty' => $qty,
+                    'pickup_date' => $item['pickup_date'] ?? now()->toDateString(),
                 ]);
 
                 Product::where('id', $item['product_id'])->decrement('stock_qty', $qty);
@@ -988,6 +991,7 @@ class RentalCreate extends Component
             'qty' => $qty,
             'unit_price' => (string) $price,
             'total_price' => (string) ($qty * $price),
+            'pickup_date' => $this->saleNewItemPickupDate ?: now()->format('Y-m-d'),
         ]);
 
         $this->saleProductSearch = '';
@@ -995,6 +999,7 @@ class RentalCreate extends Component
         $this->saleNewItemQty = '1';
         $this->saleNewItemPrice = '0';
         $this->salePendingProductId = null;
+        $this->saleNewItemPickupDate = now()->format('Y-m-d');
         $this->salePendingProductName = '';
         $this->salePendingProductCode = '';
         $this->dispatch('focus-sale-search');
