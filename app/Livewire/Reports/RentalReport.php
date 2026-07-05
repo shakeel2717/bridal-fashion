@@ -46,6 +46,7 @@ class RentalReport extends Component
                     'monthly_summary' => ['label' => 'Month-wise Summary', 'icon' => 'bi-calendar-month'],
                     'late_returns' => ['label' => 'Late Returns',      'icon' => 'bi-alarm'],
                     'cancelled' => ['label' => 'Cancelled',         'icon' => 'bi-x-circle'],
+                    'free_items' => ['label' => 'Top Free Items (Rs. 0)', 'icon' => 'bi-gift'],
                 ],
             ],
             'hisaab' => [
@@ -84,6 +85,29 @@ class RentalReport extends Component
                     'return_schedule' => ['label' => 'Return Schedule',    'icon' => 'bi-box-arrow-in-down'],
                 ],
             ],
+        ];
+    }
+
+    private function reportFreeItems(): array
+    {
+        $from = $this->dateFrom ?: '2000-01-01';
+        $to = $this->dateTo ?: now()->format('Y-m-d');
+
+        return [
+            'paginated' => true,
+            'data' => RentalItem::whereHas('rental', fn ($q) => $q->whereBetween('booking_date', [$from, $to])
+                ->whereNotIn('status', ['cancelled', 'abandoned'])
+            )
+                ->where('rental_price', 0)
+                ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('product_code', 'like', "%{$this->search}%")
+                ->orWhere('product_name', 'like', "%{$this->search}%")
+                ))
+                ->selectRaw('product_code, product_name, COUNT(*) as times_rented, SUM(rental_price) as total_revenue')
+                ->groupBy('product_code', 'product_name')
+                ->orderByDesc('times_rented')
+                ->paginate(25),
+            'columns' => 'item_rank',
+            'title' => 'Top Free Items (Zero Price)',
         ];
     }
 
@@ -389,7 +413,7 @@ class RentalReport extends Component
                 ->whereNotIn('status', ['cancelled', 'abandoned'])
             )
                 ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('product_code', 'like', "%{$this->search}%")
-                ->orWhere('product_name', 'like', "%{$this->search}%")
+                    ->orWhere('product_name', 'like', "%{$this->search}%")
                 ))
                 ->selectRaw('product_code, product_name, COUNT(*) as times_rented, SUM(rental_price) as total_revenue')
                 ->groupBy('product_code', 'product_name')
@@ -411,7 +435,7 @@ class RentalReport extends Component
                 ->whereNotIn('status', ['cancelled', 'abandoned'])
             )
                 ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('product_code', 'like', "%{$this->search}%")
-                ->orWhere('product_name', 'like', "%{$this->search}%")
+                    ->orWhere('product_name', 'like', "%{$this->search}%")
                 ))
                 ->selectRaw('product_code, product_name, COUNT(*) as times_rented, SUM(rental_price) as total_revenue, AVG(rental_price) as avg_price')
                 ->groupBy('product_code', 'product_name')
