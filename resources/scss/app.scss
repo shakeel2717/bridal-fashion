@@ -1068,6 +1068,46 @@ select.form-select:focus {
   border: 1px solid #000000;
 }
 
+// ── Phone Book ──────────────────────────────────────────────────────────────
+.phonebook-page {
+    .contact-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .contact-card {
+        border-radius: 12px !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .09) !important;
+        }
+    }
+
+    .phone-list a:hover {
+        color: var(--gold) !important;
+    }
+
+    .copy-btn {
+        opacity: 0.35;
+        transition: opacity 0.15s;
+        line-height: 1;
+
+        &:hover { opacity: 1; }
+    }
+
+    .phonebook-cat-pill {
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+}
+
 ::placeholder {
   color: #d8d8d8 !important;
   opacity: 1;

@@ -233,6 +233,15 @@
                         <div class="mod-name">Bill Books</div>
                     </a>
                 </div>
+                @if(auth()->user()->isAdmin())
+                <div class="col-2">
+                    <a href="{{ route('phonebook.index') }}" class="module-card">
+                        <div class="mod-icon-wrap teal"><i class="bi bi-telephone-fill"
+                                style="font-size:22px; color:#319795;"></i></div>
+                        <div class="mod-name">Phone Book</div>
+                    </a>
+                </div>
+                @endif
                 @if (auth()->user()->canAccess('notifications'))
                     <div class="col-2">
                         <a href="{{ route('notifications.index') }}" class="module-card">

@@ -11,6 +11,11 @@ class BillBookController extends Controller
         return view('bill-books.index');
     }
 
+    public function phonebook()
+    {
+        return view('phonebook.index');
+    }
+
     public function show(BillBook $billBook)
     {
         return view('bill-books.show', compact('billBook'));

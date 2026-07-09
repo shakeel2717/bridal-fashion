@@ -69,6 +69,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/backup/download/{filename}', [BackupController::class, 'download'])->name('backup.download');
 
     Route::get('/feature-toggles', [FeatureTogglesController::class, 'index'])->name('feature-toggles.index');
+
+    Route::get('/phonebook', [BillBookController::class, 'phonebook'])->name('phonebook.index');
 });
 
 Route::prefix('license')->name('license.')->group(function () {
