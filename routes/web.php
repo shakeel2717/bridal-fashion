@@ -22,6 +22,7 @@ use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\VendorsController;
 use App\Livewire\License\ActivationScreen;
+use App\Livewire\PhoneBook;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -64,13 +65,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/top-items', [ReportsController::class, 'topItems'])->name('reports.top-items');
     Route::get('/reports/purchase-sale', [ReportsController::class, 'purchaseSale'])->name('reports.purchase-sale');
     Route::get('/reports/customer-vendor', [ReportsController::class, 'customerVendor'])->name('reports.customer-vendor');
+    Route::get('/reports/employee', [ReportsController::class, 'employee'])->name('reports.employee');
     Route::get('/settings', fn () => view('coming-soon'))->name('settings.index');
     Route::get('/backup', [BackupController::class, 'index'])->name('backup.index');
     Route::get('/backup/download/{filename}', [BackupController::class, 'download'])->name('backup.download');
 
     Route::get('/feature-toggles', [FeatureTogglesController::class, 'index'])->name('feature-toggles.index');
 
-    Route::get('/phonebook', [BillBookController::class, 'phonebook'])->name('phonebook.index');
+    Route::get('/phonebook', PhoneBook::class)->name('phonebook.index');
 });
 
 Route::prefix('license')->name('license.')->group(function () {

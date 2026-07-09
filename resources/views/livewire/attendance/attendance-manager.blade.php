@@ -200,6 +200,27 @@
                         @error('markStatus') <div class="text-danger" style="font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
                     </div>
 
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">
+                                Time In
+                                <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
+                            </label>
+                            <input type="time" wire:model="markTimeIn"
+                                   class="form-control @error('markTimeIn') is-invalid @enderror">
+                            @error('markTimeIn') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">
+                                Time Out
+                                <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
+                            </label>
+                            <input type="time" wire:model="markTimeOut"
+                                   class="form-control @error('markTimeOut') is-invalid @enderror">
+                            @error('markTimeOut') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+
                     <div class="mb-2">
                         <label class="form-label">
                             Note

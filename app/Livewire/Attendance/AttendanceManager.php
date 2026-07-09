@@ -21,7 +21,9 @@ class AttendanceManager extends Component
 
     public string $markStatus = 'present';
 
-    public string $markNote = '';
+    public string $markNote    = '';
+    public string $markTimeIn  = '';
+    public string $markTimeOut = '';
 
     public ?string $markUserName = null;
 
@@ -70,8 +72,10 @@ class AttendanceManager extends Component
         $existing = Attendance::where('user_id', $userId)
             ->where('date', $date)
             ->first();
-        $this->markStatus = $existing?->status ?? 'present';
-        $this->markNote = $existing?->note ?? '';
+        $this->markStatus  = $existing?->status ?? 'present';
+        $this->markNote    = $existing?->note ?? '';
+        $this->markTimeIn  = $existing?->time_in ? substr($existing->time_in, 0, 5) : '';
+        $this->markTimeOut = $existing?->time_out ? substr($existing->time_out, 0, 5) : '';
 
         $this->dispatch('open-mark-modal');
     }
@@ -84,8 +88,10 @@ class AttendanceManager extends Component
     public function markAttendance(): void
     {
         $this->validate([
-            'markStatus' => 'required|in:present,absent,half_day,leave',
-            'markNote' => 'nullable|string|max:300',
+            'markStatus'  => 'required|in:present,absent,half_day,leave',
+            'markNote'    => 'nullable|string|max:300',
+            'markTimeIn'  => 'nullable|date_format:H:i',
+            'markTimeOut' => 'nullable|date_format:H:i',
         ]);
 
         $dateStr = Carbon::parse($this->markDate)->toDateString();
@@ -95,10 +101,12 @@ class AttendanceManager extends Component
             ->delete();
 
         Attendance::create([
-            'user_id' => $this->markUserId,
-            'date' => $dateStr,
-            'status' => $this->markStatus,
-            'note' => $this->markNote ?: null,
+            'user_id'    => $this->markUserId,
+            'date'       => $dateStr,
+            'status'     => $this->markStatus,
+            'time_in'    => $this->markTimeIn  ?: null,
+            'time_out'   => $this->markTimeOut ?: null,
+            'note'       => $this->markNote    ?: null,
             'created_by' => auth()->id(),
             'updated_by' => auth()->id(),
         ]);
@@ -125,11 +133,13 @@ class AttendanceManager extends Component
 
     public function closeMarkModal(): void
     {
-        $this->markUserId = null;
-        $this->markDate = null;
+        $this->markUserId   = null;
+        $this->markDate     = null;
         $this->markUserName = null;
-        $this->markNote = '';
-        $this->markStatus = 'present';
+        $this->markNote     = '';
+        $this->markTimeIn   = '';
+        $this->markTimeOut  = '';
+        $this->markStatus   = 'present';
         $this->resetValidation();
     }
 

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Attendance extends Model
 {
     protected $fillable = [
-        'user_id', 'date', 'status', 'note', 'created_by', 'updated_by',
+        'user_id', 'date', 'status', 'time_in', 'time_out', 'note', 'created_by', 'updated_by',
     ];
 
     protected static function booted(): void
