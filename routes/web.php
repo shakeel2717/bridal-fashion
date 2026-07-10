@@ -72,7 +72,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/feature-toggles', [FeatureTogglesController::class, 'index'])->name('feature-toggles.index');
 
-    Route::get('/phonebook', PhoneBook::class)->name('phonebook.index');
+    Route::get('/phonebook', [BillBookController::class, 'phonebook'])->name('phonebook.index');
 });
 
 Route::prefix('license')->name('license.')->group(function () {
