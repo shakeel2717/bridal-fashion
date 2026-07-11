@@ -213,6 +213,23 @@ class RentalCreate extends Component
             $this->discountType = $rental->discount_type ?? 'fixed';
             $this->discountValue = (string) ($rental->discount_value ?? 0);
             $this->discountAmount = (string) ($rental->discount_amount ?? 0);
+
+            // Load linked sale items
+            if ($rental->linkedSale) {
+                $this->saleItems = $rental->linkedSale->items->map(fn ($item) => [
+                    'sale_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'item_name' => $item->product_name,
+                    'item_code' => $item->product_code,
+                    'qty' => (string) $item->qty,
+                    'unit_price' => (string) $item->sale_price,
+                    'total_price' => (string) ($item->sale_price * $item->qty),
+                    'pickup_date' => $item->pickup_date
+                        ? Carbon::parse($item->pickup_date)->format('Y-m-d')
+                        : now()->format('Y-m-d'),
+                ])->toArray();
+                $this->saleDiscount = (string) ($rental->linkedSale->discount ?? '0');
+            }
         }
     }
 
@@ -672,6 +689,98 @@ class RentalCreate extends Component
                         ]);
                     }
                 }
+            }
+
+            // Sync linked sale items
+            $linkedSale = $rental->linkedSale;
+
+            if (! empty($this->saleItems)) {
+                $saleSubtotal = collect($this->saleItems)->sum(fn ($i) => (float) ($i['total_price'] ?? 0));
+                $saleDiscountAmt = (float) $this->saleDiscount;
+                $saleTotal = max(0, $saleSubtotal - $saleDiscountAmt);
+
+                if (! $linkedSale) {
+                    $customerId = $this->customerId;
+                    if ($this->customerType === 'walkin' || ! $customerId) {
+                        $customerId = Customer::where('is_walkin', true)->first()?->id;
+                    }
+                    $linkedSale = Sale::create([
+                        'rental_id' => $rental->id,
+                        'bill_ref' => $this->billRef ?: null,
+                        'customer_id' => $customerId,
+                        'customer_name' => $this->customerName,
+                        'customer_phone1' => $this->customerPhone1 ?: '0000-0000000',
+                        'customer_phone2' => $this->customerPhone2 ?: null,
+                        'customer_cnic' => $this->customerCnic ?: null,
+                        'delivery_address' => $this->deliveryAddress ?: null,
+                        'sale_date' => Carbon::parse($this->bookingDate)->toDateString(),
+                        'advance_payment_method' => Account::find($this->advanceAccountId)?->name ?? 'cash',
+                        'status' => 'completed',
+                        'total_amount' => $saleTotal,
+                        'discount' => $saleDiscountAmt,
+                        'advance_paid' => 0,
+                        'remaining_balance' => $saleTotal,
+                        'employee_id' => $this->employeeId ?: null,
+                        'created_by' => auth()->id(),
+                        'updated_by' => auth()->id(),
+                    ]);
+                } else {
+                    $linkedSale->update([
+                        'total_amount' => $saleTotal,
+                        'discount' => $saleDiscountAmt,
+                        'remaining_balance' => max(0, $saleTotal - $linkedSale->advance_paid),
+                        'updated_by' => auth()->id(),
+                    ]);
+                }
+
+                $keptSaleItemIds = collect($this->saleItems)->pluck('sale_item_id')->filter()->toArray();
+
+                // Remove deleted items and restore their stock
+                foreach ($linkedSale->items()->whereNotIn('id', $keptSaleItemIds)->get() as $removedItem) {
+                    Product::where('id', $removedItem->product_id)->increment('stock_qty', (int) $removedItem->qty);
+                    $removedItem->delete();
+                }
+
+                foreach ($this->saleItems as $item) {
+                    $qty = max(1, (int) ($item['qty'] ?? 1));
+                    $price = max(0, (float) ($item['unit_price'] ?? 0));
+                    $pickupDate = $item['pickup_date'] ?? now()->toDateString();
+
+                    if (! empty($item['sale_item_id'])) {
+                        $existingSaleItem = SaleItem::find($item['sale_item_id']);
+                        if ($existingSaleItem) {
+                            $qtyDiff = $qty - (int) $existingSaleItem->qty;
+                            $existingSaleItem->update([
+                                'sale_price' => $price,
+                                'qty' => $qty,
+                                'pickup_date' => $pickupDate,
+                            ]);
+                            if ($qtyDiff > 0) {
+                                Product::where('id', $item['product_id'])->decrement('stock_qty', $qtyDiff);
+                            } elseif ($qtyDiff < 0) {
+                                Product::where('id', $item['product_id'])->increment('stock_qty', abs($qtyDiff));
+                            }
+                        }
+                    } else {
+                        SaleItem::create([
+                            'sale_id' => $linkedSale->id,
+                            'product_id' => $item['product_id'],
+                            'product_name' => $item['item_name'],
+                            'product_code' => $item['item_code'],
+                            'sale_price' => $price,
+                            'qty' => $qty,
+                            'pickup_date' => $pickupDate,
+                        ]);
+                        Product::where('id', $item['product_id'])->decrement('stock_qty', $qty);
+                    }
+                }
+            } elseif ($linkedSale) {
+                // All sale items were removed — restore stock and delete linked sale
+                foreach ($linkedSale->items as $oldItem) {
+                    Product::where('id', $oldItem->product_id)->increment('stock_qty', (int) $oldItem->qty);
+                }
+                $linkedSale->items()->delete();
+                $linkedSale->delete();
             }
 
             // Sync security deposits

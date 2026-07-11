@@ -1092,12 +1092,8 @@
                         </div>
                         <div class="col-12">
                             @php
-                                $linkedSaleTotal = $isEditMode
-                                    ? \App\Models\Sale::where('rental_id', $rentalId)->value('total_amount') ?? 0
-                                    : $this->getSaleTotalProperty();
-                                $saleItemsExist = $isEditMode
-                                    ? \App\Models\Sale::where('rental_id', $rentalId)->exists()
-                                    : count($saleItems) > 0;
+                                $linkedSaleTotal = $this->getSaleTotalProperty();
+                                $saleItemsExist = count($saleItems) > 0;
                             @endphp
                             <div
                                 style="background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:14px;">
@@ -1130,10 +1126,11 @@
                                         <div
                                             style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
                                             Remaining</div>
+                                        @php $grandTotalCombined = (float) $totalAmount + (float) $linkedSaleTotal; @endphp
                                         <div
-                                            style="font-size:15px; font-weight:800; color:{{ (float) $advancePaid >= (float) $totalAmount ? '#38a169' : '#e53e3e' }};">
+                                            style="font-size:15px; font-weight:800; color:{{ (float) $advancePaid >= $grandTotalCombined ? '#38a169' : '#e53e3e' }};">
                                             Rs.
-                                            {{ number_format(max(0, (float) $totalAmount - (float) $advancePaid), 0) }}
+                                            {{ number_format(max(0, $grandTotalCombined - (float) $advancePaid), 0) }}
                                         </div>
                                     </div>
                                 </div>
