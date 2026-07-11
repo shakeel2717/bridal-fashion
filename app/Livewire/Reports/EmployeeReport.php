@@ -244,12 +244,12 @@ class EmployeeReport extends Component
         $rows = User::where('role', 'employee')
             ->get()
             ->map(function ($emp) use ($from, $to) {
-                $rentals = Rental::where('created_by', $emp->id)
+                $rentals = Rental::where('employee_id', $emp->id)
                     ->whereBetween('booking_date', [$from, $to])
                     ->whereNotIn('status', ['cancelled', 'abandoned'])
                     ->get();
 
-                $sales = Sale::where('created_by', $emp->id)
+                $sales = Sale::where('employee_id', $emp->id)
                     ->whereBetween('sale_date', [$from, $to])
                     ->whereNotIn('status', ['cancelled'])
                     ->get();
@@ -283,7 +283,7 @@ class EmployeeReport extends Component
         $rows = User::where('role', 'employee')
             ->get()
             ->map(function ($emp) use ($from, $to) {
-                $rentals = Rental::where('created_by', $emp->id)
+                $rentals = Rental::where('employee_id', $emp->id)
                     ->whereBetween('booking_date', [$from, $to])
                     ->whereNotIn('status', ['cancelled', 'abandoned'])
                     ->get();
@@ -314,7 +314,7 @@ class EmployeeReport extends Component
         $rows = User::where('role', 'employee')
             ->get()
             ->map(function ($emp) use ($from, $to) {
-                $sales = Sale::where('created_by', $emp->id)
+                $sales = Sale::where('employee_id', $emp->id)
                     ->whereBetween('sale_date', [$from, $to])
                     ->whereNotIn('status', ['cancelled'])
                     ->get();
