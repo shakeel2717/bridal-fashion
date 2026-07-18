@@ -83,7 +83,8 @@ class RentalList extends Component
         $today = now()->toDateString();
 
         // Products booked in more than one active rental (item 13 duplicate filter)
-        $dupProductIds = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned']))
+        $dupProductIds = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->whereNotNull('pickup_date')->whereNotNull('return_date'))
             ->whereNotNull('product_id')
             ->select('product_id')
             ->groupBy('product_id')
@@ -135,6 +136,7 @@ class RentalList extends Component
             })
             ->when($this->activeFilter === 'duplicate', function ($q) use ($dupProductIds) {
                 $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                    ->whereNotNull('pickup_date')->whereNotNull('return_date')
                     ->whereHas('items', fn ($q) => $q->whereIn('product_id', $dupProductIds));
             })
             ->when(
@@ -172,13 +174,16 @@ class RentalList extends Component
             'fined' => Rental::whereHas('tasks', fn ($q) => $q->where('type', 'fine'))
                 ->withCount('items')->get()->sum('items_count'),
             'duplicate' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->whereNotNull('pickup_date')->whereNotNull('return_date')
                 ->whereHas('items', fn ($q) => $q->whereIn('product_id', $dupProductIds))
                 ->count(),
         ];
 
         // Duplicate bookings: same product active in multiple rentals
         $duplicateBookings = RentalItem::with(['product:id,name,code', 'rental:id,customer_name,pickup_date,return_date,status,bill_ref'])
-            ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned']))
+            ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->whereNotNull('pickup_date')->whereNotNull('return_date'))
+            ->whereIn('product_id', $dupProductIds)
             ->get()
             ->groupBy('product_id')
             ->filter(fn ($group) => $group->count() > 1)

@@ -106,6 +106,7 @@
                     <th>Pickup</th>
                     <th>Return</th>
                     <th>Status</th>
+                    <th>When</th>
                     <th style="text-align:right;">Price</th>
                 </tr>
             </thead>
@@ -120,12 +121,24 @@
                     </td>
                     <td style="font-size:13px; font-weight:600;">{{ $item->rental->customer_name }}</td>
                     <td style="font-size:12px;">{{ \Carbon\Carbon::parse($item->rental->booking_date)->format('d/m/Y') }}</td>
-                    <td style="font-size:12px;">{{ \Carbon\Carbon::parse($item->rental->pickup_date)->format('d/m/Y') }}</td>
-                    <td style="font-size:12px;">{{ \Carbon\Carbon::parse($item->rental->return_date)->format('d/m/Y') }}</td>
+                    @php
+                        $pd = $item->rental->pickup_date ? \Carbon\Carbon::parse($item->rental->pickup_date) : null;
+                        $rd = $item->rental->return_date ? \Carbon\Carbon::parse($item->rental->return_date) : null;
+                        $today = \Carbon\Carbon::today();
+                        if ($rd && $rd->lt($today))       { $when = ['Past', '#718096']; }
+                        elseif ($pd && $pd->gt($today))   { $when = ['Upcoming', '#3182ce']; }
+                        else                              { $when = ['Active', '#38a169']; }
+                    @endphp
+                    <td style="font-size:12px;">{{ $pd ? $pd->format('d/m/Y') : '—' }}</td>
+                    <td style="font-size:12px;">{{ $rd ? $rd->format('d/m/Y') : '—' }}</td>
                     <td>
                         <span class="badge-status {{ $item->rental->status }}">
-                            {{ ucfirst($item->rental->status) }}
+                            {{ ucfirst(str_replace('_', ' ', $item->rental->status)) }}
                         </span>
+                    </td>
+                    <td>
+                        <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+                                     color:#fff; background:{{ $when[1] }};">{{ $when[0] }}</span>
                     </td>
                     <td style="text-align:right; font-weight:700;">
                         Rs. {{ number_format($item->rental_price, 0) }}

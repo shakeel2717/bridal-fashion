@@ -21,7 +21,7 @@ class ItemReport extends Component
     public function mount(): void
     {
         $this->dateFrom = now()->startOfYear()->format('Y-m-d');
-        $this->dateTo   = now()->format('Y-m-d');
+        $this->dateTo   = now()->endOfYear()->format('Y-m-d');
     }
 
     public function searchProducts(): void
@@ -66,11 +66,16 @@ class ItemReport extends Component
             $rentalBookings = RentalItem::with(['rental'])
                 ->where('product_id', $this->selectedProductId)
                 ->whereHas('rental', function($q) {
-                    $q->whereRaw('DATE(booking_date) >= ?', [$this->dateFrom])
-                      ->whereRaw('DATE(booking_date) <= ?', [$this->dateTo])
-                      ->whereNotIn('status', ['cancelled', 'abandoned']);
+                    $q->whereNotIn('status', ['cancelled', 'abandoned'])
+                      ->where(function($q) {
+                          $q->whereRaw('DATE(booking_date) BETWEEN ? AND ?', [$this->dateFrom, $this->dateTo])
+                            ->orWhereRaw('DATE(pickup_date) BETWEEN ? AND ?', [$this->dateFrom, $this->dateTo])
+                            ->orWhereRaw('DATE(return_date) BETWEEN ? AND ?', [$this->dateFrom, $this->dateTo]);
+                      });
                 })
-                ->get();
+                ->get()
+                ->sortBy(fn($i) => $i->rental->pickup_date ?? $i->rental->booking_date)
+                ->values();
 
             $saleBookings = SaleItem::with(['sale'])
                 ->where('product_id', $this->selectedProductId)

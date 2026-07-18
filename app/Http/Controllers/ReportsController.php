@@ -4,12 +4,26 @@ namespace App\Http\Controllers;
 
 class ReportsController extends Controller
 {
+    // Landing page with report cards
     public function index()
+    {
+        return view('reports.index');
+    }
+
+    // Sales report (previously lived at /reports)
+    public function sales()
     {
         return view('reports.sales');
     }
 
+    // Single Item booking search (search a product code -> all its bookings)
     public function items()
+    {
+        return view('reports.items');
+    }
+
+    // Rentals analytics report
+    public function rentals()
     {
         return view('reports.rentals');
     }

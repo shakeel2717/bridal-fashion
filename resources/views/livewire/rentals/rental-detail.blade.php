@@ -281,6 +281,7 @@
                             <th style="width:34px; text-align:center; vertical-align:middle;">
                                 <input type="checkbox" wire:model.live="selectAll" title="Select all">
                             </th>
+                            <th style="width:32px; text-align:center;">Sr</th>
                             <th style="width:40px;"></th>
                             <th>Item</th>
                             <th style="text-align:right;">Rental Price</th>
@@ -302,6 +303,10 @@
                                     @if ($item->pickup_status !== 'returned')
                                         <input type="checkbox" value="{{ $item->id }}" wire:model.live="selectedItems">
                                     @endif
+                                </td>
+                                {{-- Serial number (item 3) --}}
+                                <td style="text-align:center; vertical-align:middle; font-weight:600; color:var(--text-muted);">
+                                    {{ $loop->iteration }}
                                 </td>
                                 {{-- Photo --}}
                                 <td style="vertical-align:middle;">
@@ -518,7 +523,7 @@
                     <tfoot>
                         @if (($rental->discount_amount ?? 0) > 0)
                             <tr>
-                                <td colspan="5" style="text-align:right; font-size:12px; color:var(--text-muted);">
+                                <td colspan="6" style="text-align:right; font-size:12px; color:var(--text-muted);">
                                     Discount</td>
                                 <td style="text-align:right; color:#e53e3e; font-weight:600;">
                                     − Rs. {{ number_format($rental->discount_amount, 0) }}
@@ -527,7 +532,7 @@
                             </tr>
                         @endif
                         <tr style="border-top:2px solid var(--navy);">
-                            <td colspan="5"
+                            <td colspan="6"
                                 style="text-align:right; font-weight:700; font-size:14px; padding-top:10px;">Total</td>
                             <td
                                 style="text-align:right; font-weight:800; font-size:16px; color:var(--navy); padding-top:10px;">

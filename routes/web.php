@@ -62,6 +62,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/advances', [AdvancesController::class, 'index'])->name('advances.index');
     Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
+    Route::get('/reports/sales', [ReportsController::class, 'sales'])->name('reports.sales');
+    Route::get('/reports/rentals', [ReportsController::class, 'rentals'])->name('reports.rentals');
     Route::get('/reports/item', [ReportsController::class, 'items'])->name('reports.item');
     Route::get('/reports/all-items', [ReportsController::class, 'allItems'])->name('reports.all-items');
     Route::get('/reports/top-items', [ReportsController::class, 'topItems'])->name('reports.top-items');
