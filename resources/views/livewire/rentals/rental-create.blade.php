@@ -109,8 +109,57 @@
 
                             <div class="col-4">
                                 <label class="form-label">Delivery Address</label>
-                                <input type="text" wire:model="deliveryAddress" class="form-control"
-                                    placeholder="Customer address">
+                                {{-- Autosuggest from saved customer addresses (item 6) --}}
+                                <div class="position-relative"
+                                     x-data="{
+                                        items: @js($addressHistory),
+                                        query: @js($deliveryAddress),
+                                        open: false, hi: -1,
+                                        matches() {
+                                            const q = (this.query || '').toLowerCase().trim();
+                                            if (q.length < 1) return [];
+                                            return this.items.filter(a => a.toLowerCase().includes(q) && a.toLowerCase() !== q).slice(0, 8);
+                                        },
+                                        sync() { $wire.set('deliveryAddress', this.query, false); },
+                                        pick(a) { this.query = a; this.sync(); this.open = false; this.hi = -1; },
+                                        move(d) { const m = this.matches(); this.open = true; if (!m.length) return; this.hi = (this.hi + d + m.length) % m.length; },
+                                        enter() { const m = this.matches(); if (this.open && this.hi >= 0 && m[this.hi]) { this.pick(m[this.hi]); } else { this.open = false; } }
+                                     }"
+                                     x-init="$watch(() => $wire.deliveryAddress, v => { if (v !== query) query = v || '' })">
+                                    <input type="text" class="form-control" autocomplete="off"
+                                        x-model="query"
+                                        @input="open = true; hi = -1; sync()"
+                                        @focus="open = true"
+                                        @keydown.arrow-down.prevent="move(1)"
+                                        @keydown.arrow-up.prevent="move(-1)"
+                                        @keydown.enter.prevent="enter()"
+                                        @keydown.escape="open = false"
+                                        @click.away="open = false"
+                                        placeholder="Customer address">
+                                    <ul x-show="open && matches().length" x-cloak
+                                        class="list-group position-absolute w-100 shadow-sm"
+                                        style="z-index:1050; max-height:210px; overflow:auto;">
+                                        <template x-for="(a, i) in matches()" :key="i">
+                                            <li class="list-group-item list-group-item-action"
+                                                style="cursor:pointer; font-size:12px; padding:6px 10px;"
+                                                :class="{ 'active': i === hi }"
+                                                @mousedown.prevent="pick(a)"
+                                                @mouseenter="hi = i"
+                                                x-text="a"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-3">
+                                <label class="form-label">Area</label>
+                                <input type="text" wire:model="customerArea" class="form-control"
+                                    list="areaHistoryList" placeholder="e.g. Johar Town">
+                                <datalist id="areaHistoryList">
+                                    @foreach ($areaHistory as $ar)
+                                        <option value="{{ $ar }}"></option>
+                                    @endforeach
+                                </datalist>
                             </div>
 
                             <div class="col-2">
@@ -345,6 +394,43 @@
                                         <input type="text" wire:model="stitchingInstructions" class="form-control"
                                             placeholder="e.g. Waist 28, shorten sleeves 2 inches">
                                     </div>
+                                </div>
+
+                                {{-- Sizes / measurements repeater (item 9) --}}
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">
+                                            <i class="bi bi-rulers me-1"></i> Sizes / Measurements
+                                        </label>
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                            wire:click.prevent="addStitchingSize">
+                                            <i class="bi bi-plus me-1"></i> Add Row
+                                        </button>
+                                    </div>
+                                    @forelse ($stitchingSizes as $i => $row)
+                                        <div class="row g-2 mb-2 align-items-center" wire:key="stsize-{{ $i }}">
+                                            <div class="col-5">
+                                                <input type="text" class="form-control form-control-sm"
+                                                    wire:model.blur="stitchingSizes.{{ $i }}.name"
+                                                    placeholder="Name (e.g. Waist, Length)">
+                                            </div>
+                                            <div class="col-5">
+                                                <input type="text" class="form-control form-control-sm"
+                                                    wire:model.blur="stitchingSizes.{{ $i }}.value"
+                                                    placeholder="Value (e.g. 28, 40 inch)">
+                                            </div>
+                                            <div class="col-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger w-100"
+                                                    wire:click.prevent="removeStitchingSize({{ $i }})" title="Remove row">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div style="font-size:11px; color:var(--text-muted);">
+                                            No sizes added yet. Click &ldquo;Add Row&rdquo; to add measurements.
+                                        </div>
+                                    @endforelse
                                 </div>
                             @endif
                         </div>
@@ -1619,4 +1705,43 @@
             }
         }, true);
     </script>
+@endpush
+
+{{-- Item 8: warn about unsaved rental changes before leaving --}}
+@push('scripts')
+<script>
+    (function () {
+        let dirty = false;
+        const root = document.getElementById('rental-create-page');
+
+        ['input', 'change'].forEach(function (ev) {
+            document.addEventListener(ev, function (e) {
+                if (root && root.contains(e.target)) dirty = true;
+            }, true);
+        });
+
+        // When a Livewire action results in a redirect (e.g. a successful Save),
+        // allow the page to unload without warning.
+        document.addEventListener('livewire:init', function () {
+            Livewire.hook('commit', function (payload) {
+                var succeed = payload.succeed;
+                if (!succeed) return;
+                succeed(function (res) {
+                    var effects = res && res.effects;
+                    if (effects && effects.redirect) {
+                        window.__rentalAllowUnload = true;
+                    }
+                });
+            });
+        });
+
+        window.addEventListener('beforeunload', function (e) {
+            if (dirty && !window.__rentalAllowUnload) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        });
+    })();
+</script>
 @endpush

@@ -38,6 +38,11 @@
                 <option value="sale">Sale</option>
                 <option value="both">Both</option>
             </select>
+            <select wire:model.live="filterStatus" class="form-select form-select-sm" style="width:150px;">
+                <option value="active">Active only</option>
+                <option value="inactive">Deactivated only</option>
+                <option value="all">All (Active + Deactivated)</option>
+            </select>
         </div>
     </div>
 

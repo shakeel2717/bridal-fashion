@@ -15,4 +15,11 @@ class SalesController extends Controller
     {
         return view('sales.return', compact('sale'));
     }
+
+    public function receipt(Sale $sale)
+    {
+        $sale->load(['items', 'employee']);
+
+        return view('sales.receipt', compact('sale'));
+    }
 }

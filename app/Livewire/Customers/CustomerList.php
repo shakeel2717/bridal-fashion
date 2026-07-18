@@ -66,6 +66,7 @@ class CustomerList extends Component
                     $q->where('name', 'like', "%{$this->search}%")
                       ->orWhere('phone1', 'like', "%{$this->search}%")
                       ->orWhere('phone2', 'like', "%{$this->search}%")
+                      ->orWhere('area', 'like', "%{$this->search}%")
                       ->orWhere('cnic', 'like', "%{$this->search}%");
                 });
             })

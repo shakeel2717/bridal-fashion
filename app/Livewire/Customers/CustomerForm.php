@@ -17,6 +17,7 @@ class CustomerForm extends Component
     public string $whatsapp   = '';
     public string $cnic       = '';
     public string $city       = '';
+    public string $area       = '';
     public string $address    = '';
     public string $notes      = '';
     public $photo             = null;
@@ -46,6 +47,7 @@ class CustomerForm extends Component
         $this->whatsapp           = $customer->whatsapp ?? '';
         $this->cnic               = $customer->cnic ?? '';
         $this->city               = $customer->city ?? '';
+        $this->area               = $customer->area ?? '';
         $this->address            = $customer->address ?? '';
         $this->notes              = $customer->notes ?? '';
         $this->existingPhoto      = $customer->photo;
@@ -76,6 +78,7 @@ class CustomerForm extends Component
             'whatsapp'  => 'nullable|string|max:20',
             'cnic'      => 'nullable|string|max:20',
             'city'      => 'nullable|string|max:100',
+            'area'      => 'nullable|string|max:150',
             'address'   => 'nullable|string|max:500',
             'notes'     => 'nullable|string|max:1000',
             'photo'     => 'nullable|image|max:2048',
@@ -98,6 +101,7 @@ class CustomerForm extends Component
             'whatsapp'   => $this->whatsapp ?: null,
             'cnic'       => $this->cnic ?: null,
             'city'       => $this->city ?: null,
+            'area'       => $this->area ?: null,
             'address'    => $this->address ?: null,
             'notes'      => $this->notes ?: null,
             'photo'      => $photoPath,
@@ -131,6 +135,7 @@ class CustomerForm extends Component
         $this->whatsapp          = '';
         $this->cnic              = '';
         $this->city              = '';
+        $this->area              = '';
         $this->address           = '';
         $this->notes             = '';
         $this->photo             = null;

@@ -28,6 +28,10 @@
             <button wire:click="confirmDeleteSale" class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-trash me-1"></i> Delete
             </button>
+            <a href="{{ route('sales.receipt', $sale->id) }}" target="_blank"
+                class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-printer me-1"></i> Print Receipt
+            </a>
             <a href="{{ route('sales.index') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i> Back
             </a>

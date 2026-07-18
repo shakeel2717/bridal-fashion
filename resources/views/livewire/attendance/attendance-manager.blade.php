@@ -68,9 +68,10 @@
                     $sun = \Carbon\Carbon::createFromDate($year, $month, $d)->isSunday();
                 @endphp
                 <div class="att-header-cell"
-                     style="{{ $sun ? 'color:#e53e3e;' : '' }}"
+                     style="{{ $sun ? 'color:#e53e3e;' : '' }} display:flex; flex-direction:column; line-height:1.05;"
                      title="{{ $dow }} — {{ $ds }}">
-                    {{ $d }}
+                    <span>{{ $d }}</span>
+                    <span style="font-size:8px; font-weight:600; text-transform:uppercase; opacity:0.7;">{{ $dow }}</span>
                 </div>
             @endfor
             <div class="att-header-cell">Summary</div>

@@ -57,6 +57,7 @@
                     <th>Phone</th>
                     <th>WhatsApp</th>
                     <th>CNIC</th>
+                    <th>Area</th>
                     <th>Attachments</th>
                     <th>Type</th>
                     <th>Rentals</th>
@@ -96,6 +97,7 @@
                         </td>
                         <td style="font-size:13px;">{{ $customer->whatsapp ?? '—' }}</td>
                         <td style="font-size:13px; font-family:monospace;">{{ $customer->cnic ?? '—' }}</td>
+                        <td style="font-size:13px;">{{ $customer->area ?: '—' }}</td>
                         <td>
                             <div class="d-flex gap-1">
                                 @if ($customer->photo)
@@ -161,7 +163,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9"
+                        <td colspan="11"
                             style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
                             <i class="bi bi-people" style="font-size:32px; display:block; margin-bottom:8px;"></i>
                             No customers found

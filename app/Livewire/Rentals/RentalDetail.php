@@ -19,6 +19,13 @@ class RentalDetail extends Component
 {
     public Rental $rental;
 
+    // ── Bulk pickup / return (select all) ─────────────────
+    public array $selectedItems = [];
+
+    public bool $selectAll = false;
+
+    public string $bulkStaffId = '';
+
     public bool $showReturnModal = false;
 
     // Delete rental
@@ -108,6 +115,8 @@ class RentalDetail extends Component
         $this->returnReceivedBy = (string) auth()->id();
 
         $this->pickupGivenBy = (string) auth()->id();
+
+        $this->bulkStaffId = (string) auth()->id();
 
         $defaultAccount = Account::where('is_default', true)->first()
     ?? Account::where('is_active', true)->first();
@@ -206,12 +215,17 @@ class RentalDetail extends Component
 
         $status = $this->rental->status;
 
-        if ($returned === $total) {
+        if ($returned === $total && $total > 0) {
             $status = 'returned';
-        } elseif ($picked === $total) {
+        } elseif ($picked === $total && $total > 0) {
             $status = 'picked_up';
         } elseif ($picked > 0 || $returned > 0) {
             $status = 'partially_picked_up';
+        } elseif ($picked === 0 && $returned === 0) {
+            // Nothing picked up yet (e.g. admin reversed a pickup) — revert to a base status
+            if (! in_array($this->rental->status, ['booked', 'ready'])) {
+                $status = 'booked';
+            }
         }
 
         $this->rental->update(['status' => $status, 'updated_by' => auth()->id()]);
@@ -631,6 +645,166 @@ class RentalDetail extends Component
         $this->returnItemId = null;
         $this->updateRentalStatus();
         $this->rental->refresh();
+    }
+
+    // ── Bulk actions (item 5) ─────────────────────────────
+    public function updatedSelectAll($value): void
+    {
+        if ($value) {
+            $this->selectedItems = $this->rental->items
+                ->whereNotIn('pickup_status', ['returned'])
+                ->pluck('id')->map(fn ($id) => (string) $id)->values()->toArray();
+        } else {
+            $this->selectedItems = [];
+        }
+    }
+
+    public function bulkMarkPickup(): void
+    {
+        if (in_array($this->rental->status, ['cancelled', 'abandoned'])) {
+            session()->flash('error', 'Cannot pick up items for a '.$this->rental->status.' rental.');
+
+            return;
+        }
+
+        $this->validate([
+            'bulkStaffId' => 'required|exists:users,id',
+        ], ['bulkStaffId.required' => 'Please select who is handing over the items.']);
+
+        $this->rental->load('items.tasks');
+
+        $rentalPending = $this->rental->tasks()
+            ->where('status', 'pending')->where('type', '!=', 'fine')->count();
+        if ($rentalPending > 0) {
+            session()->flash('error', 'Resolve pending tasks before picking up items.');
+
+            return;
+        }
+
+        $selected = array_map('strval', $this->selectedItems);
+        $count = 0;
+        foreach ($this->rental->items as $item) {
+            if (! in_array((string) $item->id, $selected, true)) {
+                continue;
+            }
+            if ($item->pickup_status !== 'pending') {
+                continue;
+            }
+            if ($item->tasks->where('status', 'pending')->count() > 0) {
+                continue;
+            }
+            $item->update([
+                'pickup_status' => 'picked_up',
+                'picked_up_at' => now(),
+                'picked_up_by' => $this->bulkStaffId,
+            ]);
+            $count++;
+        }
+
+        $this->selectedItems = [];
+        $this->selectAll = false;
+        $this->updateRentalStatus();
+        $this->rental->refresh();
+        session()->flash('success', $count.' item(s) marked as picked up.');
+    }
+
+    public function bulkMarkReturn(): void
+    {
+        $this->validate([
+            'bulkStaffId' => 'required|exists:users,id',
+        ], ['bulkStaffId.required' => 'Please select who received the items.']);
+
+        $selected = array_map('strval', $this->selectedItems);
+        $count = 0;
+        foreach ($this->rental->items as $item) {
+            if (! in_array((string) $item->id, $selected, true)) {
+                continue;
+            }
+            if ($item->pickup_status !== 'picked_up') {
+                continue;
+            }
+            $item->update([
+                'pickup_status' => 'returned',
+                'returned_at' => now(),
+                'returned_received_by' => $this->bulkStaffId,
+            ]);
+            $count++;
+        }
+
+        $this->selectedItems = [];
+        $this->selectAll = false;
+        $this->updateRentalStatus();
+        $this->rental->refresh();
+        session()->flash('success', $count.' item(s) marked as returned.');
+    }
+
+    // ── Admin: reverse a pickup / return by mistake (item 10) ─
+    public function removePickup(int $itemId): void
+    {
+        if (! auth()->user()->isAdmin()) {
+            return;
+        }
+
+        RentalItem::where('rental_id', $this->rental->id)->findOrFail($itemId)->update([
+            'pickup_status' => 'pending',
+            'picked_up_at' => null,
+            'picked_up_by' => null,
+        ]);
+
+        $this->updateRentalStatus();
+        $this->rental->refresh();
+        session()->flash('success', 'Pickup removed — item set back to pending.');
+    }
+
+    public function removeReturn(int $itemId): void
+    {
+        if (! auth()->user()->isAdmin()) {
+            return;
+        }
+
+        RentalItem::where('rental_id', $this->rental->id)->findOrFail($itemId)->update([
+            'pickup_status' => 'picked_up',
+            'returned_at' => null,
+            'returned_received_by' => null,
+        ]);
+
+        $this->updateRentalStatus();
+        $this->rental->refresh();
+        session()->flash('success', 'Return removed — item set back to picked up.');
+    }
+
+    // ── Delete a payment added by mistake (item 11) ───────
+    public function deletePayment(int $paymentId): void
+    {
+        $payment = RentalPayment::where('rental_id', $this->rental->id)->findOrFail($paymentId);
+
+        // Reverse the balance on the payment method + keep an audit trail in history
+        $account = Account::where('name', $payment->payment_method)->first();
+        if ($account) {
+            AccountService::debit(
+                $account->id,
+                (float) $payment->amount,
+                'rental_payment_reversal',
+                "Reversed rental payment — {$this->rental->customer_name} (#{$this->rental->id})",
+                now()->toDateString(),
+                $this->rental,
+            );
+        }
+
+        $payment->delete();
+
+        // Recompute rental paid / remaining (mirrors addPayment)
+        $totalPaid = RentalPayment::where('rental_id', $this->rental->id)->sum('amount');
+        $remaining = max(0, $this->rental->total_amount - $totalPaid);
+
+        $this->rental->update([
+            'advance_paid' => $totalPaid,
+            'remaining_balance' => $remaining,
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->rental->refresh();
+        session()->flash('success', 'Payment deleted and account balance updated.');
     }
 
     public function render()

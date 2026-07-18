@@ -82,6 +82,14 @@ class RentalList extends Component
     {
         $today = now()->toDateString();
 
+        // Products booked in more than one active rental (item 13 duplicate filter)
+        $dupProductIds = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned']))
+            ->whereNotNull('product_id')
+            ->select('product_id')
+            ->groupBy('product_id')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('product_id');
+
         $rentals = Rental::with(['items', 'employee'])
             ->withSum('payments', 'amount')
             ->when($this->search, function ($q) {
@@ -125,8 +133,12 @@ class RentalList extends Component
             ->when($this->activeFilter === 'fined', function ($q) {
                 $q->whereHas('tasks', fn ($q) => $q->where('type', 'fine'));
             })
+            ->when($this->activeFilter === 'duplicate', function ($q) use ($dupProductIds) {
+                $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                    ->whereHas('items', fn ($q) => $q->whereIn('product_id', $dupProductIds));
+            })
             ->when(
-                $this->activeFilter && ! in_array($this->activeFilter, ['due', 'overpaid', 'late_pickup', 'late_return', 'no_dates', 'fined']),
+                $this->activeFilter && ! in_array($this->activeFilter, ['due', 'overpaid', 'late_pickup', 'late_return', 'no_dates', 'fined', 'duplicate']),
                 fn ($q) => $q->where('status', $this->activeFilter)
             )
             ->latest()
@@ -159,6 +171,9 @@ class RentalList extends Component
                 ->withCount('items')->get()->sum('items_count'),
             'fined' => Rental::whereHas('tasks', fn ($q) => $q->where('type', 'fine'))
                 ->withCount('items')->get()->sum('items_count'),
+            'duplicate' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->whereHas('items', fn ($q) => $q->whereIn('product_id', $dupProductIds))
+                ->count(),
         ];
 
         // Duplicate bookings: same product active in multiple rentals

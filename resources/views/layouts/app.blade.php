@@ -55,7 +55,7 @@
                 @endif
 
                 {{-- Logout --}}
-                <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+                <form method="POST" action="{{ route('logout') }}" style="margin:0;" id="auto-logout-form">
                     @csrf
                     <button type="submit" class="top-logout-btn">
                         <i class="bi bi-box-arrow-right"></i>
@@ -220,6 +220,38 @@
                 }, 300);
             });
         });
+    </script>
+
+    {{-- Item 7: auto-logout after 5 minutes of inactivity --}}
+    <script>
+        (function () {
+            const TIMEOUT = 5 * 60 * 1000; // 5 minutes
+            let timer = null;
+
+            function doLogout() {
+                const form = document.getElementById('auto-logout-form');
+                if (form) form.submit();
+            }
+
+            function resetTimer() {
+                clearTimeout(timer);
+                timer = setTimeout(doLogout, TIMEOUT);
+            }
+
+            ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'wheel']
+                .forEach(function (ev) {
+                    window.addEventListener(ev, resetTimer, { passive: true });
+                });
+
+            // Reset on any Livewire activity too
+            document.addEventListener('livewire:init', function () {
+                if (window.Livewire) {
+                    Livewire.hook('commit', function () { resetTimer(); });
+                }
+            });
+
+            resetTimer();
+        })();
     </script>
 </body>
 

@@ -86,7 +86,7 @@
             @elseif($report)
 
             {{-- ── Employee selector (for per-employee reports) ──────── --}}
-            @if($activeReport === 'attendance_detail')
+            @if(in_array($activeReport, ['attendance_detail', 'hr_financial']))
             <div class="table-card mb-3" style="padding:14px 18px;">
                 <div class="d-flex align-items-center gap-3">
                     <label class="fw-semibold mb-0" style="white-space:nowrap; font-size:.85rem;">Select Employee</label>
@@ -121,7 +121,7 @@
                         </span>
                         @endif
                     </div>
-                    @if(!in_array($activeReport, ['attendance_detail']))
+                    @if(!in_array($activeReport, ['attendance_detail', 'hr_financial']))
                     <div>
                         <input type="search" wire:model.live.debounce.300ms="search"
                                class="form-control form-control-sm"
@@ -490,6 +490,70 @@
                             <td class="text-end fw-semibold" style="color:var(--navy);">{{ number_format($report['data']->sum('net'), 0) }}</td>
                             <td colspan="2"></td>
                         </tr>
+                    </tfoot>
+
+                    {{-- ── SINGLE EMPLOYEE FINANCIALS ─────────────── --}}
+                    @elseif($report['type'] === 'hr_financial')
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th class="text-end">Earned</th>
+                            <th class="text-end">Bonus</th>
+                            <th class="text-end">Advance</th>
+                            <th class="text-end">Net (PKR)</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($report['data'] as $i => $row)
+                        <tr>
+                            <td class="text-muted" style="font-size:.8rem;">{{ $i + 1 }}</td>
+                            <td style="font-size:.85rem;">{{ $row['date'] }}</td>
+                            <td>
+                                @if($row['type'] === 'Salary')
+                                    <span class="badge" style="background:#e0e7ff; color:#3730a3;">Salary</span>
+                                @else
+                                    <span class="badge" style="background:#fef3c7; color:#92400e;">Advance</span>
+                                @endif
+                            </td>
+                            <td style="font-size:.85rem;">{{ $row['desc'] }}</td>
+                            <td class="text-end" style="font-size:.85rem; color:#059669;">{{ $row['earned'] > 0 ? number_format($row['earned'], 0) : '—' }}</td>
+                            <td class="text-end" style="font-size:.85rem; color:#059669;">{{ $row['bonus'] > 0 ? number_format($row['bonus'], 0) : '—' }}</td>
+                            <td class="text-end" style="font-size:.85rem; color:#dc2626;">{{ $row['advance'] > 0 ? number_format($row['advance'], 0) : '—' }}</td>
+                            <td class="text-end fw-semibold" style="color:var(--navy);">{{ $row['net'] > 0 ? number_format($row['net'], 0) : '—' }}</td>
+                            <td class="text-center">
+                                @php
+                                    $sc = match($row['status'] ?? '') {
+                                        'Paid'     => ['#d1fae5','#065f46'],
+                                        'Pending'  => ['#fef9c3','#854d0e'],
+                                        'Deducted' => ['#e0e7ff','#3730a3'],
+                                        default    => ['#f3f4f6','#374151'],
+                                    };
+                                @endphp
+                                <span class="badge" style="background:{{ $sc[0] }}; color:{{ $sc[1] }};">{{ $row['status'] }}</span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="rpt-tfoot">
+                        <tr>
+                            <td colspan="4" class="fw-semibold">Totals</td>
+                            <td class="text-end fw-semibold" style="color:#059669;">{{ number_format($report['data']->sum('earned'), 0) }}</td>
+                            <td class="text-end fw-semibold" style="color:#059669;">{{ number_format($report['data']->sum('bonus'), 0) }}</td>
+                            <td class="text-end fw-semibold" style="color:#dc2626;">{{ number_format($report['data']->sum('advance'), 0) }}</td>
+                            <td class="text-end fw-semibold" style="color:var(--navy);">{{ number_format($report['data']->sum('net'), 0) }}</td>
+                            <td></td>
+                        </tr>
+                        @if(isset($report['summary']) && ($report['summary']['advances_pending'] ?? 0) > 0)
+                        <tr>
+                            <td colspan="9" class="text-end" style="font-size:.8rem; color:#dc2626;">
+                                Pending (not yet deducted) advances: Rs. {{ number_format($report['summary']['advances_pending'], 0) }}
+                            </td>
+                        </tr>
+                        @endif
                     </tfoot>
 
                     @endif

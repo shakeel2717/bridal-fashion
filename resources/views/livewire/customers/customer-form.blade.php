@@ -52,8 +52,8 @@
                             @error('cnic') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        {{-- City + Address --}}
-                        <div class="col-6">
+                        {{-- City + Area + Address --}}
+                        <div class="col-4">
                             <label class="form-label">City</label>
                             <input type="text"
                                    wire:model="city"
@@ -61,9 +61,17 @@
                                    placeholder="e.g. Lahore">
                             @error('city') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
+                            <label class="form-label">Area</label>
+                            <input type="text"
+                                   wire:model="area"
+                                   class="form-control @error('area') is-invalid @enderror"
+                                   placeholder="e.g. Johar Town">
+                            @error('area') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-4">
                             <label class="form-label">Address</label>
-                            <input type="text" wire:model="address" class="form-control" placeholder="Street / area">
+                            <input type="text" wire:model="address" class="form-control" placeholder="Street address">
                         </div>
 
                         {{-- Notes --}}

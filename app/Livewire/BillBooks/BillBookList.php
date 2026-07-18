@@ -11,6 +11,7 @@ class BillBookList extends Component
 {
     public string $search     = '';
     public string $filterType = '';
+    public string $filterStatus = 'active'; // active | inactive | all
     public bool   $showForm   = false;
 
     // Form fields
@@ -94,6 +95,8 @@ class BillBookList extends Component
         $books = BillBook::with('createdBy')
             ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
+            ->when($this->filterStatus === 'active', fn($q) => $q->where('is_active', true))
+            ->when($this->filterStatus === 'inactive', fn($q) => $q->where('is_active', false))
             ->latest()
             ->get()
             ->map(function ($book) {

@@ -31,6 +31,8 @@ class RentalCreate extends Component
 
     public string $customerCity = '';
 
+    public string $customerArea = '';
+
     // ── Step 1: Customer ──────────────────────────────────
     public string $customerType = 'walkin';
 
@@ -88,6 +90,8 @@ class RentalCreate extends Component
     public string $stitchingDate = '';
 
     public string $stitchingInstructions = '';
+
+    public array $stitchingSizes = [];
 
     public string $employeeId = '';
 
@@ -160,6 +164,7 @@ class RentalCreate extends Component
 
             $this->customerName = $rental->customer_name;
             $this->customerCity = $rental->customer_city ?? '';
+            $this->customerArea = $rental->customer_area ?? '';
             $this->customerPhone1 = $rental->customer_phone1;
             $this->customerPhone2 = $rental->customer_phone2 ?? '';
             $this->customerWhatsapp = $rental->customer_whatsapp ?? '';
@@ -176,11 +181,14 @@ class RentalCreate extends Component
             $this->employeeId = (string) ($rental->employee_id ?? auth()->id());
             $this->notes = $rental->notes ?? '';
 
-            if ($rental->stitching_date || $rental->stitching_instructions) {
+            if ($rental->stitching_date || $rental->stitching_instructions || ! empty($rental->stitching_sizes)) {
                 $this->showStitching = true;
                 $this->stitchingDate = $rental->stitching_date
                     ? Carbon::parse($rental->stitching_date)->format('Y-m-d') : '';
                 $this->stitchingInstructions = $rental->stitching_instructions ?? '';
+                $this->stitchingSizes = collect($rental->stitching_sizes ?? [])
+                    ->map(fn ($r) => ['name' => $r['name'] ?? '', 'value' => $r['value'] ?? ''])
+                    ->values()->all();
             }
 
             $this->items = $rental->items->map(fn ($item) => [
@@ -243,6 +251,8 @@ class RentalCreate extends Component
         $customer = Customer::create([
             'name' => $this->customerName,
             'phone1' => $this->customerPhone1,
+            'city' => $this->customerCity ?: null,
+            'area' => $this->customerArea ?: null,
             'phone2' => $this->customerPhone2 ?: null,
             'whatsapp' => $this->customerWhatsapp ?: null,
             'cnic' => $this->customerCnic ?: null,
@@ -303,6 +313,7 @@ class RentalCreate extends Component
             'name' => $this->customerName,
             'phone1' => $this->customerPhone1,
             'city' => $this->customerCity ?: null,
+            'area' => $this->customerArea ?: null,
             'phone2' => $this->customerPhone2 ?: null,
             'whatsapp' => $this->customerWhatsapp ?: null,
             'cnic' => $this->customerCnic ?: null,
@@ -336,6 +347,7 @@ class RentalCreate extends Component
         $this->customerId = null;
         $this->customerName = '';
         $this->customerCity = '';
+        $this->customerArea = '';
         $this->customerPhone1 = '';
         $this->customerPhone2 = '';
         $this->walkinPhoto = null;
@@ -366,7 +378,7 @@ class RentalCreate extends Component
                     ->orWhere('cnic', 'like', "%{$this->customerSearch}%");
             })
             ->limit(6)
-            ->get(['id', 'name', 'phone1', 'cnic', 'city', 'address'])
+            ->get(['id', 'name', 'phone1', 'cnic', 'city', 'area', 'address'])
             ->toArray();
     }
 
@@ -379,6 +391,7 @@ class RentalCreate extends Component
         $this->customerPhone2 = $customer->phone2 ?? '';
         $this->customerWhatsapp = $customer->whatsapp ?? '';
         $this->customerCity = $customer->city ?? '';
+        $this->customerArea = $customer->area ?? '';
         $this->customerCnic = $customer->cnic ?? '';
         $this->deliveryAddress = $customer->address ?? '';
         $this->customerSearch = $customer->name;
@@ -621,6 +634,7 @@ class RentalCreate extends Component
                 'customer_name' => $this->customerName,
                 'customer_phone1' => $this->customerPhone1,
                 'customer_city' => $this->customerCity ?: null,
+                'customer_area' => $this->customerArea ?: null,
                 'customer_phone2' => $this->customerPhone2 ?: null,
                 'customer_whatsapp' => $this->customerWhatsapp ?: null,
                 'customer_cnic' => $this->customerCnic ?: null,
@@ -633,6 +647,7 @@ class RentalCreate extends Component
                 'return_date' => $this->returnDate ? Carbon::parse($this->returnDate)->toDateString() : null,
                 'stitching_date' => $this->stitchingDate ? Carbon::parse($this->stitchingDate)->toDateString() : null,
                 'stitching_instructions' => $this->stitchingInstructions ?: null,
+                'stitching_sizes' => $this->showStitching ? $this->cleanStitchingSizes() : null,
                 'total_amount' => $total,
                 'advance_paid' => $advance,
                 'remaining_balance' => $remaining,
@@ -863,6 +878,7 @@ class RentalCreate extends Component
             'customer_name' => $this->customerName,
             'customer_phone1' => $this->customerPhone1,
             'customer_city' => $this->customerCity ?: null,
+            'customer_area' => $this->customerArea ?: null,
             'customer_phone2' => $this->customerPhone2 ?: null,
             'customer_whatsapp' => $this->customerWhatsapp ?: null,
             'customer_cnic' => $this->customerCnic ?: null,
@@ -878,6 +894,7 @@ class RentalCreate extends Component
             'return_date' => $this->returnDate ? Carbon::parse($this->returnDate)->toDateString() : null,
             'stitching_date' => $this->stitchingDate ? Carbon::parse($this->stitchingDate)->toDateString() : null,
             'stitching_instructions' => $this->stitchingInstructions ?: null,
+            'stitching_sizes' => $this->showStitching ? $this->cleanStitchingSizes() : null,
             'status' => 'booked',
             'advance_payment_method' => Account::find($this->advanceAccountId)?->name ?? 'cash',
             'total_amount' => $total,
@@ -1138,6 +1155,35 @@ class RentalCreate extends Component
         return max(0, $this->getSaleSubtotalProperty() - (float) $this->saleDiscount);
     }
 
+    // ── Stitching size repeater (item 9) ──────────────────
+    public function updatedShowStitching($value): void
+    {
+        if ($value && empty($this->stitchingSizes)) {
+            $this->stitchingSizes = [['name' => '', 'value' => '']];
+        }
+    }
+
+    public function addStitchingSize(): void
+    {
+        $this->stitchingSizes[] = ['name' => '', 'value' => ''];
+    }
+
+    public function removeStitchingSize(int $index): void
+    {
+        unset($this->stitchingSizes[$index]);
+        $this->stitchingSizes = array_values($this->stitchingSizes);
+    }
+
+    private function cleanStitchingSizes(): ?array
+    {
+        $rows = collect($this->stitchingSizes)
+            ->map(fn ($r) => ['name' => trim($r['name'] ?? ''), 'value' => trim($r['value'] ?? '')])
+            ->filter(fn ($r) => $r['name'] !== '' || $r['value'] !== '')
+            ->values()->all();
+
+        return empty($rows) ? null : $rows;
+    }
+
     public function render()
     {
         $employees = User::where('is_active', true)
@@ -1148,6 +1194,17 @@ class RentalCreate extends Component
             ->orderBy('name')
             ->get(['id', 'name', 'type']);
 
-        return view('livewire.rentals.rental-create', compact('employees', 'accounts'));
+        // Address & area history for autosuggest (item 6)
+        $addressHistory = Customer::whereNotNull('address')->where('address', '!=', '')
+            ->orderBy('address')->pluck('address')
+            ->merge(Rental::whereNotNull('delivery_address')->where('delivery_address', '!=', '')->pluck('delivery_address'))
+            ->map(fn ($a) => trim($a))->filter()->unique()->values()->take(800)->all();
+
+        $areaHistory = Customer::whereNotNull('area')->where('area', '!=', '')
+            ->orderBy('area')->pluck('area')
+            ->merge(Rental::whereNotNull('customer_area')->where('customer_area', '!=', '')->pluck('customer_area'))
+            ->map(fn ($a) => trim($a))->filter()->unique()->values()->take(400)->all();
+
+        return view('livewire.rentals.rental-create', compact('employees', 'accounts', 'addressHistory', 'areaHistory'));
     }
 }

@@ -16,8 +16,8 @@ class Rental extends Model
 
     protected $fillable = [
         'bill_ref', 'customer_id', 'customer_name', 'customer_phone1', 'walkin_photo', 'walkin_cnic_front', 'walkin_cnic_back',
-        'customer_phone2', 'customer_whatsapp', 'customer_cnic', 'delivery_address', 'customer_city',
-        'booking_date', 'pickup_date', 'return_date', 'stitching_date', 'advance_payment_method',
+        'customer_phone2', 'customer_whatsapp', 'customer_cnic', 'delivery_address', 'customer_city', 'customer_area',
+        'booking_date', 'pickup_date', 'return_date', 'stitching_date', 'stitching_sizes', 'advance_payment_method',
         'stitching_instructions', 'status', 'total_amount', 'advance_paid', 'phone1_gender', 'phone2_gender', 'whatsapp_gender',
         'remaining_balance', 'refund_amount', 'refund_type', 'refund_date', 'discount_type', 'discount_value', 'discount_amount',
         'refund_note', 'employee_id', 'notes', 'created_by', 'updated_by',
@@ -30,6 +30,7 @@ class Rental extends Model
             'advance_paid' => 'decimal:2',
             'remaining_balance' => 'decimal:2',
             'refund_amount' => 'decimal:2',
+            'stitching_sizes' => 'array',
         ];
     }
 

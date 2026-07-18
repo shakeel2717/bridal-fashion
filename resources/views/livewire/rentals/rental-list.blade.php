@@ -44,6 +44,7 @@
         'late_return' => ['label' => 'Late Return', 'icon' => 'bi-alarm', 'color' => '#c53030'],
         'no_dates' => ['label' => 'No Dates', 'icon' => 'bi-calendar-x', 'color' => '#718096'],
         'fined' => ['label' => 'Fined', 'icon' => 'bi-exclamation-triangle', 'color' => '#c53030'],
+        'duplicate' => ['label' => 'Duplicate', 'icon' => 'bi-files', 'color' => '#c53030'],
     ] as $key => $info)
                     @php $isActive = $activeFilter === $key; @endphp
                     <div wire:click="setActiveFilter('{{ $key }}')"

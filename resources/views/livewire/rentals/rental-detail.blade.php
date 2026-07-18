@@ -21,9 +21,15 @@
                 @endif
             </div>
         </div>
-        <a href="{{ route('rentals.index') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Back
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('rentals.receipt', $rental->id) }}" target="_blank"
+                class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-printer me-1"></i> Print Receipt
+            </a>
+            <a href="{{ route('rentals.index') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+        </div>
     </div>
 
     <div class="row g-3">
@@ -91,11 +97,13 @@
                                 {{ $rental->customer_cnic }}</div>
                         </div>
                     @endif
-                    @if ($rental->delivery_address)
+                    @if ($rental->delivery_address || $rental->customer_area || $rental->customer_city)
                         <div class="col-6">
                             <div style="font-size:10px; color:var(--text-muted);">Address</div>
-                            <div style="font-weight:600;">{{ $rental->delivery_address }} |
-                                {{ $rental->customer_city }}</div>
+                            <div style="font-weight:600;">
+                                {{ $rental->delivery_address }}@if ($rental->customer_area), {{ $rental->customer_area }}@endif
+                                @if ($rental->customer_city) | {{ $rental->customer_city }}@endif
+                            </div>
                         </div>
                     @endif
 
@@ -143,6 +151,25 @@
                     @endif
                 </div>
             </div>
+
+            {{-- Stitching sizes / measurements (item 9) --}}
+            @if (!empty($rental->stitching_sizes))
+                <div class="table-card mb-3" style="padding:16px 20px;">
+                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">
+                        <i class="bi bi-rulers me-1"></i> Stitching Sizes / Measurements
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach ($rental->stitching_sizes as $sz)
+                            @if (!empty($sz['name']) || !empty($sz['value']))
+                                <div style="border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:12px; background:#f7fafc;">
+                                    <span style="color:var(--text-muted);">{{ $sz['name'] ?? '' }}:</span>
+                                    <strong>{{ $sz['value'] ?? '' }}</strong>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             {{-- Stitching Task --}}
             @if ($stitchingTask)
@@ -220,9 +247,40 @@
                     <i class="bi bi-box-seam me-1"></i> Rented Items
                 </div>
 
+                {{-- Bulk pickup / return toolbar (item 5) --}}
+                @if (!in_array($rental->status, ['cancelled', 'abandoned']))
+                    <div class="d-flex flex-wrap align-items-center gap-2"
+                         style="padding:8px 12px; background:#f7fafc; border-bottom:1px solid var(--border);">
+                        <span style="font-size:11px; font-weight:700; color:var(--text-muted);">
+                            <i class="bi bi-check2-square me-1"></i>{{ count($selectedItems) }} selected
+                        </span>
+                        <label style="font-size:11px; color:var(--text-muted);" class="mb-0">By/To:</label>
+                        <select wire:model="bulkStaffId" class="form-select form-select-sm"
+                                style="width:auto; font-size:11px;">
+                            @foreach (\App\Models\User::where('is_active', true)->orderBy('name')->get() as $emp)
+                                <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                            @endforeach
+                        </select>
+                        <button class="btn btn-sm btn-success action-btn" wire:click="bulkMarkPickup"
+                                @disabled(count($selectedItems) === 0)>
+                            <i class="bi bi-box-arrow-up me-1"></i> Mark Selected Picked Up
+                        </button>
+                        <button class="btn btn-sm btn-primary action-btn" wire:click="bulkMarkReturn"
+                                @disabled(count($selectedItems) === 0)>
+                            <i class="bi bi-box-arrow-in-down me-1"></i> Mark Selected Returned
+                        </button>
+                        @error('bulkStaffId')
+                            <span style="color:#e53e3e; font-size:11px;">{{ $message }}</span>
+                        @enderror
+                    </div>
+                @endif
+
                 <table class="table mb-0" style="font-size:12px;">
                     <thead>
                         <tr>
+                            <th style="width:34px; text-align:center; vertical-align:middle;">
+                                <input type="checkbox" wire:model.live="selectAll" title="Select all">
+                            </th>
                             <th style="width:40px;"></th>
                             <th>Item</th>
                             <th style="text-align:right;">Rental Price</th>
@@ -237,7 +295,14 @@
                                 $itemPendingTasks = $item->tasks->where('status', 'pending')->count();
                                 $canPickup = $itemPendingTasks === 0 && $pendingTasksCount === 0;
                             @endphp
-                            <tr style="{{ $item->pickup_status === 'returned' ? 'opacity:0.6;' : '' }}">
+                            <tr style="{{ $item->pickup_status === 'returned' ? 'opacity:0.6;' : '' }}"
+                                wire:key="ritem-{{ $item->id }}">
+                                {{-- Bulk select (item 5) --}}
+                                <td style="text-align:center; vertical-align:middle;">
+                                    @if ($item->pickup_status !== 'returned')
+                                        <input type="checkbox" value="{{ $item->id }}" wire:model.live="selectedItems">
+                                    @endif
+                                </td>
                                 {{-- Photo --}}
                                 <td style="vertical-align:middle;">
                                     @if ($item->product?->photo)
@@ -373,7 +438,7 @@
                                         @endif
                                     @elseif($item->pickup_status === 'picked_up')
                                         <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">
-                                            {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y') }}
+                                            {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y g:i A') }}
                                         </div>
                                         @if ($item->pickedUpBy)
                                             <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">
@@ -384,11 +449,19 @@
                                             wire:click="markItemReturned({{ $item->id }})">
                                             <i class="bi bi-box-arrow-in-down me-1"></i> Returned
                                         </button>
+                                        @if (auth()->user()->isAdmin())
+                                            <button class="btn btn-sm btn-link text-danger p-0 mt-1 d-block"
+                                                    style="font-size:10px;"
+                                                    wire:click="removePickup({{ $item->id }})"
+                                                    wire:confirm="Remove this pickup and set the item back to pending?">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>Remove pickup
+                                            </button>
+                                        @endif
                                     @elseif($item->pickup_status === 'returned')
                                         <div
                                             style="font-size:10px; color:var(--text-muted); margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid var(--border);">
                                             <i class="bi bi-box-arrow-up me-1" style="color:#276749;"></i>
-                                            Picked: {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y') }}
+                                            Picked: {{ \Carbon\Carbon::parse($item->picked_up_at)->format('d/m/Y g:i A') }}
                                             @if ($item->pickedUpBy)
                                                 · <strong>{{ $item->pickedUpBy->name }}</strong>
                                             @endif
@@ -397,12 +470,20 @@
                                             <i class="bi bi-check-circle me-1"></i> Returned
                                         </div>
                                         <div style="font-size:10px; color:var(--text-muted);">
-                                            {{ \Carbon\Carbon::parse($item->returned_at)->format('d/m/Y') }}
+                                            {{ \Carbon\Carbon::parse($item->returned_at)->format('d/m/Y g:i A') }}
                                         </div>
                                         @if ($item->receivedBy)
                                             <div style="font-size:10px; color:var(--text-muted);">
                                                 by <strong>{{ $item->receivedBy->name }}</strong>
                                             </div>
+                                        @endif
+                                        @if (auth()->user()->isAdmin())
+                                            <button class="btn btn-sm btn-link text-danger p-0 mt-1 d-block"
+                                                    style="font-size:10px;"
+                                                    wire:click="removeReturn({{ $item->id }})"
+                                                    wire:confirm="Remove this return and set the item back to picked up?">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>Undo return
+                                            </button>
                                         @endif
                                     @endif
 
@@ -437,7 +518,7 @@
                     <tfoot>
                         @if (($rental->discount_amount ?? 0) > 0)
                             <tr>
-                                <td colspan="4" style="text-align:right; font-size:12px; color:var(--text-muted);">
+                                <td colspan="5" style="text-align:right; font-size:12px; color:var(--text-muted);">
                                     Discount</td>
                                 <td style="text-align:right; color:#e53e3e; font-weight:600;">
                                     − Rs. {{ number_format($rental->discount_amount, 0) }}
@@ -446,7 +527,7 @@
                             </tr>
                         @endif
                         <tr style="border-top:2px solid var(--navy);">
-                            <td colspan="4"
+                            <td colspan="5"
                                 style="text-align:right; font-weight:700; font-size:14px; padding-top:10px;">Total</td>
                             <td
                                 style="text-align:right; font-weight:800; font-size:16px; color:var(--navy); padding-top:10px;">
@@ -828,6 +909,15 @@
                                 @endif
                             </div>
                         </div>
+                        @if (!in_array($rental->status, ['cancelled', 'abandoned']))
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                    style="line-height:1;"
+                                    wire:click="deletePayment({{ $payment->id }})"
+                                    wire:confirm="Delete this payment? The amount will be reversed from the payment method balance."
+                                    title="Delete payment">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 @empty
                     <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px 0;">

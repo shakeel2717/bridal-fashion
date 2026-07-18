@@ -78,8 +78,9 @@ class EmployeeReport extends Component
                 'label' => 'HR',
                 'icon'  => 'bi-person-badge',
                 'items' => [
-                    'hr_advances' => ['label' => 'Advance Records', 'icon' => 'bi-cash'],
-                    'hr_salary'   => ['label' => 'Salary Summary',  'icon' => 'bi-wallet2'],
+                    'hr_advances'  => ['label' => 'Advance Records', 'icon' => 'bi-cash'],
+                    'hr_salary'    => ['label' => 'Salary Summary',  'icon' => 'bi-wallet2'],
+                    'hr_financial' => ['label' => 'Single Employee Financials', 'icon' => 'bi-person-vcard'],
                 ],
             ],
         ];
@@ -391,6 +392,80 @@ class EmployeeReport extends Component
             'type'  => 'hr_salary',
             'title' => 'Salary Summary',
             'data'  => $rows,
+        ];
+    }
+
+    private function reportHrFinancial(): array
+    {
+        if (! $this->selectedEmployee) {
+            return [
+                'type'  => 'hr_financial',
+                'title' => 'Single Employee Financials',
+                'data'  => collect(),
+                'empty' => 'Select an employee above to view their salary & advance financials.',
+            ];
+        }
+
+        $emp  = User::find($this->selectedEmployee);
+        $from = $this->from();
+        $to   = $this->to();
+
+        $salaries = SalaryRecord::where('user_id', $this->selectedEmployee)
+            ->get()
+            ->filter(function ($sal) use ($from, $to) {
+                $period = Carbon::create($sal->year, $sal->month, 1)->format('Y-m-d');
+
+                return $period >= $from && $period <= $to;
+            });
+
+        $advances = Advance::where('user_id', $this->selectedEmployee)
+            ->whereBetween('advance_date', [$from, $to])
+            ->get();
+
+        $rows = collect();
+
+        foreach ($salaries as $sal) {
+            $period = Carbon::create($sal->year, $sal->month, 1);
+            $rows->push([
+                'sort'    => $period->format('Y-m-d'),
+                'date'    => $period->format('d/m/Y'),
+                'type'    => 'Salary',
+                'desc'    => $period->format('M Y').' — '.$sal->days_present.' days',
+                'earned'  => (float) $sal->earned_salary,
+                'bonus'   => (float) $sal->total_bonus,
+                'advance' => 0.0,
+                'net'     => (float) $sal->net_salary,
+                'status'  => ucfirst($sal->status),
+            ]);
+        }
+
+        foreach ($advances as $adv) {
+            $rows->push([
+                'sort'    => Carbon::parse($adv->advance_date)->format('Y-m-d'),
+                'date'    => Carbon::parse($adv->advance_date)->format('d/m/Y'),
+                'type'    => 'Advance',
+                'desc'    => $adv->note ?: 'Advance payment',
+                'earned'  => 0.0,
+                'bonus'   => 0.0,
+                'advance' => (float) $adv->amount,
+                'net'     => 0.0,
+                'status'  => $adv->is_deducted ? 'Deducted' : 'Pending',
+            ]);
+        }
+
+        $rows = $rows->sortBy('sort')->values();
+
+        return [
+            'type'    => 'hr_financial',
+            'title'   => ($emp?->name ?? 'Employee').' — Salary & Advance Financials',
+            'data'    => $rows,
+            'summary' => [
+                'earned'           => $salaries->sum('earned_salary'),
+                'bonus'            => $salaries->sum('total_bonus'),
+                'net'              => $salaries->sum('net_salary'),
+                'advances'         => $advances->sum('amount'),
+                'advances_pending' => $advances->where('is_deducted', false)->sum('amount'),
+            ],
         ];
     }
 

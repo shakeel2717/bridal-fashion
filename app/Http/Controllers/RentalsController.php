@@ -32,4 +32,11 @@ class RentalsController extends Controller
     {
         return view('rentals.edit', compact('rental'));
     }
+
+    public function receipt(Rental $rental)
+    {
+        $rental->load(['items', 'payments', 'securityDeposits', 'tasks', 'employee', 'linkedSale.items']);
+
+        return view('rentals.receipt', compact('rental'));
+    }
 }

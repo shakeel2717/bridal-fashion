@@ -119,6 +119,7 @@
                             <th style="width:50px;">#</th>
                             <th>Vendor Name</th>
                             <th>Phone</th>
+                            <th>Address</th>
                             <th>Products</th>
                             <th>Status</th>
                             <th>Added</th>
@@ -152,6 +153,9 @@
                                     </div>
                                 </td>
                                 <td style="font-size:13px;">{{ $vendor->phone ?? '—' }}</td>
+                                <td style="font-size:12px; color:var(--text-muted); max-width:220px;">
+                                    {{ $vendor->address ?: '—' }}
+                                </td>
                                 <td style="font-size:13px; font-weight:600;">
                                     {{ $vendor->products_count }}
                                 </td>
@@ -186,7 +190,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7"
+                                <td colspan="8"
                                     style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
                                     <i class="bi bi-shop"
                                         style="font-size:32px; display:block; margin-bottom:8px;"></i>
