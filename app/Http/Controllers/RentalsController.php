@@ -18,6 +18,11 @@ class RentalsController extends Controller
         return view('rentals.create');
     }
 
+    public function availability()
+    {
+        return view('rentals.availability');
+    }
+
     public function calendar()
     {
         return view('rentals.calendar');

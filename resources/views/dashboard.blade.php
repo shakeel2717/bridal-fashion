@@ -6,7 +6,7 @@
     {{-- Reports Topbar --}}
     <div class="table-card mb-3" style="padding:10px 14px;">
         <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
-            @foreach ([['label' => 'Sales', 'icon' => 'bi-cart-check-fill', 'route' => 'reports.sales', 'color' => '#38a169'], ['label' => 'Purchase', 'icon' => 'bi-bag-check-fill', 'route' => 'reports.purchase-sale', 'color' => '#c9963a'], ['label' => 'Rentals', 'icon' => 'bi-box-seam-fill', 'route' => 'reports.item', 'color' => '#3182ce'], ['label' => 'Stock', 'icon' => 'bi-tags-fill', 'route' => 'reports.all-items', 'color' => '#805ad5'], ['label' => 'Customers & Vendors', 'icon' => 'bi-people-fill', 'route' => 'reports.customer-vendor', 'color' => '#319795'], ['label' => 'Employees', 'icon' => 'bi-person-badge-fill', 'route' => 'reports.employee', 'color' => '#d53f8c']] as $rep)
+            @foreach ([['label' => 'Sales', 'icon' => 'bi-cart-check-fill', 'route' => 'reports.sales', 'color' => '#38a169'], ['label' => 'Purchase', 'icon' => 'bi-bag-check-fill', 'route' => 'reports.purchase-sale', 'color' => '#c9963a'], ['label' => 'Rentals', 'icon' => 'bi-box-seam-fill', 'route' => 'reports.rentals', 'color' => '#3182ce'], ['label' => 'Stock', 'icon' => 'bi-tags-fill', 'route' => 'reports.all-items', 'color' => '#805ad5'], ['label' => 'Customers & Vendors', 'icon' => 'bi-people-fill', 'route' => 'reports.customer-vendor', 'color' => '#319795'], ['label' => 'Employees', 'icon' => 'bi-person-badge-fill', 'route' => 'reports.employee', 'color' => '#d53f8c']] as $rep)
                 <a href="{{ route($rep['route']) }}"
                     style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px;
                     background:#f8fafc; border:1.5px solid var(--border);
@@ -18,6 +18,21 @@
             @endforeach
         </div>
     </div>
+
+    {{-- Item availability quick access (all staff) --}}
+    <a href="{{ route('rentals.availability') }}" class="table-card mb-3"
+       style="display:flex; align-items:center; gap:12px; padding:12px 16px; text-decoration:none;">
+        <div style="width:42px; height:42px; border-radius:10px; background:#ebf8ff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <i class="bi bi-upc-scan" style="font-size:20px; color:#3182ce;"></i>
+        </div>
+        <div>
+            <div style="font-weight:700; color:var(--navy);">Check Item Availability</div>
+            <div style="font-size:12px; color:var(--text-muted);">
+                Enter a product code to see its upcoming pickup &amp; return dates
+            </div>
+        </div>
+        <i class="bi bi-arrow-right ms-auto" style="color:#3182ce; font-size:18px;"></i>
+    </a>
 
     <div class="section-label">آج کا خلاصہ — Today's Overview</div>
 

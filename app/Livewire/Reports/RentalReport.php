@@ -72,6 +72,7 @@ class RentalReport extends Component
                 'label' => 'Items / Maal',
                 'icon' => 'bi-box-seam',
                 'items' => [
+                    'item_bookings' => ['label' => 'Item Booking Search', 'icon' => 'bi-upc-scan'],
                     'top_items' => ['label' => 'Most Rented Items',  'icon' => 'bi-trophy'],
                     'item_wise' => ['label' => 'Item-wise Revenue',  'icon' => 'bi-bar-chart'],
                     'item_detail' => ['label' => 'Full Item Detail',   'icon' => 'bi-card-list'],
@@ -443,6 +444,32 @@ class RentalReport extends Component
                 ->paginate(25),
             'columns' => 'item_revenue',
             'title' => 'Item-wise Revenue',
+        ];
+    }
+
+    private function reportItemBookings()
+    {
+        $from = $this->dateFrom ?: '2000-01-01';
+        $to = $this->dateTo ?: now()->format('Y-m-d');
+
+        return [
+            'paginated' => true,
+            'data' => RentalItem::with('rental')
+                ->whereHas('rental', function ($q) use ($from, $to) {
+                    $q->whereNotIn('status', ['cancelled', 'abandoned'])
+                        ->where(function ($q) use ($from, $to) {
+                            $q->whereBetween('booking_date', [$from, $to])
+                                ->orWhereBetween('pickup_date', [$from, $to])
+                                ->orWhereBetween('return_date', [$from, $to]);
+                        });
+                })
+                ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('product_code', 'like', "%{$this->search}%")
+                    ->orWhere('product_name', 'like', "%{$this->search}%")
+                ))
+                ->orderByDesc('id')
+                ->paginate(25),
+            'columns' => 'item_detail',
+            'title' => 'Item Booking Search — type a product code above',
         ];
     }
 

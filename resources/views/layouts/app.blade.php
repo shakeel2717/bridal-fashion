@@ -186,14 +186,16 @@
 
                 @if (auth()->user()->canAccess('reports'))
                     <a href="{{ route('reports.index') }}"
-                        class="sb-item {{ request()->routeIs('reports.*') && ! request()->routeIs('reports.item') ? 'active' : '' }}" data-label="Reports">
+                        class="sb-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" data-label="Reports">
                         <i class="bi bi-bar-chart-line"></i>
                     </a>
-                    <a href="{{ route('reports.item') }}"
-                        class="sb-item {{ request()->routeIs('reports.item') ? 'active' : '' }}" data-label="Item Report">
-                        <i class="bi bi-upc-scan"></i>
-                    </a>
                 @endif
+
+                {{-- Item availability check — visible to all staff --}}
+                <a href="{{ route('rentals.availability') }}"
+                    class="sb-item {{ request()->routeIs('rentals.availability') ? 'active' : '' }}" data-label="Item Check">
+                    <i class="bi bi-upc-scan"></i>
+                </a>
 
                 @if (auth()->user()->isAdmin())
                     <div class="sb-divider"></div>

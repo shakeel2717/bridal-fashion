@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/rentals', [RentalsController::class, 'index'])->name('rentals.index');
     Route::get('/rentals/calendar', [RentalsController::class, 'calendar'])->name('rentals.calendar');
     Route::get('/rentals/create', [RentalsController::class, 'create'])->name('rentals.create');
+    Route::get('/rentals/availability', [RentalsController::class, 'availability'])->name('rentals.availability');
     Route::get('/rentals/{rental}', [RentalsController::class, 'show'])->name('rentals.show');
     Route::get('/rentals/{rental}/edit', [RentalsController::class, 'edit'])->name('rentals.edit');
     Route::get('/rentals/{rental}/receipt', [RentalsController::class, 'receipt'])->name('rentals.receipt');

@@ -16,10 +16,10 @@ class ReportsController extends Controller
         return view('reports.sales');
     }
 
-    // Single Item booking search (search a product code -> all its bookings)
+    // Legacy /reports/item URL -> rental reports page (item search now lives inside it)
     public function items()
     {
-        return view('reports.items');
+        return view('reports.rentals');
     }
 
     // Rentals analytics report

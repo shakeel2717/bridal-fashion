@@ -15,7 +15,7 @@ class RentalCalendar extends Component
 
     public string $search = '';
 
-    public bool $showPendingOnly = false;
+    public bool $showPendingOnly = true;
 
     public ?string $selectedDate = null;
 

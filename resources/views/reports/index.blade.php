@@ -9,7 +9,6 @@
     $cards = [
         ['route' => 'reports.sales',           'name' => 'Sales Report',            'desc' => 'Sales revenue, collection & due',        'icon' => 'bi-cart-check-fill',   'wrap' => 'green',  'color' => '#38a169'],
         ['route' => 'reports.purchase-sale',   'name' => 'Purchase & Sale Report',  'desc' => 'Purchase orders vs sales',               'icon' => 'bi-arrow-left-right',  'wrap' => 'gold',   'color' => '#c9963a'],
-        ['route' => 'reports.item',            'name' => 'Single Item Report',      'desc' => 'Search a code — all its bookings & dates','icon' => 'bi-upc-scan',          'wrap' => 'blue',   'color' => '#3182ce'],
         ['route' => 'reports.rentals',         'name' => 'Rentals Report',          'desc' => 'Rental activity & summaries',             'icon' => 'bi-box-seam-fill',     'wrap' => 'purple', 'color' => '#553c9a'],
         ['route' => 'reports.all-items',       'name' => 'Stock / All Items',       'desc' => 'Category-wise stock & bookings',          'icon' => 'bi-grid-fill',         'wrap' => 'teal',   'color' => '#319795'],
         ['route' => 'reports.top-items',       'name' => 'Top & Lowest Items',      'desc' => 'Best and worst performing items',         'icon' => 'bi-trophy-fill',       'wrap' => 'gold',   'color' => '#c9963a'],
