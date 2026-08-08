@@ -82,14 +82,26 @@ class RentalList extends Component
     {
         $today = now()->toDateString();
 
-        // Products booked in more than one active rental (item 13 duplicate filter)
-        $dupProductIds = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->whereNotNull('pickup_date')->whereNotNull('return_date'))
-            ->whereNotNull('product_id')
-            ->select('product_id')
-            ->groupBy('product_id')
-            ->havingRaw('COUNT(*) > 1')
-            ->pluck('product_id');
+        // Products booked in OVERLAPPING active rentals (same product, date ranges touch or cross)
+        // Overlap condition: A.pickup <= B.return AND A.return >= B.pickup
+        $dupProductIds = \DB::table('rental_items as ri1')
+            ->join('rental_items as ri2', function ($join) {
+                $join->on('ri1.product_id', '=', 'ri2.product_id')
+                     ->whereColumn('ri1.id', '<', 'ri2.id');
+            })
+            ->join('rentals as r1', 'ri1.rental_id', '=', 'r1.id')
+            ->join('rentals as r2', 'ri2.rental_id', '=', 'r2.id')
+            ->whereNull('r1.deleted_at')
+            ->whereNull('r2.deleted_at')
+            ->whereNotNull('ri1.product_id')
+            ->whereNotIn('r1.status', ['returned', 'cancelled', 'abandoned'])
+            ->whereNotIn('r2.status', ['returned', 'cancelled', 'abandoned'])
+            ->whereNotNull('r1.pickup_date')->whereNotNull('r1.return_date')
+            ->whereNotNull('r2.pickup_date')->whereNotNull('r2.return_date')
+            ->whereColumn('r1.pickup_date', '<=', 'r2.return_date')
+            ->whereColumn('r1.return_date', '>=', 'r2.pickup_date')
+            ->distinct()
+            ->pluck('ri1.product_id');
 
         $rentals = Rental::with(['items', 'employee'])
             ->withSum('payments', 'amount')
@@ -180,13 +192,28 @@ class RentalList extends Component
         ];
 
         // Duplicate bookings: same product active in multiple rentals
+        // Load conflicting rental pairs for display (only truly overlapping ones)
         $duplicateBookings = RentalItem::with(['product:id,name,code', 'rental:id,customer_name,pickup_date,return_date,status,bill_ref'])
             ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->whereNotNull('pickup_date')->whereNotNull('return_date'))
             ->whereIn('product_id', $dupProductIds)
             ->get()
             ->groupBy('product_id')
-            ->filter(fn ($group) => $group->count() > 1)
+            ->filter(function ($group) {
+                // Confirm at least one pair in this group has overlapping dates
+                $items = $group->values();
+                for ($i = 0; $i < $items->count(); $i++) {
+                    for ($j = $i + 1; $j < $items->count(); $j++) {
+                        $a = $items[$i]->rental;
+                        $b = $items[$j]->rental;
+                        if (!$a || !$b) continue;
+                        if ($a->pickup_date <= $b->return_date && $a->return_date >= $b->pickup_date) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            })
             ->take(5);
 
         return view('livewire.rentals.rental-list', compact('rentals', 'counts', 'duplicateBookings'));

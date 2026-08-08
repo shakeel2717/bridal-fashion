@@ -13,8 +13,8 @@ class CheckLicense
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Always allow license routes through (activation screen, locked screen)
-        if ($request->routeIs('license.*')) {
+        // Always allow license routes and Livewire internal routes (file uploads etc.)
+        if ($request->routeIs('license.*') || $request->is('livewire*')) {
             return $next($request);
         }
 
