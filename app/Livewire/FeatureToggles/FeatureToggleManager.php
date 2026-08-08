@@ -44,6 +44,9 @@ class FeatureToggleManager extends Component
         'stat_total_sales' => ['label' => 'Stat: Sales Count',       'icon' => 'bi-cart-fill',         'desc' => 'Show sales count card on dashboard'],
         'stat_pending_po' => ['label' => 'Stat: PO Balance Due',    'icon' => 'bi-bag-x-fill',        'desc' => 'Show PO balance due — confidential'],
 
+        // Day Close Report
+        'daily_summary' => ['label' => 'Daily Close Report', 'icon' => 'bi-calendar2-day', 'desc' => 'Access the daily close / day-end summary report'],
+
         // Dashboard Bottom Cards
         'dash_overdue_card' => ['label' => 'Dashboard: Overdue List',    'icon' => 'bi-exclamation-triangle', 'desc' => 'Show overdue returns list at bottom'],
         'dash_pickup_card' => ['label' => 'Dashboard: Pickup List',     'icon' => 'bi-box-arrow-up',         'desc' => 'Show pickup today list at bottom'],

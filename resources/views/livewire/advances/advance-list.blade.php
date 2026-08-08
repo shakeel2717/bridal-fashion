@@ -23,6 +23,9 @@
                 </span>
             </div>
             @endif
+            <a href="{{ route('advances.ledger') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
+                <i class="bi bi-journal-text"></i> Ledger / History
+            </a>
             <button class="btn btn-primary btn-sm d-flex align-items-center gap-2"
                     wire:click="openCreate">
                 <i class="bi bi-plus-lg"></i> Add Advance

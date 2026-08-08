@@ -8,4 +8,9 @@ class AdvancesController extends Controller
     {
         return view('advances.index');
     }
+
+    public function ledger()
+    {
+        return view('advances.ledger');
+    }
 }

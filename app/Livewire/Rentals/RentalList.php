@@ -105,8 +105,8 @@ class RentalList extends Component
                         });
                 });
             })
-            ->when($this->dateFrom, fn ($q) => $q->where('booking_date', '>=', $this->dateFrom))
-            ->when($this->dateTo, fn ($q) => $q->where('booking_date', '<=', $this->dateTo))
+            ->when($this->dateFrom, fn ($q) => $q->where('pickup_date', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn ($q) => $q->where('pickup_date', '<=', $this->dateTo))
             // Special computed filters
             ->when($this->activeFilter === 'due', function ($q) {
                 $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])

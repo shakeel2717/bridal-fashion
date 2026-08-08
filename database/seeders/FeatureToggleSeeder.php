@@ -26,6 +26,8 @@ class FeatureToggleSeeder extends Seeder
             'stat_total_cash',      'stat_expenses',
             'stat_total_sales',     'stat_pending_po',
 
+            'daily_summary',
+
             // Bottom dashboard cards
             'dash_overdue_card', 'dash_pickup_card', 'dash_return_card',
         ];

@@ -386,6 +386,14 @@
                                 <div class="mod-name">Backup</div>
                             </a>
                         </div>
+                        @if(auth()->user()->canAccess('daily_summary'))
+                        <div class="col-2">
+                            <a href="{{ route('daily-summary.index') }}" class="module-card">
+                                <div class="mod-icon-wrap gold"><i class="bi bi-calendar2-day" style="font-size:22px; color:#c9963a;"></i></div>
+                                <div class="mod-name">Day Close</div>
+                            </a>
+                        </div>
+                        @endif
                     @endif
                 </div>
             @endif

@@ -8,6 +8,7 @@ use App\Http\Controllers\BillBookController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DailySummaryController;
 use App\Http\Controllers\EmployeesController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\FeatureTogglesController;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/daily-summary', [DailySummaryController::class, 'index'])->name('daily-summary.index');
 
     // Placeholder routes (we'll build each module next)
     Route::get('/customers', [CustomersController::class, 'index'])->name('customers.index');
@@ -61,6 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/salary', [SalaryController::class, 'index'])->name('salary.index');
     Route::get('/advances', [AdvancesController::class, 'index'])->name('advances.index');
+    Route::get('/advances/ledger', [AdvancesController::class, 'ledger'])->name('advances.ledger');
     Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
     Route::get('/reports/sales', [ReportsController::class, 'sales'])->name('reports.sales');

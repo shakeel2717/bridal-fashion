@@ -259,7 +259,7 @@
 
     {{-- Delete Modal --}}
     @if ($deleteId)
-        <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+        <div wire:key="delete-modal-{{ $deleteId }}" class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
             <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -280,7 +280,7 @@
 
     {{-- Edit Product Modal --}}
     @if ($editId)
-        <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+        <div wire:key="edit-modal-{{ $editId }}" class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -331,6 +331,18 @@
                                             {{ $group->name }}{{ $group->code ? ' (' . $group->code . ')' : '' }}
                                         </option>
                                     @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Type --}}
+                            <div class="col-6">
+                                <label class="form-label">Type <span class="text-danger">*</span></label>
+                                <select wire:model.live="editType" class="form-select">
+                                    <option value="rental">Rental Only</option>
+                                    <option value="sale">Sale Only</option>
+                                    <option value="both">Rental &amp; Sale</option>
+                                    <option value="fabric">Fabric</option>
+                                    <option value="service">Service</option>
                                 </select>
                             </div>
 
