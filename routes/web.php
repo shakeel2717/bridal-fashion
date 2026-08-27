@@ -5,6 +5,7 @@ use App\Http\Controllers\AdvancesController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BillBookController;
+use App\Http\Controllers\CashbookController;
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\DashboardController;
@@ -56,6 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/loans', [LoansController::class, 'index'])->name('loans.index');
     Route::get('/loans/{lender}', [LoansController::class, 'show'])->name('loans.show');
     Route::get('/expenses', [ExpensesController::class, 'index'])->name('expenses.index');
+    Route::get('/cashbook', [CashbookController::class, 'index'])->name('cashbook.index');
     Route::get('/products', [ProductsController::class, 'index'])->name('products.index');
     Route::get('/categories', [CategoriesController::class, 'index'])->name('categories.index');
     Route::get('/vendors', [VendorsController::class, 'index'])->name('vendors.index');

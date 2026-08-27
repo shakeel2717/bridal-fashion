@@ -249,3 +249,24 @@
         }
     }
 }
+// ── Stitching alert flag (rentals list) ──
+.stitch-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #fffdf5;
+    border: 1px solid var(--gold);
+    color: var(--gold-hover);
+    white-space: nowrap;
+
+    &.is-late {
+        background: #fff5f5;
+        border-color: #fc8181;
+        color: #c53030;
+    }
+}

@@ -314,6 +314,15 @@
                         </a>
                     </div>
                 @endif
+                @if (auth()->user()->isAdmin())
+                    <div class="col-2">
+                        <a href="{{ route('cashbook.index') }}" class="module-card">
+                            <div class="mod-icon-wrap blue"><i class="bi bi-journal-text"
+                                    style="font-size:22px; color:#2c5282;"></i></div>
+                            <div class="mod-name">Cashbook</div>
+                        </a>
+                    </div>
+                @endif
                 @if (auth()->user()->canAccess('expenses'))
                     <div class="col-2">
                         <a href="{{ route('expenses.index') }}" class="module-card">

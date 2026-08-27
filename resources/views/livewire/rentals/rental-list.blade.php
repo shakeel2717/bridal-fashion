@@ -36,9 +36,9 @@
         'ready' => ['label' => 'Ready', 'icon' => 'bi-check2-circle', 'color' => '#b7791f'],
         'picked_up' => ['label' => 'Picked Up', 'icon' => 'bi-box-arrow-up', 'color' => '#553c9a'],
         'partially_picked_up' => ['label' => 'Partial', 'icon' => 'bi-box-arrow-in-up', 'color' => '#c05621'],
-        'returned' => ['label' => 'Returned', 'icon' => 'bi-box-arrow-in-down', 'color' => '#276749'],
         'cancelled' => ['label' => 'Cancelled', 'icon' => 'bi-x-circle', 'color' => '#718096'],
-        'due' => ['label' => 'Due', 'icon' => 'bi-cash-coin', 'color' => '#c53030'],
+        'stitching' => ['label' => 'Stitching', 'icon' => 'bi-scissors', 'color' => '#b7791f'],
+        'due' => ['label' => 'Due (Returned)', 'icon' => 'bi-cash-coin', 'color' => '#c53030'],
         'overpaid' => ['label' => 'Overpaid', 'icon' => 'bi-arrow-up-circle', 'color' => '#e53e3e'],
         'late_pickup' => ['label' => 'Late Pickup', 'icon' => 'bi-clock-history', 'color' => '#b7791f'],
         'late_return' => ['label' => 'Late Return', 'icon' => 'bi-alarm', 'color' => '#c53030'],
@@ -157,6 +157,21 @@
                                     </span>
                                 @endforeach
                             </div>
+                            @if ($rental->stitching_date && !in_array($rental->status, ['returned', 'cancelled', 'abandoned']))
+                                @php
+                                    $stitchDate = \Carbon\Carbon::parse($rental->stitching_date);
+                                    $stitchLate = $stitchDate->isPast() && !$stitchDate->isToday();
+                                @endphp
+                                <div class="stitch-flag {{ $stitchLate ? 'is-late' : '' }}">
+                                    <i class="bi bi-scissors"></i>
+                                    Stitching {{ $stitchDate->format('d/m/Y') }}
+                                    @if ($stitchLate)
+                                        — {{ (int) $stitchDate->diffInDays(now()) }}d overdue
+                                    @elseif ($stitchDate->isToday())
+                                        — today
+                                    @endif
+                                </div>
+                            @endif
                         </td>
                         <td style="font-size:12px;">
                             @if ($rental->pickup_date)

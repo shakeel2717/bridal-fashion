@@ -2,22 +2,22 @@
 
 namespace App\Livewire\Expenses;
 
+use App\Livewire\Concerns\HasPeriodFilter;
 use App\Models\Account;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\Transaction;
 use App\Services\AccountService;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class ExpenseList extends Component
 {
-    use WithPagination;
+    use HasPeriodFilter, WithPagination;
 
     public string $search     = '';
     public string $filterCat  = '';
-    public string $filterMonth = '';
-    public string $dateFrom   = '';
-    public string $dateTo     = '';
+    public string $filterAccount = '';
 
     // Form
     public bool   $showForm    = false;
@@ -40,16 +40,52 @@ class ExpenseList extends Component
 
     public function mount(): void
     {
-        $this->expenseDate  = now()->format('Y-m-d');
-        $this->filterMonth  = now()->format('Y-m');
+        $this->initPeriod('month');
+        $this->expenseDate = now()->format('Y-m-d');
     }
 
     public function updatedSearch(): void { $this->resetPage(); }
 
+    public function updatedFilterCat(): void { $this->resetPage(); }
+
+    public function updatedFilterAccount(): void { $this->resetPage(); }
+
+    public function setCategoryFilter(string $id): void
+    {
+        $this->filterCat = $this->filterCat === $id ? '' : $id;
+        $this->resetPage();
+    }
+
     public function openCreate(): void
     {
         $this->resetForm();
+        $this->expenseDate = $this->defaultExpenseDate();
         $this->showForm = true;
+    }
+
+    public function openEdit(int $id): void
+    {
+        $expense = Expense::findOrFail($id);
+
+        $this->editId      = $expense->id;
+        $this->categoryId  = (string) $expense->expense_category_id;
+        $this->accountId   = (string) $expense->account_id;
+        $this->amount      = (string) $expense->amount;
+        $this->expenseDate = $expense->expense_date->format('Y-m-d');
+        $this->description = $expense->description ?? '';
+        $this->reference   = $expense->reference ?? '';
+        $this->showForm    = true;
+        $this->resetValidation();
+    }
+
+    /** When browsing a past period, default new entries into that period. */
+    protected function defaultExpenseDate(): string
+    {
+        if ($this->isCurrentPeriod() || $this->periodEnd()->isFuture()) {
+            return now()->format('Y-m-d');
+        }
+
+        return $this->periodEnd()->format('Y-m-d');
     }
 
     public function saveExpense(): void
@@ -70,6 +106,9 @@ class ExpenseList extends Component
             // Reverse old transaction
             $oldAccount = Account::findOrFail($expense->account_id);
             $oldAccount->credit($expense->amount); // reverse the debit
+
+            // Drop the superseded ledger entry so the cashbook doesn't double count
+            $this->purgeTransactions($expense);
 
             $expense->update([
                 'expense_category_id' => $this->categoryId,
@@ -155,9 +194,19 @@ class ExpenseList extends Component
         $account = Account::findOrFail($expense->account_id);
         $account->credit($expense->amount);
 
+        // Remove the matching ledger entry so it disappears from the cashbook too
+        $this->purgeTransactions($expense);
+
         $expense->delete();
         $this->deleteId = null;
         session()->flash('success', 'Expense deleted and account balance restored.');
+    }
+
+    protected function purgeTransactions(Expense $expense): void
+    {
+        Transaction::where('referenceable_type', Expense::class)
+            ->where('referenceable_id', $expense->id)
+            ->delete();
     }
 
     public function resetForm(): void
@@ -173,37 +222,67 @@ class ExpenseList extends Component
         $this->resetValidation();
     }
 
+    /** Filters shared by the list and the totals so both always agree. */
+    protected function baseQuery()
+    {
+        return $this->applyPeriod(Expense::query(), 'expense_date')
+            ->when($this->filterCat, fn ($q) => $q->where('expense_category_id', $this->filterCat))
+            ->when($this->filterAccount, fn ($q) => $q->where('account_id', $this->filterAccount))
+            ->when($this->search, fn ($q) => $q->where(function ($q) {
+                $q->where('description', 'like', "%{$this->search}%")
+                  ->orWhere('reference', 'like', "%{$this->search}%");
+            }));
+    }
+
     public function render()
     {
-        $expenses = Expense::with(['category', 'account', 'createdBy'])
-            ->when($this->filterCat, fn($q) => $q->where('expense_category_id', $this->filterCat))
-            ->when($this->filterMonth, fn($q) =>
-                $q->whereRaw("strftime('%Y-%m', expense_date) = ?", [$this->filterMonth])
-            )
-            ->when($this->dateFrom, fn($q) => $q->where('expense_date', '>=', $this->dateFrom))
-            ->when($this->dateTo,   fn($q) => $q->where('expense_date', '<=', $this->dateTo))
-            ->when($this->search, fn($q) =>
-                $q->where('description', 'like', "%{$this->search}%")
-                  ->orWhere('reference', 'like', "%{$this->search}%")
-            )
-            ->latest('expense_date')
+        $expenses = $this->baseQuery()
+            ->with(['category', 'account', 'createdBy'])
+            ->orderByDesc('expense_date')
+            ->orderByDesc('id')
             ->paginate(20);
 
+        $periodTotal = (float) $this->baseQuery()->sum('amount');
+        $periodCount = (int) $this->baseQuery()->count();
+
+        // Previous equivalent period, same filters — for the trend line
+        [$prevStart, $prevEnd] = $this->previousPeriodRange();
+
+        $prevTotal = (float) $this->applyDateRange(
+            Expense::query(), 'expense_date', $prevStart->toDateString(), $prevEnd->toDateString()
+        )
+            ->when($this->filterCat, fn ($q) => $q->where('expense_category_id', $this->filterCat))
+            ->when($this->filterAccount, fn ($q) => $q->where('account_id', $this->filterAccount))
+            ->sum('amount');
+
+        // Category breakdown for the current period (ignores the category chip
+        // so the chips keep showing every option)
+        $breakdown = $this->applyPeriod(Expense::query(), 'expense_date')
+            ->when($this->filterAccount, fn ($q) => $q->where('account_id', $this->filterAccount))
+            ->selectRaw('expense_category_id, COUNT(*) as entries, SUM(amount) as total')
+            ->groupBy('expense_category_id')
+            ->orderByDesc('total')
+            ->get();
+
         $categories = ExpenseCategory::where('is_active', true)
-            ->orderBy('name')->get();
+            ->orderBy('name')->get()->keyBy('id');
 
         $accounts = Account::where('is_active', true)
+            ->orderByDesc('is_default')
             ->orderBy('name')->get();
 
-        $totalThisMonth = Expense::whereRaw("strftime('%Y-%m', expense_date) = ?",
-                [now()->format('Y-m')])->sum('amount');
+        $days = max(1, (int) floor($this->periodStart()->diffInDays($this->periodEnd())) + 1);
 
-        $totalFiltered = Expense::when($this->filterCat, fn($q) => $q->where('expense_category_id', $this->filterCat))
-            ->when($this->filterMonth, fn($q) =>
-                $q->whereRaw("strftime('%Y-%m', expense_date) = ?", [$this->filterMonth])
-            )->sum('amount');
-
-        return view('livewire.expenses.expense-list',
-            compact('expenses', 'categories', 'accounts', 'totalThisMonth', 'totalFiltered'));
+        return view('livewire.expenses.expense-list', [
+            'expenses'    => $expenses,
+            'categories'  => $categories,
+            'accounts'    => $accounts,
+            'breakdown'   => $breakdown,
+            'periodTotal' => $periodTotal,
+            'periodCount' => $periodCount,
+            'prevTotal'   => $prevTotal,
+            'dailyAvg'    => $periodTotal / $days,
+            'topCategory' => $breakdown->first(),
+        ]);
     }
 }
