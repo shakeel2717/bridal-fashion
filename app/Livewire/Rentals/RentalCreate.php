@@ -15,6 +15,7 @@ use App\Models\SaleItem;
 use App\Models\User;
 use App\Services\AccountService;
 use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -430,9 +431,12 @@ class RentalCreate extends Component
         ];
 
         if ($this->billRef !== '') {
-            $rules['billRef'] = $this->isEditMode
-                ? 'nullable|string|max:50|unique:rentals,bill_ref,'.$this->rentalId
-                : 'nullable|string|max:50|unique:rentals,bill_ref';
+            // Ignore soft-deleted rentals so a deleted bill's number can be reused
+            $unique = Rule::unique('rentals', 'bill_ref')->withoutTrashed();
+            if ($this->isEditMode) {
+                $unique->ignore($this->rentalId);
+            }
+            $rules['billRef'] = ['nullable', 'string', 'max:50', $unique];
         }
 
         $this->validate($rules, [

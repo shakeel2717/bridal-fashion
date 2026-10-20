@@ -14,10 +14,11 @@
     </div>
 
     {{-- Stats cards --}}
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;">
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:16px;">
         @foreach([
             ['Total Bills',   $total,   '#3182ce','#ebf8ff','bi-journal'],
             ['Used',          $used,    '#38a169','#f0fff4','bi-check-circle-fill'],
+            ['Deleted',       $deleted, '#b7791f','#fffaf0','bi-trash'],
             ['Missing',       $missing, '#c53030','#fff5f5','bi-x-circle-fill'],
             ['% Used',        round($total > 0 ? $used/$total*100 : 0).'%', '#805ad5','#faf5ff','bi-pie-chart'],
         ] as [$lbl,$val,$col,$bg,$icon])
@@ -37,6 +38,7 @@
                 @foreach([
                     ['' ,        'All Bills',  ''],
                     ['used',     'Used Only',  '#38a169'],
+                    ['deleted',  'Deleted',    '#b7791f'],
                     ['missing',  'Missing',    '#c53030'],
                 ] as [$val,$lbl,$col])
                     <span wire:click="$set('filterStatus','{{ $val }}')"
@@ -69,10 +71,10 @@
             </thead>
             <tbody>
                 @forelse($rows as $row)
-                    <tr class="{{ !$row['is_used'] ? 'table-danger' : '' }}">
+                    <tr class="{{ $row['is_used'] ? '' : ($row['deleted'] ? 'table-warning' : 'table-danger') }}">
                         <td style="font-weight:700; color:var(--text-muted);">{{ $row['number'] }}</td>
                         <td>
-                            <span style="font-family:monospace; font-weight:700; color:{{ $row['is_used'] ? 'var(--navy)' : '#c53030' }};">
+                            <span style="font-family:monospace; font-weight:700; color:{{ $row['is_used'] ? 'var(--navy)' : ($row['deleted'] ? '#b7791f' : '#c53030') }};">
                                 {{ $row['ref'] }}
                             </span>
                         </td>
@@ -114,6 +116,21 @@
                                     <i class="bi bi-box-arrow-up-right"></i>
                                 </a>
                             </td>
+
+                        @elseif($row['deleted'])
+                            <td style="font-weight:600; color:var(--text-muted);">{{ $row['deleted']['customer_name'] }}</td>
+                            <td>
+                                <span style="background:#edf2f7; color:#4a5568; border-radius:20px; padding:1px 8px; font-size:10px; font-weight:700;">{{ $row['deleted']['type'] }}</span>
+                            </td>
+                            <td style="white-space:nowrap; color:var(--text-muted);">{{ \Carbon\Carbon::parse($row['deleted']['date'])->format('d/m/Y') }}</td>
+                            <td>
+                                <span title="Deleted on {{ \Carbon\Carbon::parse($row['deleted']['deleted_at'])->format('d/m/Y h:i A') }}"
+                                    style="background:#fffaf0; color:#b7791f; border:1px solid #f6ad55; border-radius:4px; padding:1px 6px; font-size:10px; font-weight:700;">
+                                    <i class="bi bi-trash me-1"></i>Deleted {{ \Carbon\Carbon::parse($row['deleted']['deleted_at'])->format('d/m/Y') }}
+                                </span>
+                            </td>
+                            <td class="text-end" style="font-weight:700; color:var(--text-muted); text-decoration:line-through;">Rs. {{ number_format($row['deleted']['amount'],0) }}</td>
+                            <td></td>
 
                         @else
                             <td colspan="5" style="color:#c53030; font-style:italic; font-size:11px;">
