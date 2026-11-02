@@ -26,9 +26,7 @@ class DailySummary extends Component
 
     public function nextDay(): void
     {
-        $next = Carbon::parse($this->currentDate)->addDay();
-        if ($next->isAfter(now())) return;
-        $this->currentDate = $next->toDateString();
+        $this->currentDate = Carbon::parse($this->currentDate)->addDay()->toDateString();
     }
 
     public function goToday(): void
@@ -48,6 +46,17 @@ class DailySummary extends Component
 
         $totalRentalValue   = $rentalsBooked->sum('total_amount');
         $totalRentalAdvance = $rentalsBooked->sum('advance_paid');
+
+        // ── Rentals returning on this day with money still to collect ──
+        $rentalsDue = Rental::with('items')
+            ->withSum('payments', 'amount')
+            ->whereDate('return_date', $date)
+            ->whereNotIn('status', ['cancelled', 'abandoned'])
+            ->get()
+            ->filter(fn ($r) => $r->total_amount - (float) ($r->payments_sum_amount ?? 0) > 0)
+            ->values();
+
+        $totalDueOnReturn = $rentalsDue->sum(fn ($r) => $r->total_amount - (float) ($r->payments_sum_amount ?? 0));
 
         // ── Sales on this day ──
         $sales = Sale::with('items')
@@ -89,6 +98,7 @@ class DailySummary extends Component
 
         return view('livewire.reports.daily-summary', compact(
             'rentalsBooked', 'totalRentalValue', 'totalRentalAdvance',
+            'rentalsDue', 'totalDueOnReturn',
             'sales', 'totalSaleValue', 'totalSaleAdvance',
             'rentalPayments', 'totalRentalPayments',
             'expenses', 'totalExpenses',

@@ -17,8 +17,7 @@
                     <span style="font-size:10px; background:#ebfbee; color:#276749; padding:2px 8px; border-radius:10px; margin-left:5px; font-weight:700; vertical-align:middle;">TODAY</span>
                 @endif
             </div>
-            <button wire:click="nextDay" class="btn btn-outline-secondary btn-sm" style="padding:5px 14px;"
-                @if($isToday) disabled @endif>
+            <button wire:click="nextDay" class="btn btn-outline-secondary btn-sm" style="padding:5px 14px;">
                 Next <i class="bi bi-chevron-right"></i>
             </button>
             @if(!$isToday)
@@ -58,6 +57,15 @@
                 </div>
                 <div style="font-size:24px; font-weight:800; color:#744210;">Rs. {{ number_format($totalCashIn, 0) }}</div>
                 <div style="font-size:11px; color:#975a16;">Payments + Advances</div>
+            </div>
+        </div>
+        <div class="col">
+            <div style="background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:14px 16px; text-align:center;">
+                <div style="font-size:11px; color:#c05621; font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+                    <i class="bi bi-hourglass-split me-1"></i> Due on Return
+                </div>
+                <div style="font-size:24px; font-weight:800; color:#c05621;">Rs. {{ number_format($totalDueOnReturn, 0) }}</div>
+                <div style="font-size:11px; color:#dd6b20;">{{ $rentalsDue->count() }} rentals</div>
             </div>
         </div>
         <div class="col">
@@ -153,6 +161,67 @@
                             <td colspan="5" style="font-weight:700; font-size:12px; padding:8px 12px;">Totals</td>
                             <td class="text-end fw-700" style="padding:8px 12px;">Rs. {{ number_format($totalRentalValue, 0) }}</td>
                             <td class="text-end fw-700" style="padding:8px 12px;">Rs. {{ number_format($totalRentalAdvance, 0) }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                @endif
+            </div>
+
+            {{-- Due on Return --}}
+            <div class="table-card mb-3">
+                <div class="table-card-header">
+                    <span class="table-card-title">
+                        <i class="bi bi-hourglass-split me-1"></i> Due on Return
+                        <span style="background:#fffaf0; color:#c05621; padding:1px 8px; border-radius:8px; font-size:11px; margin-left:4px;">{{ $rentalsDue->count() }}</span>
+                    </span>
+                    <span style="font-size:12px; color:var(--text-muted);">To Collect: <strong style="color:#c05621;">Rs. {{ number_format($totalDueOnReturn, 0) }}</strong></span>
+                </div>
+                @if($rentalsDue->isEmpty())
+                    <div class="text-center py-3" style="font-size:13px; color:var(--text-muted);">No payments due from returns on this day.</div>
+                @else
+                <table class="table table-hover mb-0" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>Bill#</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Paid</th>
+                            <th class="text-end">Due</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($rentalsDue as $r)
+                        @php $paid = (float) ($r->payments_sum_amount ?? 0); @endphp
+                        <tr>
+                            <td><a href="{{ route('rentals.show', $r->id) }}" style="font-weight:600; text-decoration:none; color:var(--navy);">{{ $r->bill_ref ?? '#'.$r->id }}</a></td>
+                            <td>
+                                <div style="font-weight:600;">{{ $r->customer_name }}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">{{ $r->customer_phone1 }}</div>
+                            </td>
+                            <td>
+                                @foreach($r->items->take(3) as $item)
+                                    <span style="font-size:10px; background:#f7fafc; border:1px solid var(--border); padding:1px 5px; border-radius:3px; margin-right:2px;">{{ $item->product_code }}</span>
+                                @endforeach
+                                @if($r->items->count() > 3)
+                                    <span style="font-size:10px; color:var(--text-muted);">+{{ $r->items->count()-3 }}</span>
+                                @endif
+                            </td>
+                            <td class="text-end">Rs. {{ number_format($r->total_amount, 0) }}</td>
+                            <td class="text-end">Rs. {{ number_format($paid, 0) }}</td>
+                            <td class="text-end fw-700" style="color:#c05621;">Rs. {{ number_format($r->total_amount - $paid, 0) }}</td>
+                            <td>
+                                <span class="badge-status {{ $r->status }}">{{ ucfirst(str_replace('_',' ',$r->status)) }}</span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot style="background:#f8fafc;">
+                        <tr>
+                            <td colspan="5" style="font-weight:700; font-size:12px; padding:8px 12px;">Total Due</td>
+                            <td class="text-end fw-700" style="color:#c05621; padding:8px 12px;">Rs. {{ number_format($totalDueOnReturn, 0) }}</td>
                             <td></td>
                         </tr>
                     </tfoot>

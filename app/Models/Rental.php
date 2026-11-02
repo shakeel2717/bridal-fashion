@@ -34,6 +34,34 @@ class Rental extends Model
         ];
     }
 
+    /**
+     * Work the rental status out from its items' pickup state.
+     * Always reads the items fresh, so a stale loaded relation can't leave a wrong status behind.
+     */
+    public function statusFromItems(): string
+    {
+        $items = $this->items()->get();
+        $total = $items->count();
+        $picked = $items->where('pickup_status', 'picked_up')->count();
+        $returned = $items->where('pickup_status', 'returned')->count();
+
+        if ($total === 0) {
+            return $this->status;
+        }
+        if ($returned === $total) {
+            return 'returned';
+        }
+        if ($picked === $total) {
+            return 'picked_up';
+        }
+        if ($picked > 0 || $returned > 0) {
+            return 'partially_picked_up';
+        }
+
+        // Nothing picked up yet (e.g. admin reversed a pickup) — revert to a base status
+        return in_array($this->status, ['booked', 'ready']) ? $this->status : 'booked';
+    }
+
     public function scopeOverdue($query)
     {
         return $query->whereRaw('DATE(return_date) < ?', [now()->toDateString()])

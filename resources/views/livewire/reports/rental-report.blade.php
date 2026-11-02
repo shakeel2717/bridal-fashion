@@ -189,7 +189,9 @@
                                 @forelse($report['data'] as $row)
                                     <tr>
                                         <td style="font-weight:600;">
-                                            {{ $row->period_display ?? \Carbon\Carbon::parse($row->period . '-01')->format('F Y') }}
+                                            {{ $report['period_label']==='Date'
+                                                ? \Carbon\Carbon::parse($row->period)->format('d M Y (l)')
+                                                : \Carbon\Carbon::parse($row->period.'-01')->format('F Y') }}
                                         </td>
                                         <td class="text-center">
                                             <span style="background:var(--navy); color:#fff; border-radius:20px; padding:2px 10px; font-weight:700; font-size:11px;">
@@ -623,6 +625,54 @@
                         @if($report['paginated'] && $report['data']->hasPages())
                             <div style="padding:10px 14px; border-top:1px solid var(--border);">{{ $report['data']->links('vendor.pagination.simple-bootstrap-5') }}</div>
                         @endif
+
+                    {{-- ══ READY ITEMS TO PICKUP (category-wise) ══ --}}
+                    @elseif($report['columns'] === 'ready_items')
+                        @if($report['category_counts']->isNotEmpty())
+                            <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px;">
+                                @foreach($report['category_counts'] as $category => $count)
+                                    <span style="background:#faf5ff; color:#553c9a; border-radius:20px; padding:3px 12px; font-size:11px; font-weight:700;">
+                                        {{ $category }}: {{ $count }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+                        <table class="table table-striped table-hover mb-0" id="reportTable" style="font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Code</th>
+                                    <th>Product</th>
+                                    <th>Bill</th>
+                                    <th>Customer</th>
+                                    <th>Pickup</th>
+                                    <th>Return</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($report['data'] as $item)
+                                    <tr>
+                                        <td style="font-weight:700;">{{ $item->product?->category?->name ?? 'Uncategorized' }}</td>
+                                        <td><span style="font-family:monospace; background:#f0f0f0; padding:2px 7px; border-radius:4px; font-weight:700;">{{ $item->product_code }}</span></td>
+                                        <td>{{ \Str::limit($item->product_name,26) }}</td>
+                                        <td><a href="{{ route('rentals.show',$item->rental->id) }}" style="font-family:monospace; color:var(--navy); text-decoration:none; font-weight:600;">{{ $item->rental->bill_ref ?? '#'.$item->rental->id }}</a></td>
+                                        <td>
+                                            <div style="font-weight:600;">{{ $item->rental->customer_name }}</div>
+                                            <div style="font-size:10px; color:var(--text-muted);">{{ $item->rental->customer_phone1 }}</div>
+                                        </td>
+                                        <td style="white-space:nowrap;">{{ \Carbon\Carbon::parse($item->rental->pickup_date)->format('d/m/Y') }}</td>
+                                        <td style="white-space:nowrap;">{{ $item->rental->return_date ? \Carbon\Carbon::parse($item->rental->return_date)->format('d/m/Y') : '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="7" class="rpt-empty">No ready items to pick up in this period</td></tr>
+                                @endforelse
+                            </tbody>
+                            @if($report['data']->count())
+                                <tfoot><tr class="rpt-tfoot">
+                                    <td colspan="7">{{ $report['data']->count() }} items</td>
+                                </tr></tfoot>
+                            @endif
+                        </table>
 
                     @endif
                 </div>

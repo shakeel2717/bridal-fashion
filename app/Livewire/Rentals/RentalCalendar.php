@@ -54,9 +54,12 @@ class RentalCalendar extends Component
     private function getItems(): Collection
     {
         return RentalItem::with(['rental:id,customer_name,customer_phone1,bill_ref,status,pickup_date,return_date,booking_date'])
-            ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['cancelled', 'abandoned']))
+            ->whereHas('rental', fn ($q) => $q->whereNotIn('status', $this->showPendingOnly
+                ? ['cancelled', 'abandoned', 'returned']
+                : ['cancelled', 'abandoned']))
             ->when($this->search, fn ($q) => $q->where('product_code', 'like', "%{$this->search}%"))
-            ->when($this->showPendingOnly, fn ($q) => $q->where('pickup_status', 'pending'))
+            // Items still out with the customer stay in, so their return shows until they come back
+            ->when($this->showPendingOnly, fn ($q) => $q->whereIn('pickup_status', ['pending', 'picked_up']))
             ->whereNotNull('rental_id')
             ->get();
     }
@@ -117,7 +120,10 @@ class RentalCalendar extends Component
             $code = $item->product_code;
             $color = $colorMap[$code] ?? '#718096';
 
-            if ($pickupDate) {
+            // In the pending view an item already picked up only has its return left to show
+            $showPickup = $pickupDate && (! $this->showPendingOnly || $item->pickup_status === 'pending');
+
+            if ($showPickup) {
                 $calendarData[$pickupDate]['pickups'][] = [
                     'code' => $code,
                     'name' => $item->product_name,
@@ -131,7 +137,7 @@ class RentalCalendar extends Component
                 ];
             }
 
-            if ($returnDate && $returnDate !== $pickupDate) {
+            if ($returnDate && ($returnDate !== $pickupDate || ! $showPickup)) {
                 $calendarData[$returnDate]['returns'][] = [
                     'code' => $code,
                     'name' => $item->product_name,

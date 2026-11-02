@@ -84,6 +84,7 @@ class RentalReport extends Component
                 'items' => [
                     'pickup_schedule' => ['label' => 'Pickup Schedule',    'icon' => 'bi-box-arrow-up-right'],
                     'return_schedule' => ['label' => 'Return Schedule',    'icon' => 'bi-box-arrow-in-down'],
+                    'ready_pickup_items' => ['label' => 'Ready Items to Pickup', 'icon' => 'bi-tags'],
                 ],
             ],
         ];
@@ -530,6 +531,34 @@ class RentalReport extends Component
             'columns' => 'schedule',
             'title' => 'Return Schedule',
             'date_col' => 'return_date',
+        ];
+    }
+
+    private function reportReadyPickupItems()
+    {
+        $from = $this->dateFrom ?: '2000-01-01';
+        $to = $this->dateTo ?: now()->format('Y-m-d');
+
+        $rows = RentalItem::with([
+            'rental',
+            'product' => fn ($q) => $q->withTrashed()->with('category'),
+        ])
+            ->where('pickup_status', 'pending')
+            ->whereHas('rental', fn ($q) => $q->where('status', 'ready')->whereBetween('pickup_date', [$from, $to]))
+            ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('product_code', 'like', "%{$this->search}%")
+                ->orWhere('product_name', 'like', "%{$this->search}%")
+                ->orWhereHas('rental', fn ($q) => $q->where('customer_name', 'like', "%{$this->search}%"))
+            ))
+            ->get()
+            ->sortBy(fn ($item) => [$item->product?->category?->name ?? 'Uncategorized', $item->rental->pickup_date, $item->product_code])
+            ->values();
+
+        return [
+            'paginated' => false,
+            'data' => $rows,
+            'category_counts' => $rows->countBy(fn ($item) => $item->product?->category?->name ?? 'Uncategorized'),
+            'columns' => 'ready_items',
+            'title' => 'Ready Items to Pickup — Category-wise',
         ];
     }
 

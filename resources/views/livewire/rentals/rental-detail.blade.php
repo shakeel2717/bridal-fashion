@@ -827,7 +827,8 @@
                 </div>
             @endif
 
-            {{-- Payment History --}}
+            {{-- Payment History (admin only) --}}
+            @if (auth()->user()->isAdmin())
             <div class="table-card mb-3" style="padding:16px;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">
@@ -930,6 +931,7 @@
                     </div>
                 @endforelse
             </div>
+            @endif
 
             {{-- Dates --}}
             <div class="table-card mb-3" style="padding:14px 16px;">

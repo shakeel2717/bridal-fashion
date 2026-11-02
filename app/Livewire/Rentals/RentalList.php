@@ -4,6 +4,7 @@ namespace App\Livewire\Rentals;
 
 use App\Models\Rental;
 use App\Models\RentalItem;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -14,14 +15,14 @@ class RentalList extends Component
     public string $search = '';
 
     // One of: '', 'booked', 'ready', 'picked_up', 'partially_picked_up',
-    // 'cancelled', 'due', 'overpaid', 'late_pickup', 'late_return', 'no_dates',
-    // 'fined', 'duplicate', 'stitching'
+    // 'due', 'overpaid', 'late_pickup', 'late_return', 'no_dates',
+    // 'duplicate', 'stitching', 'late_stitching'
     public string $activeFilter = '';
 
     /** Filters that are computed rather than a plain status match. */
     private const COMPUTED_FILTERS = [
         'due', 'overpaid', 'late_pickup', 'late_return',
-        'no_dates', 'fined', 'duplicate', 'stitching',
+        'no_dates', 'duplicate', 'stitching', 'late_stitching',
     ];
 
     public string $dateFrom = '';
@@ -85,30 +86,46 @@ class RentalList extends Component
         session()->flash('success', 'Rental status updated.');
     }
 
-    public function render()
+    /**
+     * Rentals that really clash over the same product, as product_id => rental ids.
+     *
+     * Clash condition: A.pickup < B.return AND A.return > B.pickup. It is strict because an
+     * item returned and sent out again on the same day is not a duplicate. Only the rentals
+     * in a clash are returned, not every booking of that product, and items already back
+     * with us don't count.
+     */
+    private function conflictingRentals(): Collection
     {
-        $today = now()->toDateString();
-
-        // Products booked in OVERLAPPING active rentals (same product, date ranges touch or cross)
-        // Overlap condition: A.pickup <= B.return AND A.return >= B.pickup
-        $dupProductIds = \DB::table('rental_items as ri1')
+        return \DB::table('rental_items as ri1')
             ->join('rental_items as ri2', function ($join) {
                 $join->on('ri1.product_id', '=', 'ri2.product_id')
-                     ->whereColumn('ri1.id', '<', 'ri2.id');
+                     ->whereColumn('ri1.id', '<', 'ri2.id')
+                     ->whereColumn('ri1.rental_id', '!=', 'ri2.rental_id');
             })
             ->join('rentals as r1', 'ri1.rental_id', '=', 'r1.id')
             ->join('rentals as r2', 'ri2.rental_id', '=', 'r2.id')
             ->whereNull('r1.deleted_at')
             ->whereNull('r2.deleted_at')
             ->whereNotNull('ri1.product_id')
+            ->where('ri1.pickup_status', '!=', 'returned')
+            ->where('ri2.pickup_status', '!=', 'returned')
             ->whereNotIn('r1.status', ['returned', 'cancelled', 'abandoned'])
             ->whereNotIn('r2.status', ['returned', 'cancelled', 'abandoned'])
             ->whereNotNull('r1.pickup_date')->whereNotNull('r1.return_date')
             ->whereNotNull('r2.pickup_date')->whereNotNull('r2.return_date')
-            ->whereColumn('r1.pickup_date', '<=', 'r2.return_date')
-            ->whereColumn('r1.return_date', '>=', 'r2.pickup_date')
-            ->distinct()
-            ->pluck('ri1.product_id');
+            ->whereColumn('r1.pickup_date', '<', 'r2.return_date')
+            ->whereColumn('r1.return_date', '>', 'r2.pickup_date')
+            ->get(['ri1.product_id', 'ri1.rental_id as rental_a', 'ri2.rental_id as rental_b'])
+            ->groupBy('product_id')
+            ->map(fn ($pairs) => $pairs->flatMap(fn ($pair) => [$pair->rental_a, $pair->rental_b])->unique()->values());
+    }
+
+    public function render()
+    {
+        $today = now()->toDateString();
+
+        $conflicts = $this->conflictingRentals();
+        $dupRentalIds = $conflicts->flatten()->unique()->values();
 
         $rentals = Rental::with(['items', 'employee'])
             ->withSum('payments', 'amount')
@@ -137,6 +154,12 @@ class RentalList extends Component
                 $q->whereNotNull('stitching_date')
                     ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
             })
+            // Late stitching = stitching date has passed and the booking isn't closed out yet.
+            ->when($this->activeFilter === 'late_stitching', function ($q) use ($today) {
+                $q->whereNotNull('stitching_date')
+                    ->where('stitching_date', '<', $today)
+                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
+            })
             ->when($this->activeFilter === 'overpaid', function ($q) {
                 $q->whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount');
             })
@@ -156,21 +179,14 @@ class RentalList extends Component
                         $q->whereNull('pickup_date')->orWhereNull('return_date');
                     });
             })
-            ->when($this->activeFilter === 'fined', function ($q) {
-                $q->whereHas('tasks', fn ($q) => $q->where('type', 'fine'));
-            })
-            ->when($this->activeFilter === 'duplicate', function ($q) use ($dupProductIds) {
-                $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                    ->whereNotNull('pickup_date')->whereNotNull('return_date')
-                    ->whereHas('items', fn ($q) => $q->whereIn('product_id', $dupProductIds));
-            })
+            ->when($this->activeFilter === 'duplicate', fn ($q) => $q->whereIn('id', $dupRentalIds))
             ->when(
                 $this->activeFilter && ! in_array($this->activeFilter, self::COMPUTED_FILTERS, true),
                 fn ($q) => $q->where('status', $this->activeFilter)
             )
             // Stitching view is date-driven — soonest first is what the tailor needs.
             ->when(
-                $this->activeFilter === 'stitching',
+                in_array($this->activeFilter, ['stitching', 'late_stitching'], true),
                 fn ($q) => $q->orderBy('stitching_date'),
                 fn ($q) => $q->latest()
             )
@@ -181,11 +197,14 @@ class RentalList extends Component
             'ready' => Rental::where('status', 'ready')->withCount('items')->get()->sum('items_count'),
             'picked_up' => Rental::where('status', 'picked_up')->withCount('items')->get()->sum('items_count'),
             'partially_picked_up' => Rental::where('status', 'partially_picked_up')->withCount('items')->get()->sum('items_count'),
-            'cancelled' => Rental::where('status', 'cancelled')->withCount('items')->get()->sum('items_count'),
             'due' => Rental::where('status', 'returned')
                 ->whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) < rentals.total_amount - 1')
                 ->withCount('items')->get()->sum('items_count'),
             'stitching' => Rental::whereNotNull('stitching_date')
+                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+                ->withCount('items')->get()->sum('items_count'),
+            'late_stitching' => Rental::whereNotNull('stitching_date')
+                ->where('stitching_date', '<', $today)
                 ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->withCount('items')->get()->sum('items_count'),
             'overpaid' => Rental::whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount')
@@ -203,37 +222,16 @@ class RentalList extends Component
                     $q->whereNull('pickup_date')->orWhereNull('return_date');
                 })
                 ->withCount('items')->get()->sum('items_count'),
-            'fined' => Rental::whereHas('tasks', fn ($q) => $q->where('type', 'fine'))
-                ->withCount('items')->get()->sum('items_count'),
-            'duplicate' => Rental::whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->whereNotNull('pickup_date')->whereNotNull('return_date')
-                ->whereHas('items', fn ($q) => $q->whereIn('product_id', $dupProductIds))
-                ->count(),
+            'duplicate' => $dupRentalIds->count(),
         ];
 
-        // Duplicate bookings: same product active in multiple rentals
-        // Load conflicting rental pairs for display (only truly overlapping ones)
-        $duplicateBookings = RentalItem::with(['product:id,name,code', 'rental:id,customer_name,pickup_date,return_date,status,bill_ref'])
-            ->whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->whereNotNull('pickup_date')->whereNotNull('return_date'))
-            ->whereIn('product_id', $dupProductIds)
+        // Duplicate bookings: load only the rentals in a clash for display
+        $duplicateBookings = RentalItem::with('product:id,name,code')
+            ->whereIn('product_id', $conflicts->keys())
+            ->whereIn('rental_id', $dupRentalIds)
             ->get()
+            ->filter(fn ($item) => $conflicts[$item->product_id]->contains($item->rental_id))
             ->groupBy('product_id')
-            ->filter(function ($group) {
-                // Confirm at least one pair in this group has overlapping dates
-                $items = $group->values();
-                for ($i = 0; $i < $items->count(); $i++) {
-                    for ($j = $i + 1; $j < $items->count(); $j++) {
-                        $a = $items[$i]->rental;
-                        $b = $items[$j]->rental;
-                        if (!$a || !$b) continue;
-                        if ($a->pickup_date <= $b->return_date && $a->return_date >= $b->pickup_date) {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            })
             ->take(5);
 
         return view('livewire.rentals.rental-list', compact('rentals', 'counts', 'duplicateBookings'));

@@ -471,10 +471,13 @@ class RentalCreate extends Component
 
         $isBooked = false;
         if ($this->pickupDate && $this->returnDate) {
+            // Strict comparison: returned and sent out again on the same day is not a double booking
             $isBooked = RentalItem::whereHas('rental', fn ($q) => $q->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
-                ->whereRaw('DATE(pickup_date) <= ?', [$this->returnDate])
-                ->whereRaw('DATE(return_date) >= ?', [$this->pickupDate])
-            )->where('product_id', $this->pendingProductId)->exists();
+                ->whereRaw('DATE(pickup_date) < ?', [Carbon::parse($this->returnDate)->toDateString()])
+                ->whereRaw('DATE(return_date) > ?', [Carbon::parse($this->pickupDate)->toDateString()])
+            )->where('product_id', $this->pendingProductId)
+                ->where('pickup_status', '!=', 'returned')
+                ->exists();
         }
 
         $product = Product::with('category')->findOrFail($this->pendingProductId);
@@ -708,6 +711,11 @@ class RentalCreate extends Component
                         ]);
                     }
                 }
+            }
+
+            // Removing or adding items can change the overall state (e.g. partial → picked up)
+            if (! in_array($rental->status, ['cancelled', 'abandoned'])) {
+                $rental->update(['status' => $rental->statusFromItems()]);
             }
 
             // Sync linked sale items

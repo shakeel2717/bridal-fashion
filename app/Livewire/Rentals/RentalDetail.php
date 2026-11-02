@@ -131,6 +131,10 @@ class RentalDetail extends Component
 
     public function openPaymentForm(): void
     {
+        if (! auth()->user()->isAdmin()) {
+            return;
+        }
+
         $this->showPaymentForm = true;
         $this->dispatch('focus-payment-amount');
     }
@@ -208,27 +212,7 @@ class RentalDetail extends Component
 
     public function updateRentalStatus(): void
     {
-        $items = $this->rental->items;
-        $total = $items->count();
-        $picked = $items->where('pickup_status', 'picked_up')->count();
-        $returned = $items->where('pickup_status', 'returned')->count();
-
-        $status = $this->rental->status;
-
-        if ($returned === $total && $total > 0) {
-            $status = 'returned';
-        } elseif ($picked === $total && $total > 0) {
-            $status = 'picked_up';
-        } elseif ($picked > 0 || $returned > 0) {
-            $status = 'partially_picked_up';
-        } elseif ($picked === 0 && $returned === 0) {
-            // Nothing picked up yet (e.g. admin reversed a pickup) — revert to a base status
-            if (! in_array($this->rental->status, ['booked', 'ready'])) {
-                $status = 'booked';
-            }
-        }
-
-        $this->rental->update(['status' => $status, 'updated_by' => auth()->id()]);
+        $this->rental->update(['status' => $this->rental->statusFromItems(), 'updated_by' => auth()->id()]);
     }
 
     public function markReady(): void
@@ -327,6 +311,10 @@ class RentalDetail extends Component
     // ── Payment ───────────────────────────────────────────
     public function addPayment(): void
     {
+        if (! auth()->user()->isAdmin()) {
+            return;
+        }
+
         $this->validate([
             'paymentAmount' => 'required|numeric|min:1',
             'paymentDate' => 'required|date',
@@ -776,7 +764,11 @@ class RentalDetail extends Component
     // ── Delete a payment added by mistake (item 11) ───────
     public function deletePayment(int $paymentId): void
     {
-        $payment = RentalPayment::where('rental_id', $this->rental->id)->findOrFail($paymentId);
+        if (! auth()->user()->isAdmin()) {
+            return;
+        }
+
+        $payment =RentalPayment::where('rental_id', $this->rental->id)->findOrFail($paymentId);
 
         // Reverse the balance on the payment method + keep an audit trail in history
         $account = Account::where('name', $payment->payment_method)->first();
