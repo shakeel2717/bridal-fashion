@@ -25,6 +25,8 @@ class RentalList extends Component
         'no_dates', 'duplicate', 'stitching', 'late_stitching',
     ];
 
+    public string $codeSearch = '';
+
     public string $dateFrom = '';
 
     public string $dateTo = '';
@@ -34,6 +36,11 @@ class RentalList extends Component
     public string $newStatus = '';
 
     public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedCodeSearch(): void
     {
         $this->resetPage();
     }
@@ -127,7 +134,7 @@ class RentalList extends Component
         $conflicts = $this->conflictingRentals();
         $dupRentalIds = $conflicts->flatten()->unique()->values();
 
-        $rentals = Rental::with(['items', 'employee'])
+        $rentals = Rental::with(['items', 'employee', 'tasks' => fn ($q) => $q->where('type', 'stitching')])
             ->withSum('payments', 'amount')
             ->when($this->search, function ($q) {
                 $q->where(function ($q) {
@@ -141,6 +148,10 @@ class RentalList extends Component
                         });
                 });
             })
+            // Exact item code — unlike the main search, 101 does not also match 1010 or 2101
+            ->when(trim($this->codeSearch) !== '', fn ($q) => $q->whereHas('items',
+                fn ($q) => $q->whereRaw('LOWER(TRIM(product_code)) = ?', [strtolower(trim($this->codeSearch))])
+            ))
             ->when($this->dateFrom, fn ($q) => $q->where('pickup_date', '>=', $this->dateFrom))
             ->when($this->dateTo, fn ($q) => $q->where('pickup_date', '<=', $this->dateTo))
             // Special computed filters
@@ -149,17 +160,10 @@ class RentalList extends Component
                 $q->where('status', 'returned')
                     ->whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) < rentals.total_amount - 1');
             })
-            // Stitching alert = booking needs stitching and isn't closed out yet.
-            ->when($this->activeFilter === 'stitching', function ($q) {
-                $q->whereNotNull('stitching_date')
-                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
-            })
-            // Late stitching = stitching date has passed and the booking isn't closed out yet.
-            ->when($this->activeFilter === 'late_stitching', function ($q) use ($today) {
-                $q->whereNotNull('stitching_date')
-                    ->where('stitching_date', '<', $today)
-                    ->whereNotIn('status', ['returned', 'cancelled', 'abandoned']);
-            })
+            // Stitching alert = booking still needs stitching (not marked Done, not closed out).
+            ->when($this->activeFilter === 'stitching', fn ($q) => $q->stitchingDue())
+            // Late stitching = same, and the stitching date has passed.
+            ->when($this->activeFilter === 'late_stitching', fn ($q) => $q->stitchingDue()->where('stitching_date', '<', $today))
             ->when($this->activeFilter === 'overpaid', function ($q) {
                 $q->whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount');
             })
@@ -200,12 +204,10 @@ class RentalList extends Component
             'due' => Rental::where('status', 'returned')
                 ->whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) < rentals.total_amount - 1')
                 ->withCount('items')->get()->sum('items_count'),
-            'stitching' => Rental::whereNotNull('stitching_date')
-                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            'stitching' => Rental::stitchingDue()
                 ->withCount('items')->get()->sum('items_count'),
-            'late_stitching' => Rental::whereNotNull('stitching_date')
+            'late_stitching' => Rental::stitchingDue()
                 ->where('stitching_date', '<', $today)
-                ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
                 ->withCount('items')->get()->sum('items_count'),
             'overpaid' => Rental::whereRaw('(SELECT COALESCE(SUM(amount), 0) FROM rental_payments WHERE rental_payments.rental_id = rentals.id) > rentals.total_amount')
                 ->withCount('items')->get()->sum('items_count'),

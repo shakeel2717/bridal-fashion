@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/rentals/{rental}/receipt', [RentalsController::class, 'receipt'])->name('rentals.receipt');
     Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
     Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create');
+    Route::get('/sales/calendar', [SalesController::class, 'calendar'])->name('sales.calendar');
     Route::get('/sales/{sale}/return', [SalesController::class, 'return'])->name('sales.return');
     Route::get('/sales/{sale}/receipt', [SalesController::class, 'receipt'])->name('sales.receipt');
     Route::get('/sales/{sale}', [SalesController::class, 'show'])->name('sales.show');

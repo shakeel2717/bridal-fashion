@@ -22,12 +22,15 @@
             @endphp
             @foreach ($btns as $key => $b)
                 <button type="button" wire:click="setFilter('{{ $key }}')"
-                    class="btn btn-sm {{ $timeFilter === $key ? 'btn-primary' : 'btn-outline-secondary' }}">
+                    class="btn btn-sm {{ $timeFilter === $key && ! $dateFrom && ! $dateTo ? 'btn-primary' : 'btn-outline-secondary' }}">
                     <i class="bi {{ $b[1] }} me-1"></i> {{ $b[0] }}
                 </button>
             @endforeach
             <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">
-                @if ($timeFilter === 'future')
+                @if ($dateFrom || $dateTo)
+                    Bookings between {{ $dateFrom ? \Carbon\Carbon::parse($dateFrom)->format('d/m/Y') : 'start' }}
+                    and {{ $dateTo ? \Carbon\Carbon::parse($dateTo)->format('d/m/Y') : 'end' }}
+                @elseif ($timeFilter === 'future')
                     Upcoming bookings (today onward)
                 @elseif ($timeFilter === 'active')
                     Currently out (picked up today / in progress)
@@ -39,9 +42,10 @@
     </div>
 
     {{-- Product search --}}
-    <div class="table-card mb-3" style="padding:14px 16px;">
+    <div class="table-card mb-3 d-flex flex-wrap align-items-end gap-3" style="padding:14px 16px;">
+        <div class="flex-grow-1" style="max-width:420px;">
         <label class="form-label">Product Code / Name</label>
-        <div class="position-relative" style="max-width:420px;">
+        <div class="position-relative">
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
                 <input type="text" wire:model.live.debounce.300ms="productSearch"
@@ -67,6 +71,22 @@
                 </ul>
             @endif
         </div>
+        </div>
+
+        {{-- From / To range --}}
+        <div>
+            <label class="form-label">From</label>
+            <input type="date" wire:model.live="dateFrom" class="form-control" style="width:160px;">
+        </div>
+        <div>
+            <label class="form-label">To</label>
+            <input type="date" wire:model.live="dateTo" class="form-control" style="width:160px;">
+        </div>
+        @if ($dateFrom || $dateTo)
+            <button class="btn btn-outline-secondary" wire:click="clearDates" title="Clear dates">
+                <i class="bi bi-x"></i> Clear dates
+            </button>
+        @endif
     </div>
 
     {{-- Results --}}

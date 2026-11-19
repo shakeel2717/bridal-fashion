@@ -105,6 +105,10 @@
                 <input type="text" wire:model.live.debounce.400ms="search" class="form-control form-control-sm"
                     placeholder="Search name, phone, CNIC, bill ref...">
             </div>
+            <div style="width:170px;">
+                <input type="text" wire:model.live.debounce.400ms="codeSearch" class="form-control form-control-sm"
+                    placeholder="Exact item code, e.g. 101" title="Shows only bills that have exactly this item code">
+            </div>
             <div class="d-flex gap-2 align-items-center">
                 <input type="date" wire:model.live="dateFrom" class="form-control form-control-sm"
                     style="width:140px;">
@@ -156,7 +160,16 @@
                                     </span>
                                 @endforeach
                             </div>
-                            @if ($rental->stitching_date && !in_array($rental->status, ['returned', 'cancelled', 'abandoned']))
+                            @php
+                                $stitchTask = $rental->tasks->where('type', 'stitching')->first();
+                                $stitchDone = $stitchTask && $stitchTask->status !== 'pending';
+                            @endphp
+                            @if ($rental->stitching_date && $stitchDone && !in_array($rental->status, ['returned', 'cancelled', 'abandoned']))
+                                <div class="stitch-flag" style="color:#276749; border-color:#9ae6b4; background:#f0fff4;">
+                                    <i class="bi bi-check2-circle"></i>
+                                    Stitching {{ $stitchTask->status === 'done' ? 'done' : $stitchTask->status }}
+                                </div>
+                            @elseif ($rental->stitching_date && !in_array($rental->status, ['returned', 'cancelled', 'abandoned']))
                                 @php
                                     $stitchDate = \Carbon\Carbon::parse($rental->stitching_date);
                                     $stitchLate = $stitchDate->isPast() && !$stitchDate->isToday();

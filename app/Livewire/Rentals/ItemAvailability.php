@@ -13,6 +13,11 @@ class ItemAvailability extends Component
     // future | past | active
     public string $timeFilter = 'future';
 
+    // Optional From/To range — when set it replaces the future/active/past filter
+    public string $dateFrom = '';
+
+    public string $dateTo = '';
+
     public array $suggestions = [];
 
     public ?int $selectedProductId = null;
@@ -23,7 +28,13 @@ class ItemAvailability extends Component
     {
         if (in_array($filter, ['future', 'past', 'active'])) {
             $this->timeFilter = $filter;
+            $this->reset(['dateFrom', 'dateTo']);
         }
+    }
+
+    public function clearDates(): void
+    {
+        $this->reset(['dateFrom', 'dateTo']);
     }
 
     public function updatedProductSearch(): void
@@ -89,7 +100,15 @@ class ItemAvailability extends Component
                 ->whereHas('rental', function ($q) use ($today) {
                     $q->whereNotIn('status', ['cancelled', 'abandoned']);
 
-                    if ($this->timeFilter === 'future') {
+                    if ($this->dateFrom || $this->dateTo) {
+                        // Any booking whose pickup → return period touches the chosen range
+                        if ($this->dateTo) {
+                            $q->whereNotNull('pickup_date')->whereDate('pickup_date', '<=', $this->dateTo);
+                        }
+                        if ($this->dateFrom) {
+                            $q->whereRaw('DATE(COALESCE(return_date, pickup_date)) >= ?', [$this->dateFrom]);
+                        }
+                    } elseif ($this->timeFilter === 'future') {
                         $q->whereNotNull('pickup_date')->whereDate('pickup_date', '>=', $today);
                     } elseif ($this->timeFilter === 'past') {
                         $q->whereNotNull('return_date')->whereDate('return_date', '<', $today);

@@ -9,6 +9,7 @@ class SalesController extends Controller
 {
     public function index()  { return view('sales.index'); }
     public function create() { return view('sales.create'); }
+    public function calendar() { return view('sales.calendar'); }
     public function show(Sale $sale) { return view('sales.show', compact('sale')); }
 
     public function return(Sale $sale)

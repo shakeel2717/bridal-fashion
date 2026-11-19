@@ -834,8 +834,13 @@ class RentalCreate extends Component
                 }
             }
 
-            $rental->tasks()->where('type', 'stitching')->delete();
-            if (! empty($this->stitchingInstructions)) {
+            // Keep the existing stitching task so a Done mark survives the edit — only its text changes
+            $stitchingTask = $rental->tasks()->where('type', 'stitching')->first();
+            if (empty($this->stitchingInstructions)) {
+                $rental->tasks()->where('type', 'stitching')->delete();
+            } elseif ($stitchingTask) {
+                $stitchingTask->update(['title' => $this->stitchingInstructions]);
+            } else {
                 RentalTask::create([
                     'rental_id' => $rental->id,
                     'type' => 'stitching',

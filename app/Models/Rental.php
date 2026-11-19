@@ -62,6 +62,17 @@ class Rental extends Model
         return in_array($this->status, ['booked', 'ready']) ? $this->status : 'booked';
     }
 
+    /**
+     * Bookings that still need stitching: a stitching date is set, the booking isn't
+     * closed and the stitching task hasn't been marked Done (or Denied) yet.
+     */
+    public function scopeStitchingDue($query)
+    {
+        return $query->whereNotNull('stitching_date')
+            ->whereNotIn('status', ['returned', 'cancelled', 'abandoned'])
+            ->whereDoesntHave('tasks', fn ($q) => $q->where('type', 'stitching')->where('status', '!=', 'pending'));
+    }
+
     public function scopeOverdue($query)
     {
         return $query->whereRaw('DATE(return_date) < ?', [now()->toDateString()])

@@ -215,7 +215,7 @@
                     <a href="{{ route('rentals.calendar') }}" class="module-card">
                         <div class="mod-icon-wrap blue"><i class="bi bi-calendar3"
                                 style="font-size:22px; color:#3182ce;"></i></div>
-                        <div class="mod-name">Calendar</div>
+                        <div class="mod-name">Rental Calendar</div>
                     </a>
                 </div>
                 @if (auth()->user()->canAccess('sales'))
@@ -224,6 +224,13 @@
                             <div class="mod-icon-wrap green"><i class="bi bi-cart-check-fill"
                                     style="font-size:22px; color:#38a169;"></i></div>
                             <div class="mod-name">Sales</div>
+                        </a>
+                    </div>
+                    <div class="col-2">
+                        <a href="{{ route('sales.calendar') }}" class="module-card">
+                            <div class="mod-icon-wrap green"><i class="bi bi-calendar-check"
+                                    style="font-size:22px; color:#38a169;"></i></div>
+                            <div class="mod-name">Sale Calendar</div>
                         </a>
                     </div>
                 @endif
