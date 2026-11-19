@@ -60,6 +60,15 @@
             </div>
         </div>
         <div class="col">
+            <div style="background:#faf5ff; border:1px solid #d6bcfa; border-radius:10px; padding:14px 16px; text-align:center;">
+                <div style="font-size:11px; color:#6b46c1; font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+                    <i class="bi bi-box-arrow-up me-1"></i> Due on Pickup
+                </div>
+                <div style="font-size:24px; font-weight:800; color:#6b46c1;">Rs. {{ number_format($totalDueOnPickup, 0) }}</div>
+                <div style="font-size:11px; color:#805ad5;">{{ $rentalsPickupDue->count() }} ready rentals</div>
+            </div>
+        </div>
+        <div class="col">
             <div style="background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:14px 16px; text-align:center;">
                 <div style="font-size:11px; color:#c05621; font-weight:700; text-transform:uppercase; margin-bottom:4px;">
                     <i class="bi bi-hourglass-split me-1"></i> Due on Return
@@ -162,6 +171,64 @@
                             <td class="text-end fw-700" style="padding:8px 12px;">Rs. {{ number_format($totalRentalValue, 0) }}</td>
                             <td class="text-end fw-700" style="padding:8px 12px;">Rs. {{ number_format($totalRentalAdvance, 0) }}</td>
                             <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                @endif
+            </div>
+
+            {{-- Due on Pickup (ready rentals going out this day) --}}
+            <div class="table-card mb-3">
+                <div class="table-card-header">
+                    <span class="table-card-title">
+                        <i class="bi bi-box-arrow-up me-1"></i> Due on Pickup — Ready Items
+                        <span style="background:#faf5ff; color:#6b46c1; padding:1px 8px; border-radius:8px; font-size:11px; margin-left:4px;">{{ $rentalsPickupDue->count() }}</span>
+                    </span>
+                    <span style="font-size:12px; color:var(--text-muted);">To Collect: <strong style="color:#6b46c1;">Rs. {{ number_format($totalDueOnPickup, 0) }}</strong></span>
+                </div>
+                @if($rentalsPickupDue->isEmpty())
+                    <div class="text-center py-3" style="font-size:13px; color:var(--text-muted);">No ready rentals with a balance due for pickup on this day.</div>
+                @else
+                <table class="table table-hover mb-0" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>Bill#</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Return</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Paid</th>
+                            <th class="text-end">Due</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($rentalsPickupDue as $r)
+                        @php $paid = (float) ($r->payments_sum_amount ?? 0); @endphp
+                        <tr>
+                            <td><a href="{{ route('rentals.show', $r->id) }}" style="font-weight:600; text-decoration:none; color:var(--navy);">{{ $r->bill_ref ?? '#'.$r->id }}</a></td>
+                            <td>
+                                <div style="font-weight:600;">{{ $r->customer_name }}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">{{ $r->customer_phone1 }}</div>
+                            </td>
+                            <td>
+                                @foreach($r->items->take(3) as $item)
+                                    <span style="font-size:10px; background:#f7fafc; border:1px solid var(--border); padding:1px 5px; border-radius:3px; margin-right:2px;">{{ $item->product_code }}</span>
+                                @endforeach
+                                @if($r->items->count() > 3)
+                                    <span style="font-size:10px; color:var(--text-muted);">+{{ $r->items->count()-3 }}</span>
+                                @endif
+                            </td>
+                            <td style="white-space:nowrap;">{{ $r->return_date ? \Carbon\Carbon::parse($r->return_date)->format('d/m/Y') : '—' }}</td>
+                            <td class="text-end">Rs. {{ number_format($r->total_amount, 0) }}</td>
+                            <td class="text-end">Rs. {{ number_format($paid, 0) }}</td>
+                            <td class="text-end fw-700" style="color:#6b46c1;">Rs. {{ number_format($r->total_amount - $paid, 0) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot style="background:#f8fafc;">
+                        <tr>
+                            <td colspan="6" style="font-weight:700; font-size:12px; padding:8px 12px;">Total Due</td>
+                            <td class="text-end fw-700" style="color:#6b46c1; padding:8px 12px;">Rs. {{ number_format($totalDueOnPickup, 0) }}</td>
                         </tr>
                     </tfoot>
                 </table>

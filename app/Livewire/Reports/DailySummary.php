@@ -58,6 +58,17 @@ class DailySummary extends Component
 
         $totalDueOnReturn = $rentalsDue->sum(fn ($r) => $r->total_amount - (float) ($r->payments_sum_amount ?? 0));
 
+        // ── Ready rentals to be picked up on this day with balance still to collect ──
+        $rentalsPickupDue = Rental::with('items')
+            ->withSum('payments', 'amount')
+            ->whereDate('pickup_date', $date)
+            ->where('status', 'ready')
+            ->get()
+            ->filter(fn ($r) => $r->total_amount - (float) ($r->payments_sum_amount ?? 0) > 0)
+            ->values();
+
+        $totalDueOnPickup = $rentalsPickupDue->sum(fn ($r) => $r->total_amount - (float) ($r->payments_sum_amount ?? 0));
+
         // ── Sales on this day ──
         $sales = Sale::with('items')
             ->whereDate('sale_date', $date)
@@ -99,6 +110,7 @@ class DailySummary extends Component
         return view('livewire.reports.daily-summary', compact(
             'rentalsBooked', 'totalRentalValue', 'totalRentalAdvance',
             'rentalsDue', 'totalDueOnReturn',
+            'rentalsPickupDue', 'totalDueOnPickup',
             'sales', 'totalSaleValue', 'totalSaleAdvance',
             'rentalPayments', 'totalRentalPayments',
             'expenses', 'totalExpenses',
